@@ -58,10 +58,10 @@ export class PersonService extends BaseService {
 
     if (closestPersonId) {
       const person = await this.personRepository.getById(closestPersonId);
-      if (!person?.faceAssetId) {
+      if (!person?.featureFaceAssetId) {
         throw new NotFoundException('Person not found');
       }
-      closestFaceAssetId = person.faceAssetId;
+      closestFaceAssetId = person.featureFaceAssetId;
     }
     const { items, hasNextPage } = await this.personRepository.getAllForUser(pagination, auth.user.id, {
       withHidden,
@@ -87,10 +87,10 @@ export class PersonService extends BaseService {
 
       for (const face of faces) {
         await this.requireAccess({ auth, permission: Permission.PersonCreate, ids: [face.id] });
-        if (person.faceAssetId === null) {
+        if (person.featureFaceAssetId === null) {
           changeFeaturePhoto.push(person.id);
         }
-        if (face.person && face.person.faceAssetId === face.id) {
+        if (face.person && face.person.featureFaceAssetId === face.id) {
           changeFeaturePhoto.push(face.person.id);
         }
 
@@ -113,10 +113,10 @@ export class PersonService extends BaseService {
     const person = await this.findOrFail(personId);
 
     await this.personRepository.reassignFace(face.id, personId);
-    if (person.faceAssetId === null) {
+    if (person.featureFaceAssetId === null) {
       await this.createNewFeaturePhoto([person.id]);
     }
-    if (face.person && face.person.faceAssetId === face.id) {
+    if (face.person && face.person.featureFaceAssetId === face.id) {
       await this.createNewFeaturePhoto([face.person.id]);
     }
 
@@ -141,8 +141,11 @@ export class PersonService extends BaseService {
     for (const personId of changeFeaturePhoto) {
       const assetFace = await this.personRepository.getRandomFace(personId);
 
-      if (assetFace) {
-        await this.personRepository.update({ id: personId, faceAssetId: assetFace.id });
+      if (assetFace?.faceClusterId) {
+        await this.personRepository.updateFaceCluster({
+          id: assetFace.faceClusterId,
+          featureFaceAssetId: assetFace.id,
+        });
         jobs.push({ name: JobName.PersonGenerateThumbnail, data: { id: personId } });
       }
     }

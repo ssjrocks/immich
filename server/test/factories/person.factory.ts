@@ -1,5 +1,5 @@
 import { Selectable } from 'kysely';
-import { PersonTable } from 'src/schema/tables/person.table';
+import { PersonTable } from 'src/schema/tables/face-cluster.table';
 import { PersonLike } from 'test/factories/types';
 import { newDate, newUuid, newUuidV7 } from 'test/small.factory';
 

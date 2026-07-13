@@ -28,7 +28,7 @@ import { ReverseGeocodeResult } from 'src/repositories/map.repository';
 import { ImmichTags } from 'src/repositories/metadata.repository';
 import { AssetExifTable } from 'src/schema/tables/asset-exif.table';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table';
-import { PersonTable } from 'src/schema/tables/person.table';
+import { PersonTable } from 'src/schema/tables/face-cluster.table';
 import { BaseService } from 'src/services/base.service';
 import { JobItem, JobOf } from 'src/types';
 import { getAssetFiles } from 'src/utils/asset.util';

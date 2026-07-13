@@ -179,7 +179,6 @@ export function mapPerson(person: MaybeDehydrated<Person>): PersonResponseDto {
     thumbnailPath: person.thumbnailPath,
     isHidden: person.isHidden,
     isFavorite: person.isFavorite,
-    color: person.color ?? undefined,
     updatedAt: asDateTimeString(person.updatedAt),
   };
 }
