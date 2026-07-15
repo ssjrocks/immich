@@ -37,6 +37,9 @@ enum SettingsKey<T> {
   albumIsReverse<bool>(),
   albumIsGrid<bool>(),
 
+  // Sync
+  trashSyncEnabled<bool>(),
+
   // Backup
   backupEnabled<bool>(),
   backupUseCellularForVideos<bool>(),

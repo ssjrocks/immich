@@ -3,6 +3,7 @@ import 'package:immich_mobile/domain/models/config/app_config.dart';
 import 'package:immich_mobile/domain/models/settings_key.dart';
 import 'package:immich_mobile/infrastructure/entities/settings.entity.drift.dart';
 import 'package:immich_mobile/infrastructure/repositories/db.repository.dart';
+import 'package:flutter/foundation.dart';
 
 class SettingsRepository extends DriftDatabaseRepository {
   final Drift _db;
@@ -30,6 +31,9 @@ class SettingsRepository extends DriftDatabaseRepository {
     }
     return _instance!;
   }
+
+  @visibleForTesting
+  static void reset() => _instance = null;
 
   Future<void> refresh() async => _applyOverrides(await _db.select(_db.settingsEntity).get());
 

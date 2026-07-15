@@ -11,8 +11,6 @@ import 'package:immich_mobile/domain/models/asset/base_asset.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/extensions/platform_extensions.dart';
 import 'package:immich_mobile/infrastructure/repositories/storage.repository.dart';
-import 'package:immich_mobile/platform/native_sync_api.g.dart';
-import 'package:immich_mobile/providers/infrastructure/platform.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/storage.provider.dart';
 import 'package:immich_mobile/services/api.service.dart';
 import 'package:immich_mobile/utils/image_url_builder.dart';
@@ -25,15 +23,14 @@ import 'package:share_plus/share_plus.dart';
 typedef _ShareFile = ({File file, bool cleanup, String displayName});
 
 final assetMediaRepositoryProvider = Provider(
-  (ref) => AssetMediaRepository(ref.watch(nativeSyncApiProvider), ref.watch(storageRepositoryProvider)),
+  (ref) => AssetMediaRepository(ref.watch(storageRepositoryProvider)),
 );
 
 class AssetMediaRepository {
-  final NativeSyncApi _nativeSyncApi;
   final StorageRepository _storageRepository;
   static final Logger _log = Logger("AssetMediaRepository");
 
-  const AssetMediaRepository(this._nativeSyncApi, this._storageRepository);
+  const AssetMediaRepository(this._storageRepository);
 
   Future<bool> _androidSupportsTrash() async {
     if (Platform.isAndroid) {
@@ -56,27 +53,6 @@ class AssetMediaRepository {
       }
     }
     return PhotoManager.editor.deleteWithIds(ids);
-  }
-
-  Future<bool> _restoreFromTrashById(String mediaId, int type) async {
-    try {
-      return await _nativeSyncApi.restoreFromTrashById(mediaId, type);
-    } catch (e, s) {
-      _log.warning('Error restore file from trash by Id', e, s);
-      return false;
-    }
-  }
-
-  Future<List<String>> restoreAssetsFromTrash(Iterable<LocalAsset> assets) async {
-    final restoredIds = <String>[];
-    for (final asset in assets) {
-      _log.info("Restoring from trash, localId: ${asset.id}, checksum: ${asset.checksum}");
-      final result = await _restoreFromTrashById(asset.id, asset.type.index);
-      if (result) {
-        restoredIds.add(asset.id);
-      }
-    }
-    return restoredIds;
   }
 
   Future<AssetEntity?> get(String id) async {
