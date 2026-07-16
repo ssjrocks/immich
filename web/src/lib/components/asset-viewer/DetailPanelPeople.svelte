@@ -5,10 +5,18 @@
   import { Route } from '$lib/route';
   import { faceManager } from '$lib/stores/face.svelte';
   import { locale } from '$lib/stores/preferences.store';
-  import { getPeopleThumbnailUrl } from '$lib/utils';
-  import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
-  import { IconButton, Text } from '@immich/ui';
-  import { mdiEye, mdiEyeOff, mdiPencil, mdiPlus } from '@mdi/js';
+  import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
+  import { handleError } from '$lib/utils/handle-error';
+  import {
+    AssetTypeEnum,
+    deleteFace,
+    updatePerson,
+    type AssetFaceResponseDto,
+    type AssetResponseDto,
+    type PersonResponseDto,
+  } from '@immich/sdk';
+  import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
+  import { mdiAccountOff, mdiCheck, mdiClose, mdiEye, mdiEyeOff, mdiPencil, mdiPlus } from '@mdi/js';
   import { DateTime, Duration } from 'luxon';
   import { t } from 'svelte-i18n';
 
@@ -22,6 +30,8 @@
 
   const isVideo = $derived(asset.type === AssetTypeEnum.Video);
   let expandedPersonId = $state<string | undefined>();
+  let renamingPersonId = $state<string | undefined>();
+  let renameValue = $state('');
 
   const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
 
@@ -37,6 +47,64 @@
   const seekToAppearance = (timestampMs: number) => {
     assetViewerManager.seekVideoTo(timestampMs);
     expandedPersonId = undefined;
+  };
+
+  const focusOnMount = (node: HTMLInputElement) => {
+    node.focus();
+  };
+
+  const refreshFaces = async () => {
+    faceManager.clear();
+    await faceManager.getAssetFaces(asset.id);
+  };
+
+  const startRename = (person: PersonResponseDto, event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    renamingPersonId = person.id;
+    renameValue = person.name;
+  };
+
+  const cancelRename = (event?: Event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    renamingPersonId = undefined;
+  };
+
+  const submitRename = async (person: PersonResponseDto, event?: Event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const name = renameValue.trim();
+    renamingPersonId = undefined;
+    if (name === person.name) {
+      return;
+    }
+    try {
+      await updatePerson({ id: person.id, personUpdateDto: { name } });
+      toastManager.primary($t('change_name_successfully'));
+      await refreshFaces();
+    } catch (error) {
+      handleError(error, $t('errors.unable_to_save_name'));
+    }
+  };
+
+  const markNotAFace = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const isConfirmed = await modalManager.showDialog({
+      prompt: $t('confirm_delete_face', { values: { name: person.name || $t('face_unassigned') } }),
+    });
+    if (!isConfirmed) {
+      return;
+    }
+    try {
+      for (const face of personFaces) {
+        await deleteFace({ id: face.id, assetFaceDeleteDto: { force: false } });
+      }
+      await refreshFaces();
+    } catch (error) {
+      handleError(error, $t('error_delete_face'));
+    }
   };
 
   const people = $derived(Array.from(faceManager.people));
@@ -133,7 +201,43 @@
             highlighted={isHighlighted}
             class="outline-offset-2 outline-immich-primary group-focus-visible:outline-2 dark:outline-immich-dark-primary"
           />
-          <p class="mt-1 truncate font-medium" title={person.name}>{person.name}</p>
+          {#if renamingPersonId === person.id}
+            <div class="mt-1 flex items-center gap-1" role="presentation" onclick={(event) => event.stopPropagation()}>
+              <input
+                type="text"
+                class="w-full min-w-0 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-700"
+                bind:value={renameValue}
+                use:focusOnMount
+                onkeydown={(event) => {
+                  if (event.key === 'Enter') {
+                    handlePromiseError(submitRename(person, event));
+                  } else if (event.key === 'Escape') {
+                    cancelRename(event);
+                  }
+                }}
+              />
+              <IconButton
+                aria-label={$t('save')}
+                icon={mdiCheck}
+                size="small"
+                shape="round"
+                color="primary"
+                variant="ghost"
+                onclick={(event: Event) => handlePromiseError(submitRename(person, event))}
+              />
+              <IconButton
+                aria-label={$t('cancel')}
+                icon={mdiClose}
+                size="small"
+                shape="round"
+                color="secondary"
+                variant="ghost"
+                onclick={cancelRename}
+              />
+            </div>
+          {:else}
+            <p class="mt-1 truncate font-medium" title={person.name}>{person.name}</p>
+          {/if}
           {#if person.birthDate && person.formattedAge}
             <p class="font-light {visiblePeople.length > 6 ? 'text-xs' : ''}" title={person.formattedBirthDate!}>
               {person.formattedAge}
@@ -141,11 +245,11 @@
           {/if}
         {/snippet}
 
-        <div class="relative">
+        <div class="group relative">
           {#if isVideo && appearances.length > 0}
             <button
               type="button"
-              class="group w-full text-left outline-none"
+              class="w-full text-left outline-none"
               onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
               onblur={() => assetViewerManager.clearHighlightedFaces()}
               onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
@@ -172,7 +276,7 @@
             {/if}
           {:else}
             <a
-              class="group outline-none"
+              class="outline-none"
               href={Route.viewPerson(person, { previousRoute })}
               onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
               onblur={() => assetViewerManager.clearHighlightedFaces()}
@@ -181,6 +285,31 @@
             >
               {@render personCard()}
             </a>
+          {/if}
+
+          {#if renamingPersonId !== person.id}
+            <div
+              class="absolute top-0 right-0 flex gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <IconButton
+                aria-label={$t('edit_name')}
+                icon={mdiPencil}
+                size="small"
+                shape="round"
+                color="primary"
+                variant="filled"
+                onclick={(event: Event) => startRename(person, event)}
+              />
+              <IconButton
+                aria-label={$t('delete_face')}
+                icon={mdiAccountOff}
+                size="small"
+                shape="round"
+                color="danger"
+                variant="filled"
+                onclick={(event: Event) => handlePromiseError(markNotAFace(person, personFaces, event))}
+              />
+            </div>
           {/if}
         </div>
       {/each}
