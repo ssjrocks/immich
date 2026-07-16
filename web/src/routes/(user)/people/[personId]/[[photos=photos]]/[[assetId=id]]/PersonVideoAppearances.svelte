@@ -77,7 +77,8 @@
                     muted
                     preload="metadata"
                     playsinline
-                    class="h-64 w-[28rem] shrink-0 rounded object-cover"
+                    class="shrink-0 rounded object-cover"
+                    style="width: 28rem; height: 16rem;"
                     src={getAssetPlaybackUrl({ id: occurrence.assetId })}
                     onloadedmetadata={(event) => onThumbnailLoaded(event.currentTarget, timestampMs)}
                   ></video>
@@ -85,7 +86,8 @@
                     muted
                     preload="metadata"
                     playsinline
-                    class="h-64 w-[28rem] shrink-0 rounded object-cover"
+                    class="shrink-0 rounded object-cover"
+                    style="width: 28rem; height: 16rem;"
                     src={getAssetPlaybackUrl({ id: occurrence.assetId })}
                     onloadedmetadata={(event) => onClipLoaded(event.currentTarget, timestampMs)}
                     ontimeupdate={(event) => onClipTimeUpdate(event.currentTarget, timestampMs)}
