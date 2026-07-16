@@ -28,6 +28,7 @@ import {
   PersonSearchDto,
   PersonStatisticsResponseDto,
   PersonUpdateDto,
+  PersonVideoOccurrenceResponseDto,
 } from 'src/dtos/person.dto';
 import { ApiTag, Permission } from 'src/enum';
 import { Auth, Authenticated, FileResponse } from 'src/middleware/auth.guard';
@@ -153,6 +154,20 @@ export class PersonController {
   })
   getPersonStatistics(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto): Promise<PersonStatisticsResponseDto> {
     return this.service.getStatistics(auth, id);
+  }
+
+  @Get(':id/video-occurrences')
+  @Authenticated({ permission: Permission.PersonRead })
+  @Endpoint({
+    summary: 'Get video occurrences for a person',
+    description: 'Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.',
+    history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
+  })
+  getPersonVideoOccurrences(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+  ): Promise<PersonVideoOccurrenceResponseDto[]> {
+    return this.service.getVideoOccurrences(auth, id);
   }
 
   @Get(':id/thumbnail')

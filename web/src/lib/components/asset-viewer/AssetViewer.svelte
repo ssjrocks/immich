@@ -66,6 +66,7 @@
     isShared?: boolean;
     album?: AlbumResponseDto;
     person?: PersonResponseDto;
+    initialTimeMs?: number;
     onAssetChange?: (asset: AssetResponseDto) => void;
     preAction?: PreAction;
     onAction?: OnAction;
@@ -82,6 +83,7 @@
     isShared = false,
     album,
     person,
+    initialTimeMs,
     onAssetChange,
     preAction,
     onAction,
@@ -569,6 +571,7 @@
         projectionType={asset.exifInfo?.projectionType}
         loopVideo={$slideshowState !== SlideshowState.PlaySlideshow}
         extendedControls
+        {initialTimeMs}
         onPreviousAsset={() => navigateAsset('previous')}
         onNextAsset={() => navigateAsset('next')}
         onClose={closeViewer}

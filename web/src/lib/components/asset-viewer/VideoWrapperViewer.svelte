@@ -12,6 +12,7 @@
     loopVideo: boolean;
     playOriginalVideo: boolean;
     extendedControls?: boolean;
+    initialTimeMs?: number;
     onClose?: () => void;
     onPreviousAsset?: () => void;
     onNextAsset?: () => void;
@@ -27,6 +28,7 @@
     loopVideo,
     playOriginalVideo,
     extendedControls = false,
+    initialTimeMs,
     onPreviousAsset,
     onClose,
     onNextAsset,
@@ -47,6 +49,7 @@
     assetId={effectiveAssetId}
     {playOriginalVideo}
     {extendedControls}
+    {initialTimeMs}
     {onPreviousAsset}
     {onNextAsset}
     {onVideoEnded}

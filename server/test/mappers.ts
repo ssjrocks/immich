@@ -168,10 +168,17 @@ export const getForAssetFace = (face: ReturnType<AssetFaceFactory['build']>) => 
 
 export const getForDetectedFaces = (asset: ReturnType<AssetFactory['build']>) => ({
   id: asset.id,
+  type: asset.type,
   visibility: asset.visibility,
   exifInfo: getDehydrated(asset.exifInfo),
   faces: asset.faces.map((face) => getDehydrated(face)),
   files: asset.files.map((file) => getDehydrated(file)),
+});
+
+export const getForVideoDetectFacesJob = (asset: ReturnType<AssetFactory['build']>) => ({
+  id: asset.id,
+  originalPath: asset.originalPath,
+  visibility: asset.visibility,
 });
 
 export const getForSidecarWrite = (asset: ReturnType<AssetFactory['build']>) => ({

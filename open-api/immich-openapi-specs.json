@@ -9436,6 +9436,66 @@
         "x-immich-state": "Stable"
       }
     },
+    "/people/{id}/video-occurrences": {
+      "get": {
+        "description": "Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.",
+        "operationId": "getPersonVideoOccurrences",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonVideoOccurrenceResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get video occurrences for a person",
+        "tags": [
+          "People"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "person.read",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/plugins": {
       "get": {
         "description": "Retrieve a list of plugins available to the authenticated user.",
@@ -17351,6 +17411,23 @@
           },
           "sourceType": {
             "$ref": "#/components/schemas/SourceType"
+          },
+          "timestampMs": {
+            "description": "Milliseconds from video start; absent for photos",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
+            "x-immich-history": [
+              {
+                "version": "v3.1.0",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              }
+            ],
+            "x-immich-state": "Stable"
           }
         },
         "required": [
@@ -19114,6 +19191,19 @@
           "modelName": {
             "description": "Name of the model to use",
             "type": "string"
+          },
+          "videoFrameRate": {
+            "description": "Frames per second to sample when detecting faces in videos",
+            "format": "double",
+            "maximum": 60,
+            "minimum": 0.1,
+            "type": "number"
+          },
+          "videoMaxFrames": {
+            "description": "Maximum number of frames to sample per video for face detection",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
           }
         },
         "required": [
@@ -19121,7 +19211,9 @@
           "maxDistance",
           "minFaces",
           "minScore",
-          "modelName"
+          "modelName",
+          "videoFrameRate",
+          "videoMaxFrames"
         ],
         "type": "object"
       },
@@ -19263,6 +19355,9 @@
           "AssetDeleteCheck",
           "AssetDetectFacesQueueAll",
           "AssetDetectFaces",
+          "AssetVideoDetectFacesQueueAll",
+          "AssetVideoDetectFaces",
+          "AssetVideoClusterFaces",
           "AssetDetectDuplicatesQueueAll",
           "AssetDetectDuplicates",
           "AssetEditThumbnailGeneration",
@@ -19713,7 +19808,8 @@
           "integrity-checksum-mismatch-refresh",
           "integrity-missing-files-delete-all",
           "integrity-untracked-files-delete-all",
-          "integrity-checksum-mismatch-delete-all"
+          "integrity-checksum-mismatch-delete-all",
+          "video-face-detection"
         ],
         "type": "string"
       },
@@ -21200,6 +21296,30 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "PersonVideoOccurrenceResponseDto": {
+        "properties": {
+          "assetId": {
+            "description": "Asset ID of the video",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          },
+          "timestampsMs": {
+            "description": "Timestamps (ms from video start) where this person appears",
+            "items": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "assetId",
+          "timestampsMs"
+        ],
         "type": "object"
       },
       "PinCodeChangeDto": {

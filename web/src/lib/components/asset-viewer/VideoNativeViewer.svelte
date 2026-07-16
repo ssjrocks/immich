@@ -53,6 +53,7 @@
     cacheKey: string | null;
     playOriginalVideo: boolean;
     extendedControls?: boolean;
+    initialTimeMs?: number;
     onPreviousAsset?: () => void;
     onNextAsset?: () => void;
     onVideoEnded?: () => void;
@@ -67,6 +68,7 @@
     cacheKey,
     playOriginalVideo,
     extendedControls = false,
+    initialTimeMs,
     onPreviousAsset = () => {},
     onNextAsset = () => {},
     onVideoEnded = () => {},
@@ -90,6 +92,7 @@
   const aspectRatio = $derived(asset.width && asset.height ? `${asset.width} / ${asset.height}` : undefined);
   let showVideo = $state(false);
   let hasFocused = $state(false);
+  let hasAppliedInitialTime = $state(false);
   let activeSession: { assetId: string; id: string } | undefined;
   let rebuildCount = 0;
 
@@ -240,9 +243,19 @@
   });
 
   $effect(() => {
+    assetViewerManager.videoPlayer = videoPlayer;
+    return () => {
+      if (assetViewerManager.videoPlayer === videoPlayer) {
+        assetViewerManager.videoPlayer = undefined;
+      }
+    };
+  });
+
+  $effect(() => {
     // reactive on `assetFileUrl` changes
     if (videoPlayer && assetFileUrl) {
       hasFocused = false;
+      hasAppliedInitialTime = false;
       rebuildCount = 0;
       releaseSession();
       if (isHlsElement(videoPlayer)) {
@@ -275,6 +288,11 @@
   });
 
   const handleCanPlay = async (video: HTMLVideoElement) => {
+    if (initialTimeMs !== undefined && !hasAppliedInitialTime) {
+      hasAppliedInitialTime = true;
+      video.currentTime = initialTimeMs / 1000;
+    }
+
     try {
       if (!video.paused) {
         await video.play();

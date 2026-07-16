@@ -34,6 +34,14 @@ It can be found from the app bar when you access the detail view of a person.
 
 Face detection sends the generated preview image to the machine learning service for processing. The service checks if it has the relevant model downloaded and downloads it if not. The image is decoded, pre-processed and passed to the face detection model (with hardware acceleration if configured). The bounding boxes and scores outputted from this model are used to crop and preprocess the image once again to be passed to a facial recognition model (also accelerated if configured). The embeddings from the recognition model, together with the bounding boxes and scores from the face detection model, are then sent back to the server to be added to the database. The embeddings in particular are indexed so they can be searched quickly during facial recognition clustering.
 
+### Video face detection
+
+For video assets, Immich goes a step further: after first-frame face detection it samples frames throughout the full video at a configurable frame rate (default: 0.5 fps, i.e. one frame every 2 seconds, capped at 50 frames per video). Each detected face is stored with a `timestampMs` value recording where in the video it appeared.
+
+Because many of these frames will show the same person from slightly different angles, a deduplication step runs before facial recognition. Faces from the same video are clustered by embedding similarity (cosine distance); only the highest-quality representative from each cluster — chosen by largest normalised bounding-box area, a reliable proxy for face frontality — is kept. The duplicates are discarded, and only the survivors are forwarded to the facial recognition pipeline.
+
+This means that a person who appears throughout a long video contributes exactly one face record to the recognition stage, rather than dozens of near-identical records that could skew clustering results. You can trigger video face detection manually from Administration → Jobs, or via **Administration → Create Job → Video face detection**.
+
 ## How Facial Recognition Works
 
 The facial recognition algorithm we use is derived from [DBSCAN](https://www.youtube.com/watch?v=RDZUdRSDOok), a popular clustering algorithm. It essentially treats each detected face as a point in a graph and aims to group points that are close to each other.
@@ -92,3 +100,13 @@ The distance threshold described in How Facial Recognition Works. The default wo
 The core point threshold described in How Facial Recognition Works. This setting has a few implications. First, it takes effect immediately in that people with fewer faces than this are hidden from view. Secondly, it makes clustering more robust as it prevents loosely-related faces from being linked to each other by requiring a certain level of density.
 
 Increasing this setting is a good idea if you increase the recognition distance or reduce the minimum detection score. Setting it to 1 effectively disables the concept of core points, but can be an option if you prefer a more hands-on approach.
+
+### Video face detection frame rate
+
+How many frames per second are sampled when scanning a video for faces. The default is 0.5 (one frame every 2 seconds). Raising this value increases the chance of catching every appearance of a person, at the cost of processing time and storage for intermediate face records — set it to 1 for one frame every second, or higher for very thorough scans. The allowed range is 0.1–60 fps.
+
+After changing this setting you can re-run **Video Face Detection** from the Jobs page (or via the manual job trigger) to reprocess existing videos.
+
+### Video face detection max frames
+
+The maximum number of frames sampled per video, regardless of video length or the configured frame rate. The default is 50. Raise this for long videos scanned at a high frame rate so the scan isn't cut short. The allowed range is 1–10000 frames.

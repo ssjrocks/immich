@@ -21,8 +21,10 @@ import {
   PersonSearchDto,
   PersonStatisticsResponseDto,
   PersonUpdateDto,
+  PersonVideoOccurrenceResponseDto,
 } from 'src/dtos/person.dto';
 import {
+  AssetType,
   AssetVisibility,
   CacheControl,
   JobName,
@@ -158,6 +160,12 @@ export class PersonService extends BaseService {
   async getStatistics(auth: AuthDto, id: string): Promise<PersonStatisticsResponseDto> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
     return this.personRepository.getStatistics(id);
+  }
+
+  async getVideoOccurrences(auth: AuthDto, id: string): Promise<PersonVideoOccurrenceResponseDto[]> {
+    await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
+    const rows = await this.personRepository.getVideoOccurrences(id);
+    return rows.map((row) => ({ assetId: row.assetId, timestampsMs: row.timestampsMs }));
   }
 
   async getThumbnail(auth: AuthDto, id: string): Promise<ImmichFileResponse> {
@@ -378,7 +386,197 @@ export class PersonService extends BaseService {
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, facesRecognizedAt: new Date() });
 
+    if (asset.type === AssetType.Video) {
+      await this.jobRepository.queue({ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } });
+    }
+
     return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.AssetVideoDetectFacesQueueAll, queue: QueueName.FaceDetection })
+  async handleQueueVideoDetectFaces({ force }: JobOf<JobName.AssetVideoDetectFacesQueueAll>): Promise<JobStatus> {
+    const { machineLearning } = await this.getConfig({ withCache: false });
+    if (!isFacialRecognitionEnabled(machineLearning)) {
+      return JobStatus.Skipped;
+    }
+
+    let jobs: JobItem[] = [];
+    const assets = this.assetJobRepository.streamForVideoDetectFacesJob(force);
+    for await (const asset of assets) {
+      jobs.push({ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } });
+
+      if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
+        await this.jobRepository.queueAll(jobs);
+        jobs = [];
+      }
+    }
+
+    await this.jobRepository.queueAll(jobs);
+
+    return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.AssetVideoDetectFaces, queue: QueueName.FaceDetection })
+  async handleVideoDetectFaces({ id }: JobOf<JobName.AssetVideoDetectFaces>): Promise<JobStatus> {
+    const { machineLearning } = await this.getConfig({ withCache: true });
+    if (!isFacialRecognitionEnabled(machineLearning)) {
+      return JobStatus.Skipped;
+    }
+
+    const asset = await this.assetJobRepository.getForVideoDetectFacesJob(id);
+    if (!asset) {
+      return JobStatus.Failed;
+    }
+
+    if (asset.visibility === AssetVisibility.Hidden) {
+      return JobStatus.Skipped;
+    }
+
+    const { videoFrameRate, videoMaxFrames } = machineLearning.facialRecognition;
+    let tempDir: string | undefined;
+    try {
+      tempDir = await this.storageRepository.createTempDir('immich-video-faces-');
+      const { framePaths, effectiveFrameRate } = await this.mediaRepository.extractVideoFrames(
+        asset.originalPath,
+        tempDir,
+        videoFrameRate,
+        videoMaxFrames,
+      );
+
+      if (framePaths.length === 0) {
+        this.logger.debug(`No frames extracted for video ${id}`);
+        await this.assetRepository.upsertJobStatus({ assetId: id, videoFacesRecognizedAt: new Date() });
+        return JobStatus.Success;
+      }
+
+      const facesToAdd: (Insertable<AssetFaceTable> & { id: string })[] = [];
+      const embeddings: FaceSearchTable[] = [];
+
+      for (const [frameIndex, framePath] of framePaths.entries()) {
+        // Frame 0 is at 0 ms; each subsequent frame is 1/effectiveFrameRate seconds later.
+        const timestampMs = Math.round(frameIndex * (1000 / effectiveFrameRate));
+
+        const { imageHeight, imageWidth, faces } = await this.machineLearningRepository.detectFaces(
+          framePath,
+          machineLearning.facialRecognition,
+        );
+
+        for (const { boundingBox, embedding } of faces) {
+          const faceId = this.cryptoRepository.randomUUID();
+          facesToAdd.push({
+            id: faceId,
+            assetId: asset.id,
+            imageHeight,
+            imageWidth,
+            boundingBoxX1: boundingBox.x1,
+            boundingBoxY1: boundingBox.y1,
+            boundingBoxX2: boundingBox.x2,
+            boundingBoxY2: boundingBox.y2,
+            timestampMs,
+          });
+          embeddings.push({ faceId, embedding });
+        }
+      }
+
+      if (facesToAdd.length > 0) {
+        await this.personRepository.refreshFaces(facesToAdd, [], embeddings);
+        this.logger.log(`Detected ${facesToAdd.length} faces across ${framePaths.length} frames in video ${id}`);
+        await this.jobRepository.queue({ name: JobName.AssetVideoClusterFaces, data: { id } });
+      }
+    } finally {
+      if (tempDir) {
+        await this.storageRepository.unlinkDir(tempDir, { recursive: true, force: true });
+      }
+    }
+
+    await this.assetRepository.upsertJobStatus({ assetId: id, videoFacesRecognizedAt: new Date() });
+
+    return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.AssetVideoClusterFaces, queue: QueueName.FaceDetection })
+  async handleVideoClusterFaces({ id }: JobOf<JobName.AssetVideoClusterFaces>): Promise<JobStatus> {
+    const { machineLearning } = await this.getConfig({ withCache: true });
+    if (!isFacialRecognitionEnabled(machineLearning)) {
+      return JobStatus.Skipped;
+    }
+
+    const faces = await this.personRepository.getVideoFacesWithEmbeddings(id);
+
+    if (faces.length === 0) {
+      return JobStatus.Success;
+    }
+
+    if (faces.length === 1) {
+      await this.jobRepository.queueAll([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: faces[0].id } },
+      ]);
+      return JobStatus.Success;
+    }
+
+    const { maxDistance } = machineLearning.facialRecognition;
+
+    // Rank by normalised bounding-box area descending. Larger faces are generally
+    // more frontal and yield better embeddings, so they become cluster representatives.
+    const ranked = faces
+      .map((face) => ({
+        ...face,
+        area:
+          ((face.boundingBoxX2 - face.boundingBoxX1) * (face.boundingBoxY2 - face.boundingBoxY1)) /
+          (face.imageWidth * face.imageHeight || 1),
+        vec: JSON.parse(face.embedding) as number[],
+      }))
+      .sort((a, b) => b.area - a.area);
+
+    const processed = new Set<string>();
+    const faceIdsToRemove: string[] = [];
+    const survivors: string[] = [];
+
+    // Greedy clustering: each unvisited face becomes a cluster representative;
+    // all subsequent faces within maxDistance of it are marked as duplicates.
+    for (const face of ranked) {
+      if (processed.has(face.id)) {
+        continue;
+      }
+      processed.add(face.id);
+      survivors.push(face.id);
+
+      for (const other of ranked) {
+        if (processed.has(other.id)) {
+          continue;
+        }
+        if (this.cosineDistance(face.vec, other.vec) <= maxDistance) {
+          processed.add(other.id);
+          faceIdsToRemove.push(other.id);
+        }
+      }
+    }
+
+    if (faceIdsToRemove.length > 0) {
+      await this.personRepository.refreshFaces([], faceIdsToRemove, []);
+      this.logger.log(`Removed ${faceIdsToRemove.length} duplicate video faces in asset ${id}, kept ${survivors.length}`);
+    }
+
+    const jobs = survivors.map((faceId) => ({ name: JobName.FacialRecognition, data: { id: faceId } }) as const);
+    await this.jobRepository.queueAll([{ name: JobName.FacialRecognitionQueueAll, data: { force: false } }, ...jobs]);
+
+    return JobStatus.Success;
+  }
+
+  // Returns cosine distance (1 − cosine similarity). 0 = identical direction, 1 = orthogonal.
+  // Zero-magnitude vectors are treated as maximally distant to avoid division by zero.
+  private cosineDistance(a: number[], b: number[]): number {
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+    const denom = Math.sqrt(normA) * Math.sqrt(normB);
+    return denom === 0 ? 1 : 1 - dot / denom;
   }
 
   private iou(

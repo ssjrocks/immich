@@ -5,6 +5,7 @@ import _ from 'lodash';
 import { Duration } from 'luxon';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { Writable } from 'node:stream';
 import sharp from 'sharp';
 import { ORIENTATION_TO_SHARP_ROTATION } from 'src/constants';
@@ -282,6 +283,48 @@ export class MediaRepository {
           bitrate: this.parseInt(stream.bit_rate),
         })),
     };
+  }
+
+  /**
+   * Samples frames from a video at a given rate (frames per second) and writes them as JPEG files.
+   *
+   * If the requested rate would yield more frames than maxFrames allows, the rate is reduced to
+   * maxFrames / duration so that frames are spread evenly across the full video rather than being
+   * silently truncated at the start. The returned effectiveFrameRate reflects whichever rate was
+   * actually used, so callers don't need to duplicate this clamping logic to compute per-frame
+   * timestamps.
+   */
+  async extractVideoFrames(
+    videoPath: string,
+    outputDir: string,
+    frameRate: number,
+    maxFrames: number,
+  ): Promise<{ framePaths: string[]; effectiveFrameRate: number }> {
+    const outputPattern = path.join(outputDir, 'frame_%04d.jpg');
+
+    const { format } = await this.probe(videoPath);
+    const duration = format.duration ?? 0;
+    const naiveCount = duration > 0 ? Math.ceil(duration * frameRate) : 0;
+    const effectiveFrameRate = naiveCount > maxFrames ? maxFrames / duration : frameRate;
+
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg(videoPath)
+        .outputOptions([`-vf fps=${effectiveFrameRate}`, `-frames:v ${maxFrames}`, '-q:v 3'])
+        .output(outputPattern)
+        .on('error', (error: Error, _stdout: string | null, stderr: string | null) =>
+          reject(new Error(stderr || error.message)),
+        )
+        .on('end', () => resolve())
+        .run();
+    });
+
+    const files = await fs.readdir(outputDir);
+    const framePaths = files
+      .filter((file) => file.startsWith('frame_') && file.endsWith('.jpg'))
+      .sort()
+      .map((file) => path.join(outputDir, file));
+
+    return { framePaths, effectiveFrameRate };
   }
 
   /**

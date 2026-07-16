@@ -54,6 +54,7 @@
   import type { PageData } from './$types';
   import EditNameInput from './EditNameInput.svelte';
   import MergeFaceSelector from './MergeFaceSelector.svelte';
+  import PersonVideoAppearances from './PersonVideoAppearances.svelte';
   import UnmergeFaceSelector from './UnmergeFaceSelector.svelte';
 
   interface Props {
@@ -65,6 +66,7 @@
   let numberOfAssets = $derived(data.statistics.assets);
   let person = $derived(data.person);
   let thumbnailData = $derived(getPeopleThumbnailUrl(person));
+  let videoOccurrences = $derived(data.videoOccurrences);
 
   let timelineManager = $state<TimelineManager>() as TimelineManager;
   const options = $derived({ visibility: AssetVisibility.Timeline, personId: data.person.id });
@@ -451,6 +453,7 @@
             </div>
           {/if}
         </div>
+        <PersonVideoAppearances {person} occurrences={videoOccurrences} />
       {/if}
     </Timeline>
   {/key}

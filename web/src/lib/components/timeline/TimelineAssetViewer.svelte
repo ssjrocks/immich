@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { page } from '$app/state';
   import type { Action } from '$lib/components/asset-viewer/actions/action';
   import type { AssetCursor } from '$lib/components/asset-viewer/AssetViewer.svelte';
-  import { AssetAction } from '$lib/constants';
+  import { AssetAction, QueryParameter } from '$lib/constants';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { assetCacheManager } from '$lib/managers/AssetCacheManager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -66,6 +67,15 @@
     current: assetViewerManager.asset!,
     previousAsset: undefined,
     nextAsset: undefined,
+  });
+
+  const initialTimeMs = $derived.by(() => {
+    const raw = page.url.searchParams.get(QueryParameter.TIME_MS);
+    if (!raw) {
+      return undefined;
+    }
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
   });
 
   const loadCloseAssets = async (currentAsset: AssetResponseDto) => {
@@ -241,6 +251,7 @@
     {isShared}
     {album}
     {person}
+    {initialTimeMs}
     onAssetChange={(asset) => {
       timelineManager?.upsertAssets([toTimelineAsset(asset)]);
     }}

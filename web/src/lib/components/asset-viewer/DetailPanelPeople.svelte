@@ -6,10 +6,10 @@
   import { faceManager } from '$lib/stores/face.svelte';
   import { locale } from '$lib/stores/preferences.store';
   import { getPeopleThumbnailUrl } from '$lib/utils';
-  import { type AssetResponseDto } from '@immich/sdk';
+  import { AssetTypeEnum, type AssetResponseDto } from '@immich/sdk';
   import { IconButton, Text } from '@immich/ui';
   import { mdiEye, mdiEyeOff, mdiPencil, mdiPlus } from '@mdi/js';
-  import { DateTime } from 'luxon';
+  import { DateTime, Duration } from 'luxon';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -19,6 +19,25 @@
   };
 
   const { asset, isOwner, previousRoute }: Props = $props();
+
+  const isVideo = $derived(asset.type === AssetTypeEnum.Video);
+  let expandedPersonId = $state<string | undefined>();
+
+  const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
+
+  const getAppearanceTimestamps = (personFaces: { timestampMs?: number }[]) =>
+    [...new Set(personFaces.map((face) => face.timestampMs).filter((ms): ms is number => ms != undefined))].sort(
+      (a, b) => a - b,
+    );
+
+  const toggleAppearances = (personId: string) => {
+    expandedPersonId = expandedPersonId === personId ? undefined : personId;
+  };
+
+  const seekToAppearance = (timestampMs: number) => {
+    assetViewerManager.seekVideoTo(timestampMs);
+    expandedPersonId = undefined;
+  };
 
   const people = $derived(Array.from(faceManager.people));
   const visiblePeople = $derived(
@@ -100,14 +119,9 @@
       {#each visiblePeople as person (person.id)}
         {@const personFaces = faceManager.facesByPersonId.get(person.id) ?? []}
         {@const isHighlighted = personFaces.some((f) => assetViewerManager.highlightedFaces.some((b) => b.id === f.id))}
-        <a
-          class="group outline-none"
-          href={Route.viewPerson(person, { previousRoute })}
-          onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
-          onblur={() => assetViewerManager.clearHighlightedFaces()}
-          onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
-          onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
-        >
+        {@const appearances = getAppearanceTimestamps(personFaces)}
+
+        {#snippet personCard()}
           <ImageThumbnail
             curve
             shadow
@@ -125,7 +139,50 @@
               {person.formattedAge}
             </p>
           {/if}
-        </a>
+        {/snippet}
+
+        <div class="relative">
+          {#if isVideo && appearances.length > 0}
+            <button
+              type="button"
+              class="group w-full text-left outline-none"
+              onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
+              onblur={() => assetViewerManager.clearHighlightedFaces()}
+              onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
+              onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
+              onclick={() => toggleAppearances(person.id)}
+            >
+              {@render personCard()}
+            </button>
+
+            {#if expandedPersonId === person.id}
+              <div
+                class="absolute top-full left-0 z-10 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              >
+                {#each appearances as timestampMs (timestampMs)}
+                  <button
+                    type="button"
+                    class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                    onclick={() => seekToAppearance(timestampMs)}
+                  >
+                    {formatTimestamp(timestampMs)}
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          {:else}
+            <a
+              class="group outline-none"
+              href={Route.viewPerson(person, { previousRoute })}
+              onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
+              onblur={() => assetViewerManager.clearHighlightedFaces()}
+              onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
+              onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
+            >
+              {@render personCard()}
+            </a>
+          {/if}
+        </div>
       {/each}
     </div>
   </section>

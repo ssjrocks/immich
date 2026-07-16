@@ -125,6 +125,47 @@ export class PersonRepository {
       .stream();
   }
 
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getVideoFacesWithEmbeddings(assetId: string) {
+    return this.db
+      .selectFrom('asset_face')
+      .innerJoin('face_search', 'face_search.faceId', 'asset_face.id')
+      .select([
+        'asset_face.id',
+        'asset_face.imageWidth',
+        'asset_face.imageHeight',
+        'asset_face.boundingBoxX1',
+        'asset_face.boundingBoxY1',
+        'asset_face.boundingBoxX2',
+        'asset_face.boundingBoxY2',
+        'asset_face.timestampMs',
+        'face_search.embedding',
+      ])
+      .where('asset_face.assetId', '=', assetId)
+      .where('asset_face.timestampMs', 'is not', null)
+      .where('asset_face.sourceType', '=', SourceType.MachineLearning)
+      .where('asset_face.deletedAt', 'is', null)
+      .execute();
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getVideoOccurrences(personId: string) {
+    return this.db
+      .selectFrom('asset_face')
+      .select([
+        'asset_face.assetId',
+        () => sql<number[]>`array_agg("asset_face"."timestampMs" order by "asset_face"."timestampMs" asc)`.as(
+          'timestampsMs',
+        ),
+      ])
+      .where('asset_face.personId', '=', personId)
+      .where('asset_face.timestampMs', 'is not', null)
+      .where('asset_face.deletedAt', 'is', null)
+      .groupBy('asset_face.assetId')
+      .orderBy((eb) => eb.fn.min('asset_face.timestampMs'), 'asc')
+      .execute();
+  }
+
   getAll(options: GetAllPeopleOptions = {}) {
     return this.db
       .selectFrom('person')

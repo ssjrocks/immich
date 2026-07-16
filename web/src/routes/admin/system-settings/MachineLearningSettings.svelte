@@ -251,6 +251,36 @@
             isEdited={configToEdit.machineLearning.facialRecognition.minFaces !==
               config.machineLearning.facialRecognition.minFaces}
           />
+
+          <SettingInputField
+            inputType={SettingInputFieldType.NUMBER}
+            label={$t('admin.machine_learning_video_face_detection_frame_rate')}
+            description={$t('admin.machine_learning_video_face_detection_frame_rate_description')}
+            bind:value={configToEdit.machineLearning.facialRecognition.videoFrameRate}
+            step="0.1"
+            min={0.1}
+            max={60}
+            disabled={disabled ||
+              !configToEdit.machineLearning.enabled ||
+              !configToEdit.machineLearning.facialRecognition.enabled}
+            isEdited={configToEdit.machineLearning.facialRecognition.videoFrameRate !==
+              config.machineLearning.facialRecognition.videoFrameRate}
+          />
+
+          <SettingInputField
+            inputType={SettingInputFieldType.NUMBER}
+            label={$t('admin.machine_learning_video_face_detection_max_frames')}
+            description={$t('admin.machine_learning_video_face_detection_max_frames_description')}
+            bind:value={configToEdit.machineLearning.facialRecognition.videoMaxFrames}
+            step="1"
+            min={1}
+            max={10000}
+            disabled={disabled ||
+              !configToEdit.machineLearning.enabled ||
+              !configToEdit.machineLearning.facialRecognition.enabled}
+            isEdited={configToEdit.machineLearning.facialRecognition.videoMaxFrames !==
+              config.machineLearning.facialRecognition.videoMaxFrames}
+          />
         </div>
       </SettingAccordion>
 

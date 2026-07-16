@@ -41,6 +41,7 @@ class AssetViewerManager extends BaseEventManager<Events> {
   #animationFrameId: number | null = null;
 
   imgRef = $state<HTMLImageElement | undefined>();
+  videoPlayer = $state<HTMLVideoElement | undefined>();
   imageLoaderStatus = $state<ImageLoaderStatus | undefined>();
   #isImageLoading = $derived.by(() => {
     const quality = this.imageLoaderStatus?.quality;
@@ -244,6 +245,17 @@ class AssetViewerManager extends BaseEventManager<Events> {
 
   hideHiddenPeople() {
     this.#showingHiddenPeople = false;
+  }
+
+  seekVideoTo(ms: number) {
+    const video = this.videoPlayer;
+    if (!video) {
+      return;
+    }
+    video.currentTime = ms / 1000;
+    if (video.paused) {
+      void video.play().catch(() => {});
+    }
   }
 
   setAsset(asset: AssetResponseDto) {

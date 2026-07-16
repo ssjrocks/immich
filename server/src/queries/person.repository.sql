@@ -12,6 +12,45 @@ delete from "person"
 where
   "person"."id" in ($1)
 
+-- PersonRepository.getVideoFacesWithEmbeddings
+select
+  "asset_face"."id",
+  "asset_face"."imageWidth",
+  "asset_face"."imageHeight",
+  "asset_face"."boundingBoxX1",
+  "asset_face"."boundingBoxY1",
+  "asset_face"."boundingBoxX2",
+  "asset_face"."boundingBoxY2",
+  "asset_face"."timestampMs",
+  "face_search"."embedding"
+from
+  "asset_face"
+  inner join "face_search" on "face_search"."faceId" = "asset_face"."id"
+where
+  "asset_face"."assetId" = $1
+  and "asset_face"."timestampMs" is not null
+  and "asset_face"."sourceType" = $2
+  and "asset_face"."deletedAt" is null
+
+-- PersonRepository.getVideoOccurrences
+select
+  "asset_face"."assetId",
+  array_agg(
+    "asset_face"."timestampMs"
+    order by
+      "asset_face"."timestampMs" asc
+  ) as "timestampsMs"
+from
+  "asset_face"
+where
+  "asset_face"."personId" = $1
+  and "asset_face"."timestampMs" is not null
+  and "asset_face"."deletedAt" is null
+group by
+  "asset_face"."assetId"
+order by
+  min("asset_face"."timestampMs") asc
+
 -- PersonRepository.getFileSamples
 select
   "id",

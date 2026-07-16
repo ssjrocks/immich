@@ -1177,6 +1177,8 @@ export type AssetFaceResponseDto = {
     imageWidth: number;
     person: (PersonResponseDto) | null;
     sourceType?: SourceType;
+    /** Milliseconds from video start; absent for photos */
+    timestampMs?: number;
 };
 export type AssetFaceCreateDto = {
     /** Asset ID */
@@ -1521,6 +1523,12 @@ export type AssetFaceUpdateDto = {
 export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
+};
+export type PersonVideoOccurrenceResponseDto = {
+    /** Asset ID of the video */
+    assetId: string;
+    /** Timestamps (ms from video start) where this person appears */
+    timestampsMs: number[];
 };
 export type PluginMethodResponseDto = {
     /** Description */
@@ -2462,6 +2470,10 @@ export type FacialRecognitionConfig = {
     minScore: number;
     /** Name of the model to use */
     modelName: string;
+    /** Frames per second to sample when detecting faces in videos */
+    videoFrameRate: number;
+    /** Maximum number of frames to sample per video for face detection */
+    videoMaxFrames: number;
 };
 export type OcrConfig = {
     /** Whether the task is enabled */
@@ -5515,6 +5527,19 @@ export function getPersonThumbnail({ id }: {
     }));
 }
 /**
+ * Get video occurrences for a person
+ */
+export function getPersonVideoOccurrences({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PersonVideoOccurrenceResponseDto[];
+    }>(`/people/${encodeURIComponent(id)}/video-occurrences`, {
+        ...opts
+    }));
+}
+/**
  * List all plugins
  */
 export function searchPlugins({ description, enabled, id, name, title, version }: {
@@ -7376,7 +7401,8 @@ export enum ManualJobName {
     IntegrityChecksumMismatchRefresh = "integrity-checksum-mismatch-refresh",
     IntegrityMissingFilesDeleteAll = "integrity-missing-files-delete-all",
     IntegrityUntrackedFilesDeleteAll = "integrity-untracked-files-delete-all",
-    IntegrityChecksumMismatchDeleteAll = "integrity-checksum-mismatch-delete-all"
+    IntegrityChecksumMismatchDeleteAll = "integrity-checksum-mismatch-delete-all",
+    VideoFaceDetection = "video-face-detection"
 }
 export enum QueueName {
     ThumbnailGeneration = "thumbnailGeneration",
@@ -7438,6 +7464,9 @@ export enum JobName {
     AssetDeleteCheck = "AssetDeleteCheck",
     AssetDetectFacesQueueAll = "AssetDetectFacesQueueAll",
     AssetDetectFaces = "AssetDetectFaces",
+    AssetVideoDetectFacesQueueAll = "AssetVideoDetectFacesQueueAll",
+    AssetVideoDetectFaces = "AssetVideoDetectFaces",
+    AssetVideoClusterFaces = "AssetVideoClusterFaces",
     AssetDetectDuplicatesQueueAll = "AssetDetectDuplicatesQueueAll",
     AssetDetectDuplicates = "AssetDetectDuplicates",
     AssetEditThumbnailGeneration = "AssetEditThumbnailGeneration",

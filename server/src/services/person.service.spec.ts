@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { mapFaces, mapPerson } from 'src/dtos/person.dto';
-import { AssetFileType, CacheControl, JobName, JobStatus, SourceType, SystemMetadataKey } from 'src/enum';
+import { AssetFileType, AssetType, AssetVisibility, CacheControl, JobName, JobStatus, SourceType, SystemMetadataKey } from 'src/enum';
 import { FaceSearchResult } from 'src/repositories/search.repository';
 import { PersonService } from 'src/services/person.service';
 import { ImmichFileResponse } from 'src/utils/file';
@@ -18,6 +18,7 @@ import {
   getForAssetFace,
   getForDetectedFaces,
   getForFacialRecognitionJob,
+  getForVideoDetectFacesJob,
 } from 'test/mappers';
 import { newDate, newUuid } from 'test/small.factory';
 import { makeStream, newTestService, ServiceMocks } from 'test/utils';
@@ -977,6 +978,247 @@ describe(PersonService.name, () => {
       expect(mocks.person.reassignFace).not.toHaveBeenCalled();
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
+
+    it('should queue video face detection for video assets', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.machineLearning.detectFaces.mockResolvedValue({ imageHeight: 500, imageWidth: 400, faces: [] });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } });
+    });
+
+    it('should not queue video face detection for image assets', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Image }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.machineLearning.detectFaces.mockResolvedValue({ imageHeight: 500, imageWidth: 400, faces: [] });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      expect(mocks.job.queue).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: JobName.AssetVideoDetectFaces }),
+      );
+    });
+  });
+
+  describe('handleQueueVideoDetectFaces', () => {
+    it('should skip if facial recognition is disabled', async () => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
+
+      await expect(sut.handleQueueVideoDetectFaces({})).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.assetJob.streamForVideoDetectFacesJob).not.toHaveBeenCalled();
+    });
+
+    it('should queue video assets that need processing', async () => {
+      const asset = AssetFactory.create();
+      mocks.assetJob.streamForVideoDetectFacesJob.mockReturnValue(makeStream([asset]));
+
+      await sut.handleQueueVideoDetectFaces({ force: false });
+
+      expect(mocks.assetJob.streamForVideoDetectFacesJob).toHaveBeenCalledWith(false);
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([{ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } }]);
+    });
+  });
+
+  describe('handleVideoDetectFaces', () => {
+    it('should skip if facial recognition is disabled', async () => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
+
+      await expect(sut.handleVideoDetectFaces({ id: 'foo' })).resolves.toBe(JobStatus.Skipped);
+    });
+
+    it('should fail if asset not found', async () => {
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(undefined);
+
+      await expect(sut.handleVideoDetectFaces({ id: 'foo' })).resolves.toBe(JobStatus.Failed);
+    });
+
+    it('should skip hidden assets', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video, visibility: AssetVisibility.Hidden }).build();
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.media.extractVideoFrames).not.toHaveBeenCalled();
+    });
+
+    it('should succeed with no frames extracted', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({ framePaths: [], effectiveFrameRate: 0.5 });
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.storage.unlinkDir).toHaveBeenCalledWith('/tmp/test-frames', { recursive: true, force: true });
+      expect(mocks.asset.upsertJobStatus).toHaveBeenCalledWith({
+        assetId: asset.id,
+        videoFacesRecognizedAt: expect.any(Date),
+      });
+    });
+
+    it('should detect faces across frames and queue clustering', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      const face = AssetFaceFactory.create({ assetId: asset.id });
+
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({
+        framePaths: ['/tmp/test-frames/frame_0001.jpg', '/tmp/test-frames/frame_0002.jpg'],
+        effectiveFrameRate: 0.5,
+      });
+      mocks.machineLearning.detectFaces
+        .mockResolvedValueOnce(getAsDetectedFace(face))
+        .mockResolvedValueOnce({ imageHeight: 500, imageWidth: 400, faces: [] });
+      mocks.crypto.randomUUID.mockReturnValue(face.id);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.machineLearning.detectFaces).toHaveBeenCalledTimes(2);
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith(
+        [expect.objectContaining({ assetId: asset.id, timestampMs: 0 })],
+        [],
+        [{ faceId: face.id, embedding: '[1, 2, 3, 4]' }],
+      );
+      expect(mocks.job.queue).toHaveBeenCalledWith({ name: JobName.AssetVideoClusterFaces, data: { id: asset.id } });
+      expect(mocks.storage.unlinkDir).toHaveBeenCalledWith('/tmp/test-frames', { recursive: true, force: true });
+    });
+
+    it('should set correct timestampMs per frame using the effective frame rate', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({
+        framePaths: [
+          '/tmp/test-frames/frame_0001.jpg',
+          '/tmp/test-frames/frame_0002.jpg',
+          '/tmp/test-frames/frame_0003.jpg',
+        ],
+        effectiveFrameRate: 1 / 3,
+      });
+      const face = AssetFaceFactory.create({ assetId: asset.id });
+      mocks.machineLearning.detectFaces.mockResolvedValue(getAsDetectedFace(face));
+      mocks.crypto.randomUUID.mockReturnValue(newUuid());
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await sut.handleVideoDetectFaces({ id: asset.id });
+
+      const addedFaces = mocks.person.refreshFaces.mock.calls[0][0] as Array<{ timestampMs: number }>;
+      expect(addedFaces[0].timestampMs).toBe(0);
+      expect(addedFaces[1].timestampMs).toBe(3000);
+      expect(addedFaces[2].timestampMs).toBe(6000);
+    });
+
+    it('should clean up temp dir even if detection fails', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({
+        framePaths: ['/tmp/test-frames/frame_0001.jpg'],
+        effectiveFrameRate: 0.5,
+      });
+      mocks.machineLearning.detectFaces.mockRejectedValue(new Error('ML error'));
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).rejects.toThrow('ML error');
+      expect(mocks.storage.unlinkDir).toHaveBeenCalledWith('/tmp/test-frames', { recursive: true, force: true });
+    });
+  });
+
+  describe('handleVideoClusterFaces', () => {
+    const makeFace = (id: string, x1: number, y1: number, x2: number, y2: number, embedding: number[]) => ({
+      id,
+      imageWidth: 100,
+      imageHeight: 100,
+      boundingBoxX1: x1,
+      boundingBoxY1: y1,
+      boundingBoxX2: x2,
+      boundingBoxY2: y2,
+      timestampMs: 0,
+      embedding: JSON.stringify(embedding),
+    });
+
+    it('should skip if facial recognition is disabled', async () => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.person.getVideoFacesWithEmbeddings).not.toHaveBeenCalled();
+    });
+
+    it('should succeed with no faces', async () => {
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([]);
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+      expect(mocks.person.refreshFaces).not.toHaveBeenCalled();
+      expect(mocks.job.queueAll).not.toHaveBeenCalled();
+    });
+
+    it('should queue recognition for a single face without clustering', async () => {
+      const face = makeFace('face-1', 10, 10, 50, 50, [1, 0, 0]);
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([face]);
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+      expect(mocks.person.refreshFaces).not.toHaveBeenCalled();
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: 'face-1' } },
+      ]);
+    });
+
+    it('should keep distinct faces and remove duplicates', async () => {
+      // face-1 and face-2 are very similar (same person), face-3 is different
+      const faceA1 = makeFace('face-1', 10, 10, 60, 60, [1, 0, 0]); // area 0.25, person A
+      const faceA2 = makeFace('face-2', 10, 10, 40, 40, [0.99, 0.01, 0]); // area 0.09, person A (duplicate)
+      const faceB = makeFace('face-3', 10, 10, 50, 50, [0, 1, 0]); // area 0.16, person B
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceA1, faceA2, faceB]);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      // face-2 is the duplicate — same cluster as face-1 (largest area representative)
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], ['face-2'], []);
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: 'face-1' } },
+        { name: JobName.FacialRecognition, data: { id: 'face-3' } },
+      ]);
+    });
+
+    it('should keep all faces when all are distinct', async () => {
+      const faceA = makeFace('face-1', 0, 0, 50, 50, [1, 0, 0]);
+      const faceB = makeFace('face-2', 0, 0, 50, 50, [0, 1, 0]);
+      const faceC = makeFace('face-3', 0, 0, 50, 50, [0, 0, 1]);
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceA, faceB, faceC]);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).not.toHaveBeenCalled();
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: 'face-1' } },
+        { name: JobName.FacialRecognition, data: { id: 'face-2' } },
+        { name: JobName.FacialRecognition, data: { id: 'face-3' } },
+      ]);
+    });
+
+    it('should pick the largest face as cluster representative', async () => {
+      const faceSmall = makeFace('face-1', 10, 10, 20, 20, [1, 0, 0]); // area 0.01
+      const faceLarge = makeFace('face-2', 10, 10, 80, 80, [0.99, 0.01, 0]); // area 0.49, same cluster
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceSmall, faceLarge]);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], ['face-1'], []);
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: 'face-2' } },
+      ]);
+    });
   });
 
   describe('handleRecognizeFaces', () => {
@@ -1337,6 +1579,37 @@ describe(PersonService.name, () => {
       mocks.person.getById.mockResolvedValue(person);
       await expect(sut.getStatistics(auth, person.id)).rejects.toBeInstanceOf(BadRequestException);
       expect(mocks.access.person.checkOwnerAccess).toHaveBeenCalledWith(auth.user.id, new Set([person.id]));
+    });
+  });
+
+  describe('getVideoOccurrences', () => {
+    it('should require person read access', async () => {
+      const auth = AuthFactory.create();
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).rejects.toBeInstanceOf(BadRequestException);
+      expect(mocks.access.person.checkOwnerAccess).toHaveBeenCalledWith(auth.user.id, new Set(['person-1']));
+    });
+
+    it('should return video occurrences for a person', async () => {
+      const auth = AuthFactory.create();
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      mocks.person.getVideoOccurrences.mockResolvedValue([
+        { assetId: 'asset-1', timestampsMs: [1000, 5000] },
+        { assetId: 'asset-2', timestampsMs: [2000] },
+      ]);
+
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
+        { assetId: 'asset-1', timestampsMs: [1000, 5000] },
+        { assetId: 'asset-2', timestampsMs: [2000] },
+      ]);
+      expect(mocks.person.getVideoOccurrences).toHaveBeenCalledWith('person-1');
+    });
+
+    it('should return empty list when person has no video faces', async () => {
+      const auth = AuthFactory.create();
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      mocks.person.getVideoOccurrences.mockResolvedValue([]);
+
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([]);
     });
   });
 
