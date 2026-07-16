@@ -5,6 +5,7 @@ import _ from 'lodash';
 import { Duration } from 'luxon';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { Writable } from 'node:stream';
 import sharp from 'sharp';
@@ -325,6 +326,32 @@ export class MediaRepository {
       .map((file) => path.join(outputDir, file));
 
     return { framePaths, effectiveFrameRate };
+  }
+
+  /**
+   * Extracts a single frame from a video at the given timestamp. Used to generate a correct
+   * person thumbnail crop for faces detected on a sampled frame partway through a video, rather
+   * than always cropping from the asset's static first-frame preview image.
+   */
+  async extractVideoFrameAt(videoPath: string, timestampMs: number): Promise<Buffer> {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'immich-frame-'));
+    try {
+      const outputPath = path.join(tempDir, 'frame.jpg');
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(videoPath)
+          .seekInput(timestampMs / 1000)
+          .outputOptions(['-frames:v 1', '-q:v 3'])
+          .output(outputPath)
+          .on('error', (error: Error, _stdout: string | null, stderr: string | null) =>
+            reject(new Error(stderr || error.message)),
+          )
+          .on('end', () => resolve())
+          .run();
+      });
+      return await fs.readFile(outputPath);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
   }
 
   /**

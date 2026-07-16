@@ -50,15 +50,17 @@ moment someone appears.
 - Updated the "Face detection" job description on the admin Job Queues page to
   describe the new video behavior.
 
-## Known issues
+## Fixed
 
-- **Person thumbnails for video-only faces can show the wrong crop.** The
-  existing person-thumbnail generation path crops a face's bounding box from the
-  asset's single static preview image — for a face detected on a *later*
-  sampled frame, that bounding box doesn't correspond to the preview image's
-  content, so the generated thumbnail can show an unrelated part of the scene
-  even though the underlying detection (and the timestamp it links to) is
-  correct. Not yet fixed.
+- **Person thumbnails for video-only faces showed the wrong crop.** The
+  existing person-thumbnail generation path always cropped a face's bounding
+  box from the asset's single static preview (first-frame) image — for a face
+  detected on a *later* sampled frame, that bounding box didn't correspond to
+  the preview image's content, so the generated thumbnail could show an
+  unrelated part of the scene even though the underlying detection (and the
+  timestamp it links to) was correct. Fixed by extracting the actual frame at
+  that face's timestamp (`MediaRepository.extractVideoFrameAt`) instead of
+  reusing the first-frame preview whenever a face has a `timestampMs`.
 
 ## Configuration reference
 

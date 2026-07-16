@@ -417,14 +417,21 @@ export class MediaService extends BaseService {
       return JobStatus.Failed;
     }
 
-    const { ownerId, x1, y1, x2, y2, oldWidth, oldHeight, exifOrientation, previewPath, originalPath } = data;
+    const { ownerId, x1, y1, x2, y2, oldWidth, oldHeight, exifOrientation, previewPath, originalPath, timestampMs } =
+      data;
     let inputImage: string | Buffer;
     if (data.type === AssetType.Video) {
-      if (!previewPath) {
+      if (timestampMs != null) {
+        // This face was detected on a frame sampled partway through the video, not the first
+        // frame — the bounding box only makes sense against that same frame, so it must be
+        // re-extracted rather than cropped from the static first-frame preview image.
+        inputImage = await this.mediaRepository.extractVideoFrameAt(originalPath, timestampMs);
+      } else if (!previewPath) {
         this.logger.error(`Could not generate person thumbnail for video ${id}: missing preview path`);
         return JobStatus.Failed;
+      } else {
+        inputImage = previewPath;
       }
-      inputImage = previewPath;
     } else if (image.extractEmbedded && mimeTypes.isRaw(originalPath)) {
       const extracted = await this.extractImage(originalPath, image.preview.size);
       inputImage = extracted ? extracted.buffer : originalPath;

@@ -1622,6 +1622,30 @@ describe(MediaService.name, () => {
       expect(mocks.person.update).toHaveBeenCalledWith({ id: person.id, thumbnailPath: expect.any(String) });
     });
 
+    it('should extract the frame at the timestamp for a face detected partway through a video', async () => {
+      const person = PersonFactory.create();
+      const frame = Buffer.from('frame-bytes');
+
+      mocks.person.getDataForThumbnailGenerationJob.mockResolvedValue(personThumbnailStub.videoThumbnailMidVideo);
+      mocks.media.generateThumbnail.mockResolvedValue();
+      mocks.media.extractVideoFrameAt.mockResolvedValue(frame);
+      const data = Buffer.from('');
+      const info = { width: 1000, height: 1000 } as OutputInfo;
+      mocks.media.decodeImage.mockResolvedValue({ data, info });
+
+      await expect(sut.handleGeneratePersonThumbnail({ id: person.id })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.media.extractVideoFrameAt).toHaveBeenCalledWith(
+        personThumbnailStub.videoThumbnailMidVideo.originalPath,
+        personThumbnailStub.videoThumbnailMidVideo.timestampMs,
+      );
+      expect(mocks.media.decodeImage).toHaveBeenCalledWith(frame, {
+        colorspace: Colorspace.P3,
+        orientation: 1,
+        processInvalidImages: false,
+      });
+    });
+
     it('should generate a thumbnail without going negative', async () => {
       const person = PersonFactory.create();
 
