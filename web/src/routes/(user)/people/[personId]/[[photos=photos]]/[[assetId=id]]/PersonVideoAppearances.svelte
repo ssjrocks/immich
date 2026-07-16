@@ -2,8 +2,8 @@
   import { goto } from '$app/navigation';
   import { QueryParameter } from '$lib/constants';
   import { Route } from '$lib/route';
-  import { getAssetPlaybackUrl } from '$lib/utils';
-  import type { PersonResponseDto, PersonVideoOccurrenceResponseDto } from '@immich/sdk';
+  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
+  import { AssetMediaSize, type PersonResponseDto, type PersonVideoOccurrenceResponseDto } from '@immich/sdk';
   import { Duration } from 'luxon';
   import { t } from 'svelte-i18n';
 
@@ -19,11 +19,7 @@
 
   let hovered = $state<{ assetId: string; timestampMs: number } | undefined>();
   let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
-  let thumbnailVideo: HTMLVideoElement | undefined = $state();
   let clipVideo: HTMLVideoElement | undefined = $state();
-  // The clip only starts loading once the thumbnail is ready, so a hover never opens more
-  // than one concurrent video stream at a time -- halves the peak simultaneous connections.
-  let clipReady = $state(false);
 
   const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
 
@@ -37,7 +33,6 @@
   const showPreview = (assetId: string, timestampMs: number) => {
     clearTimeout(hoverTimeout);
     hoverTimeout = setTimeout(() => {
-      clipReady = false;
       hovered = { assetId, timestampMs };
     }, HOVER_INTENT_DELAY_MS);
   };
@@ -45,13 +40,12 @@
   const hidePreview = () => {
     clearTimeout(hoverTimeout);
     hovered = undefined;
-    clipReady = false;
   };
 
-  // Mirrors the cleanup pattern in VideoThumbnail.svelte: removing a <video> from the
-  // DOM alone doesn't reliably release its network/decoder resources, so each preview
-  // must be explicitly paused and unloaded before the next one replaces it -- otherwise
-  // repeated hovers accumulate live video loads and can bog down the whole page.
+  // Mirrors the cleanup pattern in VideoThumbnail.svelte: removing a <video> from the DOM
+  // alone doesn't reliably release its network/decoder resources, so each preview must be
+  // explicitly paused and unloaded before the next one replaces it -- otherwise repeated
+  // hovers accumulate live video loads and can bog down the whole page.
   const releaseVideo = (video: HTMLVideoElement | undefined) => {
     if (!video) {
       return;
@@ -64,16 +58,8 @@
   $effect(() => {
     // re-run (and clean up the previous run) whenever the hovered chip changes
     hovered;
-    return () => {
-      releaseVideo(thumbnailVideo);
-      releaseVideo(clipVideo);
-    };
+    return () => releaseVideo(clipVideo);
   });
-
-  const onThumbnailLoaded = (video: HTMLVideoElement, timestampMs: number) => {
-    video.currentTime = timestampMs / 1000;
-    clipReady = true;
-  };
 
   const onClipLoaded = (video: HTMLVideoElement, timestampMs: number) => {
     video.currentTime = Math.max(0, timestampMs / 1000 - PREVIEW_PADDING_SECONDS);
@@ -90,57 +76,50 @@
 {#if occurrences.length > 0}
   <section class="w-fit max-w-64 px-4 pb-4 sm:max-w-96 sm:px-6">
     <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{$t('appears_in_videos')}</p>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-3">
       {#each occurrences as occurrence (occurrence.assetId)}
-        <div class="flex flex-wrap items-center gap-1">
-          {#each occurrence.timestampsMs as timestampMs (timestampMs)}
-            <div class="relative inline-block">
-              <button
-                type="button"
-                class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-                onclick={() => openAppearance(occurrence.assetId, timestampMs)}
-                onfocus={() => showPreview(occurrence.assetId, timestampMs)}
-                onblur={hidePreview}
-                onpointerenter={() => showPreview(occurrence.assetId, timestampMs)}
-                onpointerleave={hidePreview}
-              >
-                {formatTimestamp(timestampMs)}
-              </button>
-
-              {#if hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
-                <div
-                  class="absolute top-full left-0 z-10 mt-1 flex gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
-                  style="width: 57rem;"
+        <div class="flex items-center gap-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+          <img
+            src={getAssetMediaUrl({ id: occurrence.assetId, size: AssetMediaSize.Thumbnail })}
+            alt=""
+            class="h-16 w-24 shrink-0 rounded object-cover"
+          />
+          <div class="flex flex-wrap items-center gap-1">
+            {#each occurrence.timestampsMs as timestampMs (timestampMs)}
+              <div class="relative inline-block">
+                <button
+                  type="button"
+                  class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                  onclick={() => openAppearance(occurrence.assetId, timestampMs)}
+                  onfocus={() => showPreview(occurrence.assetId, timestampMs)}
+                  onblur={hidePreview}
+                  onpointerenter={() => showPreview(occurrence.assetId, timestampMs)}
+                  onpointerleave={hidePreview}
                 >
-                  <video
-                    bind:this={thumbnailVideo}
-                    muted
-                    preload="metadata"
-                    playsinline
-                    class="shrink-0 rounded object-cover"
-                    style="width: 28rem; height: 16rem;"
-                    src={getAssetPlaybackUrl({ id: occurrence.assetId })}
-                    onloadedmetadata={(event) => onThumbnailLoaded(event.currentTarget, timestampMs)}
-                  ></video>
-                  {#if clipReady}
+                  {formatTimestamp(timestampMs)}
+                </button>
+
+                {#if hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
+                  <div
+                    class="absolute top-full left-0 z-10 mt-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                    style="width: 28rem;"
+                  >
                     <video
                       bind:this={clipVideo}
                       muted
                       preload="metadata"
                       playsinline
-                      class="shrink-0 rounded object-cover"
+                      class="rounded object-cover"
                       style="width: 28rem; height: 16rem;"
                       src={getAssetPlaybackUrl({ id: occurrence.assetId })}
                       onloadedmetadata={(event) => onClipLoaded(event.currentTarget, timestampMs)}
                       ontimeupdate={(event) => onClipTimeUpdate(event.currentTarget, timestampMs)}
                     ></video>
-                  {:else}
-                    <div class="shrink-0 rounded bg-gray-100 dark:bg-gray-700" style="width: 28rem; height: 16rem;"></div>
-                  {/if}
-                </div>
-              {/if}
-            </div>
-          {/each}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
         </div>
       {/each}
     </div>
