@@ -814,7 +814,6 @@
   "custom_date": "Benutzerdefiniertes Datum",
   "custom_locale": "Benutzerdefiniertes Gebietsschema",
   "custom_locale_description": "Datumsangaben, Uhrzeiten und Zahlen je nach Sprache und Land formatieren",
-  "custom_url": "Benutzerdefinierte URL",
   "cutoff_date_description": "Behalte Fotos der letzten…",
   "cutoff_day": "{count, plural, one {Tag} other {Tage}}",
   "cutoff_year": "{count, plural, one {Jahr} other {Jahre}}",

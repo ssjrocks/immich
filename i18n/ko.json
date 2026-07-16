@@ -799,7 +799,6 @@
   "custom_date": "날짜 선택",
   "custom_locale": "사용자 지정 로케일",
   "custom_locale_description": "언어 및 지역 선택에 따른 날짜, 시간 및 숫자 형식 지정",
-  "custom_url": "사용자 지정 URL",
   "cutoff_date_description": "선택한 기간의 사진을 유지합니다…",
   "cutoff_day": "{count, plural, one {일} other {일}}",
   "cutoff_year": "{count, plural, one {년} other {년}}",

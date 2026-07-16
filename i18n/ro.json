@@ -814,7 +814,6 @@
   "custom_date": "Data personalizată",
   "custom_locale": "Setare regională personalizată",
   "custom_locale_description": "Formatați datele, timpul și numerele în funcție de limbă și regiune",
-  "custom_url": "URL personalizat",
   "cutoff_date_description": "Păstrează fotografiile din ultimele…",
   "cutoff_day": "{count, plural, one {# zi} few {# zile} other {# de zile}}",
   "cutoff_year": "{count, plural, =0 {0 ani} one {# an} few {# ani} other {# de ani}}",

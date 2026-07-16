@@ -808,7 +808,6 @@
   "custom_date": "Pasirinktinė data",
   "custom_locale": "Pasirinktinė vietovė",
   "custom_locale_description": "Formatuoti datas, laiką ir skaičius pagal pasirinktą kalbą ir regioną",
-  "custom_url": "Pasirinktinis URL",
   "cutoff_date_description": "Išsaugoti nuotraukas iš paskutinės…",
   "cutoff_day": "{count, plural, one {diena} other {dienos}}",
   "cutoff_year": "{count, plural, one {metai} other {metai}}",

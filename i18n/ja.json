@@ -794,7 +794,6 @@
   "custom_date": "カスタム日付",
   "custom_locale": "言語と地域の手動設定",
   "custom_locale_description": "選択した言語と地域の設定に従って、日付・時刻・数値を書式設定します",
-  "custom_url": "カスタムURL",
   "cutoff_date_description": "写真を保持する期間:",
   "cutoff_day": "{count, plural, one {(日)} other {(日)}}",
   "cutoff_year": "{count, plural, one {年} other {年}}",

@@ -814,7 +814,6 @@
   "custom_date": "Aangepaste datum",
   "custom_locale": "Aangepaste landinstelling",
   "custom_locale_description": "Formatteer datums, tijden, en getallen op basis van de geselecteerde taal en regio",
-  "custom_url": "Aangepaste URL",
   "cutoff_date_description": "Bewaar foto's van de laatste…",
   "cutoff_day": "{count, plural, one {dag} other {dagen}}",
   "cutoff_year": "{count, plural, one {jaar} other {jaren}}",

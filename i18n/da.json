@@ -803,7 +803,6 @@
   "custom_date": "Brugerdefineret dato",
   "custom_locale": "Brugerdefineret lokale",
   "custom_locale_description": "Formatér datoer, klokkeslæt og tal baseret på det valgte sprog og den valgte region",
-  "custom_url": "Tilpasset URL",
   "cutoff_date_description": "Behold fotos fra den sidste…",
   "cutoff_day": "{count, plural, one {dag} other {dage}}",
   "cutoff_year": "{count, plural, one {år} other {år}}",

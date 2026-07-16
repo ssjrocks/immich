@@ -813,7 +813,6 @@
   "custom_date": "Elekti propran daton",
   "custom_locale": "Propra lokaĵaro",
   "custom_locale_description": "Prezenti datojn, horojn kaj numerojn laŭ la elektita lingvo kaj regiono",
-  "custom_url": "Propra URL",
   "cutoff_date_description": "Konservi fotojn el la lastaj…",
   "cutoff_day": "{count, plural, one {tago} other {tagoj}}",
   "cutoff_year": "{count, plural, one {jaro} other {jaroj}}",

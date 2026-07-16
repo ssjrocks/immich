@@ -814,7 +814,6 @@
   "custom_date": "Data personalizada",
   "custom_locale": "Configuración Rexional Personalizada",
   "custom_locale_description": "Formatar datas, tempos e números baseándose na lingua e a rexión",
-  "custom_url": "URL personalizada",
   "cutoff_date_description": "Manter fotos dos últimos…",
   "cutoff_day": "{count, plural, one {day} other {days}}",
   "cutoff_year": "{count, plural, one {day} other {days}}",

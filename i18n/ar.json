@@ -794,7 +794,6 @@
   "custom_date": "تاريخ مخصص",
   "custom_locale": "لغة مخصصة",
   "custom_locale_description": "تنسيق التواريخ, الأوقات والأرقام بناءً على اللغة والمنطقة المختاره",
-  "custom_url": "رابط مخصص",
   "cutoff_date_description": "احتفظ بالصور من آخر…",
   "cutoff_day": "{count, plural, one {يوم} other {ايام}}",
   "cutoff_year": "{count, plural, one {سنة} other {سنوات}}",

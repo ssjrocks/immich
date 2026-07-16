@@ -814,7 +814,6 @@
   "custom_date": "Datum po meri",
   "custom_locale": "Jezik po meri",
   "custom_locale_description": "Oblikovanje datuma, časa in številk glede na izbrani jezik in regijo",
-  "custom_url": "URL po meri",
   "cutoff_date_description": "Shranite fotografije iz zadnjega…",
   "cutoff_day": "{count, plural, one {dan} other {dni}}",
   "cutoff_year": "{count, plural, one {leto} two {leti} few {leta} other {let}}",
