@@ -72,6 +72,7 @@
               {#if hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
                 <div
                   class="absolute top-full left-0 z-10 mt-1 flex gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                  style="width: 57rem;"
                 >
                   <video
                     muted
