@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { AssetFace } from 'src/database';
 import { AssetEditAction, MirrorAxis } from 'src/dtos/editing.dto';
 import { AssetOcrResponseDto } from 'src/dtos/ocr.dto';
-import { SourceType } from 'src/enum';
+import { SourceType, VideoFaceSamplingMethod } from 'src/enum';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import { BoundingBox } from 'src/repositories/machine-learning.repository';
 import { MediaRepository } from 'src/repositories/media.repository';
@@ -710,12 +710,15 @@ describe(MediaRepository.name, () => {
       vi.restoreAllMocks();
     });
 
+    const interval = (intervalSeconds: number) => ({ method: VideoFaceSamplingMethod.Interval, intervalSeconds }) as const;
+    const frameCount = () => ({ method: VideoFaceSamplingMethod.FrameCount }) as const;
+
     it('should call ffmpeg with correct options', async () => {
       const mockChain = buildMockChain();
       vi.mocked(ffmpeg).mockReturnValue(mockChain as any);
       vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_0001.jpg', 'frame_0002.jpg'] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50);
 
       expect(vi.mocked(ffmpeg)).toHaveBeenCalledWith('/video.mp4');
       expect(mockChain.outputOptions).toHaveBeenCalledWith(['-vf fps=0.5', '-frames:v 50', '-q:v 3']);
@@ -726,7 +729,7 @@ describe(MediaRepository.name, () => {
     it('should return sorted frame paths', async () => {
       vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_0002.jpg', 'frame_0001.jpg'] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50);
 
       expect(result.framePaths).toEqual(['/tmp/frames/frame_0001.jpg', '/tmp/frames/frame_0002.jpg']);
     });
@@ -734,7 +737,7 @@ describe(MediaRepository.name, () => {
     it('should filter out non-frame files', async () => {
       vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_0001.jpg', 'other.jpg', 'frame_0002.png'] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50);
 
       expect(result.framePaths).toEqual(['/tmp/frames/frame_0001.jpg']);
     });
@@ -742,7 +745,7 @@ describe(MediaRepository.name, () => {
     it('should return empty array when no frames extracted', async () => {
       vi.spyOn(fs, 'readdir').mockResolvedValue([] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50);
 
       expect(result.framePaths).toEqual([]);
     });
@@ -750,33 +753,59 @@ describe(MediaRepository.name, () => {
     it('should reject with stderr when ffmpeg errors', async () => {
       vi.mocked(ffmpeg).mockReturnValue(buildMockChain('error', 'invalid video stream') as any);
 
-      await expect(sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50)).rejects.toThrow('invalid video stream');
+      await expect(sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50)).rejects.toThrow(
+        'invalid video stream',
+      );
     });
 
     it('should reduce the frame rate when naive frame count exceeds maxFrames', async () => {
-      // 100s video at 1fps = 100 frames > maxFrames 50 → 50/100 = 0.5fps
+      // 100s video at 1fps (1s interval) = 100 frames > maxFrames 50 → 50/100 = 0.5fps
       mockProbe(100);
       const mockChain = buildMockChain();
       vi.mocked(ffmpeg).mockReturnValue(mockChain as any);
       vi.spyOn(fs, 'readdir').mockResolvedValue([] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 1, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(1), 50);
 
       expect(mockChain.outputOptions).toHaveBeenCalledWith(['-vf fps=0.5', '-frames:v 50', '-q:v 3']);
       expect(result.effectiveFrameRate).toBe(0.5);
     });
 
     it('should not reduce the frame rate when naive frame count exactly equals maxFrames', async () => {
-      // 100s video at 0.5fps = exactly 50 frames, not > maxFrames 50, so no reduction
+      // 100s video at 0.5fps (2s interval) = exactly 50 frames, not > maxFrames 50, so no reduction
       mockProbe(100);
       const mockChain = buildMockChain();
       vi.mocked(ffmpeg).mockReturnValue(mockChain as any);
       vi.spyOn(fs, 'readdir').mockResolvedValue([] as any);
 
-      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', 0.5, 50);
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', interval(2), 50);
 
       expect(mockChain.outputOptions).toHaveBeenCalledWith(['-vf fps=0.5', '-frames:v 50', '-q:v 3']);
       expect(result.effectiveFrameRate).toBe(0.5);
+    });
+
+    it('should spread maxFrames evenly across the video in frameCount mode', async () => {
+      // 100s video, maxFrames 50 → 50/100 = 0.5fps, regardless of any interval setting
+      mockProbe(100);
+      const mockChain = buildMockChain();
+      vi.mocked(ffmpeg).mockReturnValue(mockChain as any);
+      vi.spyOn(fs, 'readdir').mockResolvedValue([] as any);
+
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', frameCount(), 50);
+
+      expect(mockChain.outputOptions).toHaveBeenCalledWith(['-vf fps=0.5', '-frames:v 50', '-q:v 3']);
+      expect(result.effectiveFrameRate).toBe(0.5);
+    });
+
+    it('should fall back to 1fps in frameCount mode when duration is unknown', async () => {
+      mockProbe(0);
+      const mockChain = buildMockChain();
+      vi.mocked(ffmpeg).mockReturnValue(mockChain as any);
+      vi.spyOn(fs, 'readdir').mockResolvedValue([] as any);
+
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', frameCount(), 50);
+
+      expect(result.effectiveFrameRate).toBe(1);
     });
   });
 });

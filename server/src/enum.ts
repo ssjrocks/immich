@@ -460,6 +460,32 @@ export const TranscodePolicySchema = z
   .describe('Transcode policy')
   .meta({ id: 'TranscodePolicy' });
 
+export enum VideoFaceScanMode {
+  /** Stock behavior: only the video's static preview frame is checked for faces. */
+  ThumbnailOnly = 'thumbnailOnly',
+  /** Videos are skipped by facial recognition entirely; photos are unaffected. */
+  Disabled = 'disabled',
+  /** Samples frames throughout the video, in addition to the preview frame. */
+  FullScan = 'fullScan',
+}
+
+export const VideoFaceScanModeSchema = z
+  .enum(VideoFaceScanMode)
+  .describe('How videos are treated by facial recognition')
+  .meta({ id: 'VideoFaceScanMode' });
+
+export enum VideoFaceSamplingMethod {
+  /** Spread a fixed number of frames evenly across the video's duration. */
+  FrameCount = 'frameCount',
+  /** Capture a frame every N seconds, capped by maxFrames. */
+  Interval = 'interval',
+}
+
+export const VideoFaceSamplingMethodSchema = z
+  .enum(VideoFaceSamplingMethod)
+  .describe('How frames are sampled from a video during a full scan')
+  .meta({ id: 'VideoFaceSamplingMethod' });
+
 export enum TranscodeTarget {
   None = 'NONE',
   Audio = 'AUDIO',

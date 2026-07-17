@@ -35,8 +35,10 @@ import {
   SourceType,
   SystemMetadataKey,
   VectorIndex,
+  VideoFaceSamplingMethod,
 } from 'src/enum';
 import { BoundingBox } from 'src/repositories/machine-learning.repository';
+import { VideoFrameSampling } from 'src/repositories/media.repository';
 import { UpdateFacesData } from 'src/repositories/person.repository';
 import { AssetFaceTable } from 'src/schema/tables/asset-face.table';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table';
@@ -45,7 +47,7 @@ import { JobItem, JobOf } from 'src/types';
 import { getDimensions } from 'src/utils/asset.util';
 import { ImmichFileResponse } from 'src/utils/file';
 import { mimeTypes } from 'src/utils/mime-types';
-import { isFacialRecognitionEnabled } from 'src/utils/misc';
+import { isFacialRecognitionEnabled, isVideoFaceDetectionDisabled, isVideoFaceScanEnabled } from 'src/utils/misc';
 import { Point, transformPoints } from 'src/utils/transform';
 
 @Injectable()
@@ -327,6 +329,10 @@ export class PersonService extends BaseService {
       return JobStatus.Skipped;
     }
 
+    if (asset.type === AssetType.Video && isVideoFaceDetectionDisabled(machineLearning)) {
+      return JobStatus.Skipped;
+    }
+
     const { imageHeight, imageWidth, faces } = await this.machineLearningRepository.detectFaces(
       previewFile.path,
       machineLearning.facialRecognition,
@@ -399,7 +405,7 @@ export class PersonService extends BaseService {
 
     await this.assetRepository.upsertJobStatus({ assetId: asset.id, facesRecognizedAt: new Date() });
 
-    if (asset.type === AssetType.Video) {
+    if (asset.type === AssetType.Video && isVideoFaceScanEnabled(machineLearning)) {
       await this.jobRepository.queue({ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } });
     }
 
@@ -409,7 +415,7 @@ export class PersonService extends BaseService {
   @OnJob({ name: JobName.AssetVideoDetectFacesQueueAll, queue: QueueName.VideoFaceDetection })
   async handleQueueVideoDetectFaces({ force }: JobOf<JobName.AssetVideoDetectFacesQueueAll>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: false });
-    if (!isFacialRecognitionEnabled(machineLearning)) {
+    if (!isVideoFaceScanEnabled(machineLearning)) {
       return JobStatus.Skipped;
     }
 
@@ -432,7 +438,7 @@ export class PersonService extends BaseService {
   @OnJob({ name: JobName.AssetVideoDetectFaces, queue: QueueName.VideoFaceDetection })
   async handleVideoDetectFaces({ id }: JobOf<JobName.AssetVideoDetectFaces>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: true });
-    if (!isFacialRecognitionEnabled(machineLearning)) {
+    if (!isVideoFaceScanEnabled(machineLearning)) {
       return JobStatus.Skipped;
     }
 
@@ -450,15 +456,20 @@ export class PersonService extends BaseService {
     const existingVideoFaces = await this.personRepository.getVideoFacesWithEmbeddings(id);
     const faceIdsToRemove = existingVideoFaces.map((face) => face.id);
 
-    const { videoFrameRate, videoMaxFrames } = machineLearning.facialRecognition;
+    const { samplingMethod, maxFrames, intervalSeconds } = machineLearning.facialRecognition.video;
+    const sampling: VideoFrameSampling =
+      samplingMethod === VideoFaceSamplingMethod.FrameCount
+        ? { method: VideoFaceSamplingMethod.FrameCount }
+        : { method: VideoFaceSamplingMethod.Interval, intervalSeconds };
+
     let tempDir: string | undefined;
     try {
       tempDir = await this.storageRepository.createTempDir('immich-video-faces-');
       const { framePaths, effectiveFrameRate } = await this.mediaRepository.extractVideoFrames(
         asset.originalPath,
         tempDir,
-        videoFrameRate,
-        videoMaxFrames,
+        sampling,
+        maxFrames,
       );
 
       if (framePaths.length === 0) {
@@ -520,7 +531,7 @@ export class PersonService extends BaseService {
   @OnJob({ name: JobName.AssetVideoClusterFaces, queue: QueueName.VideoFaceDetection })
   async handleVideoClusterFaces({ id }: JobOf<JobName.AssetVideoClusterFaces>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: true });
-    if (!isFacialRecognitionEnabled(machineLearning)) {
+    if (!isVideoFaceScanEnabled(machineLearning)) {
       return JobStatus.Skipped;
     }
 

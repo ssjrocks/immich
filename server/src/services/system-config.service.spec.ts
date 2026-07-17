@@ -15,6 +15,8 @@ import {
   TranscodePolicy,
   VideoCodec,
   VideoContainer,
+  VideoFaceSamplingMethod,
+  VideoFaceScanMode,
 } from 'src/enum';
 import { SystemConfigService } from 'src/services/system-config.service';
 import { DeepPartial } from 'src/types';
@@ -129,8 +131,12 @@ const updatedConfig = Object.freeze<SystemConfig>({
       minScore: 0.7,
       maxDistance: 0.5,
       minFaces: 3,
-      videoFrameRate: 0.5,
-      videoMaxFrames: 50,
+      video: {
+        scanMode: VideoFaceScanMode.ThumbnailOnly,
+        samplingMethod: VideoFaceSamplingMethod.FrameCount,
+        maxFrames: 50,
+        intervalSeconds: 2,
+      },
     },
     ocr: {
       enabled: true,

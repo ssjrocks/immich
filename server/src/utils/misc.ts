@@ -16,7 +16,7 @@ import parse from 'picomatch/lib/parse';
 import { SystemConfig } from 'src/config';
 import { CLIP_MODEL_INFO, endpointTags, serverVersion } from 'src/constants';
 import { extraModels } from 'src/decorators';
-import { ApiCustomExtension, ImmichCookie, ImmichHeader, MetadataKey } from 'src/enum';
+import { ApiCustomExtension, ImmichCookie, ImmichHeader, MetadataKey, VideoFaceScanMode } from 'src/enum';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 
 type OperationObject = NonNullable<OpenAPIObject['paths'][string]['get']>;
@@ -101,6 +101,11 @@ export const isOcrEnabled = (machineLearning: SystemConfig['machineLearning']) =
   isMachineLearningEnabled(machineLearning) && machineLearning.ocr.enabled;
 export const isFacialRecognitionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isMachineLearningEnabled(machineLearning) && machineLearning.facialRecognition.enabled;
+export const isVideoFaceScanEnabled = (machineLearning: SystemConfig['machineLearning']) =>
+  isFacialRecognitionEnabled(machineLearning) &&
+  machineLearning.facialRecognition.video.scanMode === VideoFaceScanMode.FullScan;
+export const isVideoFaceDetectionDisabled = (machineLearning: SystemConfig['machineLearning']) =>
+  machineLearning.facialRecognition.video.scanMode === VideoFaceScanMode.Disabled;
 export const isDuplicateDetectionEnabled = (machineLearning: SystemConfig['machineLearning']) =>
   isSmartSearchEnabled(machineLearning) && machineLearning.duplicateDetection.enabled;
 export const isFaceImportEnabled = (metadata: SystemConfig['metadata']) => metadata.faces.import;

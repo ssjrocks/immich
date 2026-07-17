@@ -1152,6 +1152,78 @@ class AssetsApi {
     return null;
   }
 
+  /// Get a video frame at a timestamp
+  ///
+  /// Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [int] timestampMs (required):
+  ///   Timestamp in milliseconds to extract a frame at
+  ///
+  /// * [String] key:
+  ///
+  /// * [String] slug:
+  Future<Response> getVideoFrameWithHttpInfo(String id, int timestampMs, { String? key, String? slug, Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/assets/{id}/video/frame'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    if (key != null) {
+      queryParams.addAll(_queryParams('', 'key', key));
+    }
+    if (slug != null) {
+      queryParams.addAll(_queryParams('', 'slug', slug));
+    }
+      queryParams.addAll(_queryParams('', 'timestampMs', timestampMs));
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Get a video frame at a timestamp
+  ///
+  /// Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  ///
+  /// * [int] timestampMs (required):
+  ///   Timestamp in milliseconds to extract a frame at
+  ///
+  /// * [String] key:
+  ///
+  /// * [String] slug:
+  Future<void> getVideoFrame(String id, int timestampMs, { String? key, String? slug, Future<void>? abortTrigger, }) async {
+    final response = await getVideoFrameWithHttpInfo(id, timestampMs, key: key, slug: slug, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
   /// Play asset video
   ///
   /// Streams the video file for the specified asset. This endpoint also supports byte range requests.

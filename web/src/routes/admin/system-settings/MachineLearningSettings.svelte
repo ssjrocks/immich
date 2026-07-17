@@ -8,7 +8,8 @@
   import FormatMessage from '$lib/elements/FormatMessage.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
   import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
-  import { Button, IconButton } from '@immich/ui';
+  import { VideoFaceSamplingMethod, VideoFaceScanMode } from '@immich/sdk';
+  import { Alert, Button, IconButton } from '@immich/ui';
   import { mdiPlus, mdiTrashCanOutline } from '@mdi/js';
   import { isEqual } from 'lodash-es';
   import { t } from 'svelte-i18n';
@@ -252,35 +253,91 @@
               config.machineLearning.facialRecognition.minFaces}
           />
 
-          <SettingInputField
-            inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_video_face_detection_frame_rate')}
-            description={$t('admin.machine_learning_video_face_detection_frame_rate_description')}
-            bind:value={configToEdit.machineLearning.facialRecognition.videoFrameRate}
-            step="0.1"
-            min={0.1}
-            max={60}
+          <SettingSelect
+            label={$t('admin.machine_learning_video_face_detection_scan_mode')}
+            desc={$t('admin.machine_learning_video_face_detection_scan_mode_description')}
+            name="video-face-detection-scan-mode"
+            bind:value={configToEdit.machineLearning.facialRecognition.video.scanMode}
+            options={[
+              {
+                value: VideoFaceScanMode.ThumbnailOnly,
+                text: $t('admin.machine_learning_video_face_detection_scan_mode_thumbnail_only'),
+              },
+              {
+                value: VideoFaceScanMode.Disabled,
+                text: $t('admin.machine_learning_video_face_detection_scan_mode_disabled'),
+              },
+              {
+                value: VideoFaceScanMode.FullScan,
+                text: $t('admin.machine_learning_video_face_detection_scan_mode_full_scan'),
+              },
+            ]}
             disabled={disabled ||
               !configToEdit.machineLearning.enabled ||
               !configToEdit.machineLearning.facialRecognition.enabled}
-            isEdited={configToEdit.machineLearning.facialRecognition.videoFrameRate !==
-              config.machineLearning.facialRecognition.videoFrameRate}
+            isEdited={configToEdit.machineLearning.facialRecognition.video.scanMode !==
+              config.machineLearning.facialRecognition.video.scanMode}
           />
 
-          <SettingInputField
-            inputType={SettingInputFieldType.NUMBER}
-            label={$t('admin.machine_learning_video_face_detection_max_frames')}
-            description={$t('admin.machine_learning_video_face_detection_max_frames_description')}
-            bind:value={configToEdit.machineLearning.facialRecognition.videoMaxFrames}
-            step="1"
-            min={1}
-            max={10000}
-            disabled={disabled ||
-              !configToEdit.machineLearning.enabled ||
-              !configToEdit.machineLearning.facialRecognition.enabled}
-            isEdited={configToEdit.machineLearning.facialRecognition.videoMaxFrames !==
-              config.machineLearning.facialRecognition.videoMaxFrames}
-          />
+          {#if configToEdit.machineLearning.facialRecognition.video.scanMode === VideoFaceScanMode.FullScan}
+            <Alert color="warning" size="small">
+              {$t('admin.machine_learning_video_face_detection_disk_space_warning')}
+            </Alert>
+
+            <SettingSelect
+              label={$t('admin.machine_learning_video_face_detection_sampling_method')}
+              desc={$t('admin.machine_learning_video_face_detection_sampling_method_description')}
+              name="video-face-detection-sampling-method"
+              bind:value={configToEdit.machineLearning.facialRecognition.video.samplingMethod}
+              options={[
+                {
+                  value: VideoFaceSamplingMethod.FrameCount,
+                  text: $t('admin.machine_learning_video_face_detection_sampling_method_frame_count'),
+                },
+                {
+                  value: VideoFaceSamplingMethod.Interval,
+                  text: $t('admin.machine_learning_video_face_detection_sampling_method_interval'),
+                },
+              ]}
+              disabled={disabled ||
+                !configToEdit.machineLearning.enabled ||
+                !configToEdit.machineLearning.facialRecognition.enabled}
+              isEdited={configToEdit.machineLearning.facialRecognition.video.samplingMethod !==
+                config.machineLearning.facialRecognition.video.samplingMethod}
+            />
+
+            {#if configToEdit.machineLearning.facialRecognition.video.samplingMethod === VideoFaceSamplingMethod.Interval}
+              <SettingInputField
+                inputType={SettingInputFieldType.NUMBER}
+                label={$t('admin.machine_learning_video_face_detection_interval_seconds')}
+                description={$t('admin.machine_learning_video_face_detection_interval_seconds_description')}
+                bind:value={configToEdit.machineLearning.facialRecognition.video.intervalSeconds}
+                step="0.1"
+                min={0.1}
+                max={60}
+                disabled={disabled ||
+                  !configToEdit.machineLearning.enabled ||
+                  !configToEdit.machineLearning.facialRecognition.enabled}
+                isEdited={configToEdit.machineLearning.facialRecognition.video.intervalSeconds !==
+                  config.machineLearning.facialRecognition.video.intervalSeconds}
+              />
+            {/if}
+
+            <SettingInputField
+              inputType={SettingInputFieldType.NUMBER}
+              label={$t('admin.machine_learning_video_face_detection_max_frames')}
+              description={$t('admin.machine_learning_video_face_detection_max_frames_description')}
+              bind:value={configToEdit.machineLearning.facialRecognition.video.maxFrames}
+              step="1"
+              min={1}
+              max={10_000}
+              disabled={disabled ||
+                !configToEdit.machineLearning.enabled ||
+                !configToEdit.machineLearning.facialRecognition.enabled}
+              isEdited={configToEdit.machineLearning.facialRecognition.video.maxFrames !==
+                config.machineLearning.facialRecognition.video.maxFrames}
+            />
+          {/if}
         </div>
       </SettingAccordion>
 

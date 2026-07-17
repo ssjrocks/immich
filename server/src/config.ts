@@ -14,6 +14,8 @@ import {
   TranscodePolicy,
   VideoCodec,
   VideoContainer,
+  VideoFaceSamplingMethod,
+  VideoFaceScanMode,
 } from 'src/enum';
 import { ConcurrentQueueName, FullsizeImageOptions, ImageOptions } from 'src/types';
 
@@ -96,8 +98,12 @@ export type SystemConfig = {
       minScore: number;
       minFaces: number;
       maxDistance: number;
-      videoFrameRate: number;
-      videoMaxFrames: number;
+      video: {
+        scanMode: VideoFaceScanMode;
+        samplingMethod: VideoFaceSamplingMethod;
+        maxFrames: number;
+        intervalSeconds: number;
+      };
     };
     ocr: {
       enabled: boolean;
@@ -316,8 +322,14 @@ export const defaults = Object.freeze<SystemConfig>({
       minScore: 0.7,
       maxDistance: 0.5,
       minFaces: 3,
-      videoFrameRate: 0.5,
-      videoMaxFrames: 50,
+      video: {
+        // Off by default: upgrading to a version with this feature must not silently start
+        // reprocessing an existing library's videos.
+        scanMode: VideoFaceScanMode.ThumbnailOnly,
+        samplingMethod: VideoFaceSamplingMethod.FrameCount,
+        maxFrames: 50,
+        intervalSeconds: 2,
+      },
     },
     ocr: {
       enabled: true,

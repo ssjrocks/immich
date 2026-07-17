@@ -113,6 +113,7 @@ Class | Method | HTTP request | Description
 *AssetsApi* | [**getMainPlaylist**](doc//AssetsApi.md#getmainplaylist) | **GET** /assets/{id}/video/stream/main.m3u8 | Get HLS main playlist
 *AssetsApi* | [**getMediaPlaylist**](doc//AssetsApi.md#getmediaplaylist) | **GET** /assets/{id}/video/stream/{sessionId}/{variantIndex}/playlist.m3u8 | Get HLS media playlist
 *AssetsApi* | [**getSegment**](doc//AssetsApi.md#getsegment) | **GET** /assets/{id}/video/stream/{sessionId}/{variantIndex}/{filename} | Get HLS segment or init file
+*AssetsApi* | [**getVideoFrame**](doc//AssetsApi.md#getvideoframe) | **GET** /assets/{id}/video/frame | Get a video frame at a timestamp
 *AssetsApi* | [**playAssetVideo**](doc//AssetsApi.md#playassetvideo) | **GET** /assets/{id}/video/playback | Play asset video
 *AssetsApi* | [**removeAssetEdits**](doc//AssetsApi.md#removeassetedits) | **DELETE** /assets/{id}/edits | Remove edits from an existing asset
 *AssetsApi* | [**runAssetJobs**](doc//AssetsApi.md#runassetjobs) | **POST** /assets/jobs | Run an asset job
@@ -223,6 +224,7 @@ Class | Method | HTTP request | Description
 *PeopleApi* | [**getPerson**](doc//PeopleApi.md#getperson) | **GET** /people/{id} | Get a person
 *PeopleApi* | [**getPersonStatistics**](doc//PeopleApi.md#getpersonstatistics) | **GET** /people/{id}/statistics | Get person statistics
 *PeopleApi* | [**getPersonThumbnail**](doc//PeopleApi.md#getpersonthumbnail) | **GET** /people/{id}/thumbnail | Get person thumbnail
+*PeopleApi* | [**getPersonVideoOccurrences**](doc//PeopleApi.md#getpersonvideooccurrences) | **GET** /people/{id}/video-occurrences | Get video occurrences for a person
 *PeopleApi* | [**mergePerson**](doc//PeopleApi.md#mergeperson) | **POST** /people/{id}/merge | Merge people
 *PeopleApi* | [**reassignFaces**](doc//PeopleApi.md#reassignfaces) | **PUT** /people/{id}/reassign | Reassign faces
 *PeopleApi* | [**updatePeople**](doc//PeopleApi.md#updatepeople) | **PUT** /people | Update people
@@ -519,6 +521,7 @@ Class | Method | HTTP request | Description
  - [PersonResponseDto](doc//PersonResponseDto.md)
  - [PersonStatisticsResponseDto](doc//PersonStatisticsResponseDto.md)
  - [PersonUpdateDto](doc//PersonUpdateDto.md)
+ - [PersonVideoOccurrenceResponseDto](doc//PersonVideoOccurrenceResponseDto.md)
  - [PinCodeChangeDto](doc//PinCodeChangeDto.md)
  - [PinCodeResetDto](doc//PinCodeResetDto.md)
  - [PinCodeSetupDto](doc//PinCodeSetupDto.md)
@@ -710,6 +713,9 @@ Class | Method | HTTP request | Description
  - [VersionCheckStateResponseDto](doc//VersionCheckStateResponseDto.md)
  - [VideoCodec](doc//VideoCodec.md)
  - [VideoContainer](doc//VideoContainer.md)
+ - [VideoFaceSamplingMethod](doc//VideoFaceSamplingMethod.md)
+ - [VideoFaceScanMode](doc//VideoFaceScanMode.md)
+ - [VideoFacialRecognitionConfig](doc//VideoFacialRecognitionConfig.md)
  - [WorkflowCreateDto](doc//WorkflowCreateDto.md)
  - [WorkflowResponseDto](doc//WorkflowResponseDto.md)
  - [WorkflowShareResponseDto](doc//WorkflowShareResponseDto.md)

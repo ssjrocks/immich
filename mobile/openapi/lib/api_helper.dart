@@ -214,6 +214,12 @@ String parameterToString(dynamic value) {
   if (value is VideoContainer) {
     return VideoContainerTypeTransformer().encode(value).toString();
   }
+  if (value is VideoFaceSamplingMethod) {
+    return VideoFaceSamplingMethodTypeTransformer().encode(value).toString();
+  }
+  if (value is VideoFaceScanMode) {
+    return VideoFaceScanModeTypeTransformer().encode(value).toString();
+  }
   if (value is WorkflowTrigger) {
     return WorkflowTriggerTypeTransformer().encode(value).toString();
   }

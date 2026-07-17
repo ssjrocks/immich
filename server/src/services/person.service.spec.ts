@@ -1,7 +1,17 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BulkIdErrorReason } from 'src/dtos/asset-ids.response.dto';
 import { mapFaces, mapPerson } from 'src/dtos/person.dto';
-import { AssetFileType, AssetType, AssetVisibility, CacheControl, JobName, JobStatus, SourceType, SystemMetadataKey } from 'src/enum';
+import {
+  AssetFileType,
+  AssetType,
+  AssetVisibility,
+  CacheControl,
+  JobName,
+  JobStatus,
+  SourceType,
+  SystemMetadataKey,
+  VideoFaceScanMode,
+} from 'src/enum';
 import { FaceSearchResult } from 'src/repositories/search.repository';
 import { PersonService } from 'src/services/person.service';
 import { ImmichFileResponse } from 'src/utils/file';
@@ -999,8 +1009,9 @@ describe(PersonService.name, () => {
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
 
-    it('should queue video face detection for video assets', async () => {
+    it('should queue video face detection for video assets when scanMode is fullScan', async () => {
       const asset = AssetFactory.from({ type: AssetType.Video }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.videoFaceFullScan);
       mocks.machineLearning.detectFaces.mockResolvedValue({ imageHeight: 500, imageWidth: 400, faces: [] });
       mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
 
@@ -1011,6 +1022,7 @@ describe(PersonService.name, () => {
 
     it('should not queue video face detection for image assets', async () => {
       const asset = AssetFactory.from({ type: AssetType.Image }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.videoFaceFullScan);
       mocks.machineLearning.detectFaces.mockResolvedValue({ imageHeight: 500, imageWidth: 400, faces: [] });
       mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
 
@@ -1020,11 +1032,45 @@ describe(PersonService.name, () => {
         expect.objectContaining({ name: JobName.AssetVideoDetectFaces }),
       );
     });
+
+    it('should not queue video face detection for video assets when scanMode is thumbnailOnly (default)', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.machineLearning.detectFaces.mockResolvedValue({ imageHeight: 500, imageWidth: 400, faces: [] });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      expect(mocks.job.queue).not.toHaveBeenCalledWith(
+        expect.objectContaining({ name: JobName.AssetVideoDetectFaces }),
+      );
+    });
+
+    it('should skip preview-frame detection entirely for video assets when scanMode is disabled', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).file({ type: AssetFileType.Preview }).exif().build();
+      mocks.systemMetadata.get.mockResolvedValue({
+        machineLearning: { facialRecognition: { video: { scanMode: VideoFaceScanMode.Disabled } } },
+      });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await expect(sut.handleDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.machineLearning.detectFaces).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleQueueVideoDetectFaces', () => {
+    beforeEach(() => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.videoFaceFullScan);
+    });
+
     it('should skip if facial recognition is disabled', async () => {
       mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
+
+      await expect(sut.handleQueueVideoDetectFaces({})).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.assetJob.streamForVideoDetectFacesJob).not.toHaveBeenCalled();
+    });
+
+    it('should skip when scanMode is not fullScan', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({});
 
       await expect(sut.handleQueueVideoDetectFaces({})).resolves.toBe(JobStatus.Skipped);
       expect(mocks.assetJob.streamForVideoDetectFacesJob).not.toHaveBeenCalled();
@@ -1042,10 +1088,21 @@ describe(PersonService.name, () => {
   });
 
   describe('handleVideoDetectFaces', () => {
+    beforeEach(() => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.videoFaceFullScan);
+    });
+
     it('should skip if facial recognition is disabled', async () => {
       mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
 
       await expect(sut.handleVideoDetectFaces({ id: 'foo' })).resolves.toBe(JobStatus.Skipped);
+    });
+
+    it('should skip when scanMode is not fullScan', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({});
+
+      await expect(sut.handleVideoDetectFaces({ id: 'foo' })).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.media.extractVideoFrames).not.toHaveBeenCalled();
     });
 
     it('should fail if asset not found', async () => {
@@ -1205,8 +1262,19 @@ describe(PersonService.name, () => {
       embedding: JSON.stringify(embedding),
     });
 
+    beforeEach(() => {
+      mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.videoFaceFullScan);
+    });
+
     it('should skip if facial recognition is disabled', async () => {
       mocks.systemMetadata.get.mockResolvedValue(systemConfigStub.machineLearningDisabled);
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Skipped);
+      expect(mocks.person.getVideoFacesWithEmbeddings).not.toHaveBeenCalled();
+    });
+
+    it('should skip when scanMode is not fullScan', async () => {
+      mocks.systemMetadata.get.mockResolvedValue({});
 
       await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Skipped);
       expect(mocks.person.getVideoFacesWithEmbeddings).not.toHaveBeenCalled();

@@ -445,6 +445,67 @@ class PeopleApi {
     return null;
   }
 
+  /// Get video occurrences for a person
+  ///
+  /// Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<Response> getPersonVideoOccurrencesWithHttpInfo(String id, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/people/{id}/video-occurrences'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'GET',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Get video occurrences for a person
+  ///
+  /// Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<List<PersonVideoOccurrenceResponseDto>?> getPersonVideoOccurrences(String id, { Future<void>? abortTrigger, }) async {
+    final response = await getPersonVideoOccurrencesWithHttpInfo(id, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+    // When a remote server returns no body with a status of 204, we shall not decode it.
+    // At the time of writing this, `dart:convert` will throw an "Unexpected end of input"
+    // FormatException when trying to decode an empty string.
+    if (response.body.isNotEmpty && response.statusCode != HttpStatus.noContent) {
+      final responseBody = await _decodeBodyBytes(response);
+      return (await apiClient.deserializeAsync(responseBody, 'List<PersonVideoOccurrenceResponseDto>') as List)
+        .cast<PersonVideoOccurrenceResponseDto>()
+        .toList(growable: false);
+
+    }
+    return null;
+  }
+
   /// Merge people
   ///
   /// Merge a list of people into the person specified in the path parameter.

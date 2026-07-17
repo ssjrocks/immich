@@ -25,6 +25,7 @@ import {
   HevcProfile,
   LogLevel,
   RawExtractedFormat,
+  VideoFaceSamplingMethod,
 } from 'src/enum';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 import {
@@ -63,6 +64,10 @@ export type ExtractResult = {
   buffer: Buffer;
   format: RawExtractedFormat;
 };
+
+export type VideoFrameSampling =
+  | { method: VideoFaceSamplingMethod.FrameCount }
+  | { method: VideoFaceSamplingMethod.Interval; intervalSeconds: number };
 
 @Injectable()
 export class MediaRepository {
@@ -298,15 +303,23 @@ export class MediaRepository {
   async extractVideoFrames(
     videoPath: string,
     outputDir: string,
-    frameRate: number,
+    sampling: VideoFrameSampling,
     maxFrames: number,
   ): Promise<{ framePaths: string[]; effectiveFrameRate: number }> {
     const outputPattern = path.join(outputDir, 'frame_%04d.jpg');
 
     const { format } = await this.probe(videoPath);
     const duration = format.duration ?? 0;
-    const naiveCount = duration > 0 ? Math.ceil(duration * frameRate) : 0;
-    const effectiveFrameRate = naiveCount > maxFrames ? maxFrames / duration : frameRate;
+
+    let effectiveFrameRate: number;
+    if (sampling.method === VideoFaceSamplingMethod.FrameCount) {
+      // Spread maxFrames evenly across the whole video, regardless of length.
+      effectiveFrameRate = duration > 0 ? maxFrames / duration : 1;
+    } else {
+      const frameRate = 1 / sampling.intervalSeconds;
+      const naiveCount = duration > 0 ? Math.ceil(duration * frameRate) : 0;
+      effectiveFrameRate = naiveCount > maxFrames ? maxFrames / duration : frameRate;
+    }
 
     await new Promise<void>((resolve, reject) => {
       ffmpeg(videoPath)

@@ -19269,18 +19269,8 @@
             "description": "Name of the model to use",
             "type": "string"
           },
-          "videoFrameRate": {
-            "description": "Frames per second to sample when detecting faces in videos",
-            "format": "double",
-            "maximum": 60,
-            "minimum": 0.1,
-            "type": "number"
-          },
-          "videoMaxFrames": {
-            "description": "Maximum number of frames to sample per video for face detection",
-            "maximum": 10000,
-            "minimum": 1,
-            "type": "integer"
+          "video": {
+            "$ref": "#/components/schemas/VideoFacialRecognitionConfig"
           }
         },
         "required": [
@@ -19289,8 +19279,7 @@
           "minFaces",
           "minScore",
           "modelName",
-          "videoFrameRate",
-          "videoMaxFrames"
+          "video"
         ],
         "type": "object"
       },
@@ -28079,6 +28068,53 @@
           "webm"
         ],
         "type": "string"
+      },
+      "VideoFaceSamplingMethod": {
+        "description": "How frames are sampled from a video during a full scan",
+        "enum": [
+          "frameCount",
+          "interval"
+        ],
+        "type": "string"
+      },
+      "VideoFaceScanMode": {
+        "description": "How videos are treated by facial recognition",
+        "enum": [
+          "thumbnailOnly",
+          "disabled",
+          "fullScan"
+        ],
+        "type": "string"
+      },
+      "VideoFacialRecognitionConfig": {
+        "properties": {
+          "intervalSeconds": {
+            "description": "Seconds between captured frames when samplingMethod is \"interval\". Supports sub-second precision.",
+            "format": "double",
+            "maximum": 60,
+            "minimum": 0.1,
+            "type": "number"
+          },
+          "maxFrames": {
+            "description": "Maximum number of frames to sample per video. Used directly as the frame count in \"frameCount\" mode, or as a hard safety cap in \"interval\" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails.",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "samplingMethod": {
+            "$ref": "#/components/schemas/VideoFaceSamplingMethod"
+          },
+          "scanMode": {
+            "$ref": "#/components/schemas/VideoFaceScanMode"
+          }
+        },
+        "required": [
+          "intervalSeconds",
+          "maxFrames",
+          "samplingMethod",
+          "scanMode"
+        ],
+        "type": "object"
       },
       "WorkflowCreateDto": {
         "properties": {

@@ -2465,6 +2465,14 @@ export type DuplicateDetectionConfig = {
     /** Maximum distance threshold for duplicate detection */
     maxDistance: number;
 };
+export type VideoFacialRecognitionConfig = {
+    /** Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision. */
+    intervalSeconds: number;
+    /** Maximum number of frames to sample per video. Used directly as the frame count in "frameCount" mode, or as a hard safety cap in "interval" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails. */
+    maxFrames: number;
+    samplingMethod: VideoFaceSamplingMethod;
+    scanMode: VideoFaceScanMode;
+};
 export type FacialRecognitionConfig = {
     /** Whether the task is enabled */
     enabled: boolean;
@@ -2476,10 +2484,7 @@ export type FacialRecognitionConfig = {
     minScore: number;
     /** Name of the model to use */
     modelName: string;
-    /** Frames per second to sample when detecting faces in videos */
-    videoFrameRate: number;
-    /** Maximum number of frames to sample per video for face detection */
-    videoMaxFrames: number;
+    video: VideoFacialRecognitionConfig;
 };
 export type OcrConfig = {
     /** Whether the task is enabled */
@@ -7725,6 +7730,15 @@ export enum LogLevel {
     Warn = "warn",
     Error = "error",
     Fatal = "fatal"
+}
+export enum VideoFaceSamplingMethod {
+    FrameCount = "frameCount",
+    Interval = "interval"
+}
+export enum VideoFaceScanMode {
+    ThumbnailOnly = "thumbnailOnly",
+    Disabled = "disabled",
+    FullScan = "fullScan"
 }
 export enum ReleaseChannel {
     Stable = "stable",

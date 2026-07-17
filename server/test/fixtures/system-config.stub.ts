@@ -1,4 +1,5 @@
 import { SystemConfig } from 'src/config';
+import { VideoFaceScanMode } from 'src/enum';
 import { DeepPartial } from 'src/types';
 
 export const systemConfigStub = {
@@ -109,6 +110,15 @@ export const systemConfigStub = {
       clip: {
         modelName: 'ViT-B-16__openai',
         enabled: true,
+      },
+    },
+  },
+  videoFaceFullScan: {
+    machineLearning: {
+      facialRecognition: {
+        video: {
+          scanMode: VideoFaceScanMode.FullScan,
+        },
       },
     },
   },

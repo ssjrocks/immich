@@ -525,6 +525,8 @@ class ApiClient {
           return PersonStatisticsResponseDto.fromJson(value);
         case 'PersonUpdateDto':
           return PersonUpdateDto.fromJson(value);
+        case 'PersonVideoOccurrenceResponseDto':
+          return PersonVideoOccurrenceResponseDto.fromJson(value);
         case 'PinCodeChangeDto':
           return PinCodeChangeDto.fromJson(value);
         case 'PinCodeResetDto':
@@ -907,6 +909,12 @@ class ApiClient {
           return VideoCodecTypeTransformer().decode(value);
         case 'VideoContainer':
           return VideoContainerTypeTransformer().decode(value);
+        case 'VideoFaceSamplingMethod':
+          return VideoFaceSamplingMethodTypeTransformer().decode(value);
+        case 'VideoFaceScanMode':
+          return VideoFaceScanModeTypeTransformer().decode(value);
+        case 'VideoFacialRecognitionConfig':
+          return VideoFacialRecognitionConfig.fromJson(value);
         case 'WorkflowCreateDto':
           return WorkflowCreateDto.fromJson(value);
         case 'WorkflowResponseDto':
