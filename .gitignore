@@ -30,3 +30,16 @@ vite.config.js.timestamp-*
 .devcontainer/.env*
 *.tsbuildinfo
 *.tsbuildInfo
+
+# Personal / secret-adjacent files -- never meant to be committed to this fork.
+# Deliberately broad: this repo is public, so anything matching these patterns
+# should be treated as sensitive by default rather than reviewed case-by-case.
+ssh-sudo-info.md
+.env
+.env.*
+*.pem
+*.key
+*.age
+id_rsa*
+id_ed25519*
+id_claude_remote*
