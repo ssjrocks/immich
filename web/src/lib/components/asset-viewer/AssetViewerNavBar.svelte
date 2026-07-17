@@ -73,7 +73,7 @@
   const Close: ActionItem = $derived({
     title: $t('go_back'),
     icon: languageManager.rtl ? mdiArrowRight : mdiArrowLeft,
-    $if: () => !!onClose && !assetViewerManager.isFaceEditMode && !assetViewerManager.isEditFacesPanelOpen,
+    $if: () => !!onClose && !assetViewerManager.isFaceEditMode,
     onAction: () => onClose?.(),
     shortcuts: [{ key: 'Escape' }],
   });

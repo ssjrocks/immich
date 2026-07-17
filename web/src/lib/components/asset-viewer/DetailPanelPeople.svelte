@@ -156,6 +156,7 @@
             shape="round"
             color="secondary"
             variant="ghost"
+            class="h-[3.125rem] w-[3.125rem]"
             onclick={() => assetViewerManager.toggleHiddenPeople()}
           />
         {/if}
@@ -166,6 +167,7 @@
           shape="round"
           color="secondary"
           variant="ghost"
+          class="h-[3.125rem] w-[3.125rem]"
           onclick={() => assetViewerManager.toggleFaceEditMode()}
         />
 
@@ -175,9 +177,10 @@
             icon={mdiPencil}
             size="medium"
             shape="round"
-            color="secondary"
-            variant="ghost"
-            onclick={() => assetViewerManager.openEditFacesPanel()}
+            color={assetViewerManager.isPeopleEditMode ? 'primary' : 'secondary'}
+            variant={assetViewerManager.isPeopleEditMode ? 'filled' : 'ghost'}
+            class="h-[3.125rem] w-[3.125rem]"
+            onclick={() => assetViewerManager.togglePeopleEditMode()}
           />
         {/if}
       </div>
@@ -261,7 +264,7 @@
 
             {#if expandedPersonId === person.id}
               <div
-                class="absolute top-full left-0 z-10 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                class="absolute top-full right-0 z-10 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
               >
                 {#each appearances as timestampMs (timestampMs)}
                   <button
@@ -287,14 +290,14 @@
             </a>
           {/if}
 
-          {#if renamingPersonId !== person.id}
+          {#if assetViewerManager.isPeopleEditMode && renamingPersonId !== person.id}
             <div
               class="absolute top-0 right-0 flex gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
             >
               <IconButton
                 aria-label={$t('edit_name')}
                 icon={mdiPencil}
-                size="small"
+                size="medium"
                 shape="round"
                 color="primary"
                 variant="filled"
@@ -303,7 +306,7 @@
               <IconButton
                 aria-label={$t('delete_face')}
                 icon={mdiAccountOff}
-                size="small"
+                size="medium"
                 shape="round"
                 color="danger"
                 variant="filled"

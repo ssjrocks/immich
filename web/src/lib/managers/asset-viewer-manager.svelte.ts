@@ -56,7 +56,7 @@ class AssetViewerManager extends BaseEventManager<Events> {
   isPlayingMotionPhoto = $state(false);
   isShowEditor = $state(false);
   #isFaceEditMode = $state(false);
-  #isEditFacesPanelOpen = $state(false);
+  #isPeopleEditMode = $state(false);
   #viewingAssetStoreState = $state<AssetResponseDto>();
   #viewState = $state<boolean>(false);
   #highlightedFaces = $state<Faces[]>([]);
@@ -87,8 +87,8 @@ class AssetViewerManager extends BaseEventManager<Events> {
     return this.#isFaceEditMode;
   }
 
-  get isEditFacesPanelOpen() {
-    return this.#isEditFacesPanelOpen;
+  get isPeopleEditMode() {
+    return this.#isPeopleEditMode;
   }
 
   get zoomState() {
@@ -209,18 +209,18 @@ class AssetViewerManager extends BaseEventManager<Events> {
     this.#isFaceEditMode = false;
   }
 
-  openEditFacesPanel() {
-    this.#isEditFacesPanelOpen = true;
+  togglePeopleEditMode() {
+    this.#isPeopleEditMode = !this.#isPeopleEditMode;
   }
 
-  closeEditFacesPanel() {
-    this.#isEditFacesPanelOpen = false;
+  closePeopleEditMode() {
+    this.#isPeopleEditMode = false;
   }
 
   resetPanelState() {
     this.closeEditor();
     this.closeFaceEditMode();
-    this.closeEditFacesPanel();
+    this.closePeopleEditMode();
   }
 
   get highlightedFaces() {
