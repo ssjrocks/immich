@@ -333,18 +333,26 @@ export class PersonService extends BaseService {
     );
     this.logger.debug(`${faces.length} faces detected in ${previewFile.path}`);
 
+    // Scoped to this asset's preview-frame faces only: a video asset also carries faces sampled
+    // from other frames (asset_face.timestampMs set), which live in a different frame's coordinate
+    // space entirely and belong to the separate video-face pipeline. Mixing them in here would
+    // both corrupt the scale/IOU match against the freshly re-detected preview faces below, and
+    // (via the stale-face sweep) delete every previously detected video face on every re-run of
+    // this job, since they'd never IOU-match anything in the preview frame.
+    const previewFaces = asset.faces.filter((face) => face.timestampMs == null);
+
     const facesToAdd: (Insertable<AssetFaceTable> & { id: string })[] = [];
     const embeddings: FaceSearchTable[] = [];
     const mlFaceIds = new Set<string>();
 
-    for (const face of asset.faces) {
+    for (const face of previewFaces) {
       if (face.sourceType === SourceType.MachineLearning) {
         mlFaceIds.add(face.id);
       }
     }
 
-    const heightScale = imageHeight / (asset.faces[0]?.imageHeight || 1);
-    const widthScale = imageWidth / (asset.faces[0]?.imageWidth || 1);
+    const heightScale = imageHeight / (previewFaces[0]?.imageHeight || 1);
+    const widthScale = imageWidth / (previewFaces[0]?.imageWidth || 1);
     for (const { boundingBox, embedding } of faces) {
       const scaledBox = {
         x1: boundingBox.x1 * widthScale,
@@ -352,7 +360,7 @@ export class PersonService extends BaseService {
         x2: boundingBox.x2 * widthScale,
         y2: boundingBox.y2 * heightScale,
       };
-      const match = asset.faces.find((face) => this.iou(face, scaledBox) > 0.5);
+      const match = previewFaces.find((face) => this.iou(face, scaledBox) > 0.5);
 
       if (match && !mlFaceIds.delete(match.id)) {
         embeddings.push({ faceId: match.id, embedding });
@@ -516,7 +524,10 @@ export class PersonService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    const faces = await this.personRepository.getVideoFacesWithEmbeddings(id);
+    // Include the un-timestamped preview-frame face too, so a person visible in both the
+    // preview frame and a sampled video frame gets deduped into one face rather than kept
+    // as two near-identical entries.
+    const faces = await this.personRepository.getVideoFacesWithEmbeddings(id, { includeUntimedFace: true });
 
     if (faces.length === 0) {
       return JobStatus.Success;

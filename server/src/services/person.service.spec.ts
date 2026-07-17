@@ -911,6 +911,26 @@ describe(PersonService.name, () => {
       expect(mocks.person.reassignFaces).not.toHaveBeenCalled();
     });
 
+    it('should not sweep up video-timestamped faces as stale when re-detecting the preview frame', async () => {
+      const assetId = newUuid();
+      const asset = AssetFactory.from({ id: assetId, type: AssetType.Video })
+        .face({})
+        .face({ timestampMs: 5000 })
+        .file({ type: AssetFileType.Preview })
+        .exif()
+        .build();
+      const [previewFace, videoFace] = asset.faces;
+      mocks.machineLearning.detectFaces.mockResolvedValue({ faces: [], imageHeight: 500, imageWidth: 400 });
+      mocks.assetJob.getForDetectFacesJob.mockResolvedValue(getForDetectedFaces(asset));
+
+      await sut.handleDetectFaces({ id: asset.id });
+
+      // Only the stale preview face should be swept -- the video-timestamped face belongs to a
+      // different frame's coordinate space entirely and must survive a preview-only re-detection.
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], [previewFace.id], []);
+      expect(mocks.person.refreshFaces).not.toHaveBeenCalledWith([], expect.arrayContaining([videoFace.id]), []);
+    });
+
     it('should add new face and delete an existing face not among the new detected faces', async () => {
       const assetId = newUuid();
       const face = AssetFaceFactory.create({
@@ -1229,6 +1249,27 @@ describe(PersonService.name, () => {
         { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
         { name: JobName.FacialRecognition, data: { id: 'face-1' } },
         { name: JobName.FacialRecognition, data: { id: 'face-3' } },
+      ]);
+      // The un-timestamped preview-frame face must be included in the same clustering pass, or a
+      // person visible in both the preview frame and a sampled video frame would keep two
+      // near-identical face rows instead of being deduped into one.
+      expect(mocks.person.getVideoFacesWithEmbeddings).toHaveBeenCalledWith('asset-1', { includeUntimedFace: true });
+    });
+
+    it('should dedupe the un-timestamped preview face against a matching video face', async () => {
+      const previewFace = { ...makeFace('preview-face', 10, 10, 60, 60, [1, 0, 0]), timestampMs: null }; // area 0.25
+      const videoFace = makeFace('video-face', 10, 10, 40, 40, [0.99, 0.01, 0]); // area 0.09, same person
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([previewFace, videoFace]);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      // The smaller (video) face is the duplicate; the larger preview face survives as the cluster representative
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], ['video-face'], []);
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
+        { name: JobName.FacialRecognition, data: { id: 'preview-face' } },
       ]);
     });
 

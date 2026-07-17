@@ -125,8 +125,14 @@ export class PersonRepository {
       .stream();
   }
 
+  /**
+   * By default, returns only this asset's timestamped (sampled-frame) video faces. Pass
+   * `includeUntimedFace: true` to also include the asset's un-timestamped preview-frame face (if
+   * any) -- needed when clustering, so a person visible in both the preview frame and a sampled
+   * video frame gets deduped into a single face rather than kept as two near-identical entries.
+   */
   @GenerateSql({ params: [DummyValue.UUID] })
-  getVideoFacesWithEmbeddings(assetId: string) {
+  getVideoFacesWithEmbeddings(assetId: string, options: { includeUntimedFace?: boolean } = {}) {
     return this.db
       .selectFrom('asset_face')
       .innerJoin('face_search', 'face_search.faceId', 'asset_face.id')
@@ -142,7 +148,7 @@ export class PersonRepository {
         'face_search.embedding',
       ])
       .where('asset_face.assetId', '=', assetId)
-      .where('asset_face.timestampMs', 'is not', null)
+      .$if(!options.includeUntimedFace, (qb) => qb.where('asset_face.timestampMs', 'is not', null))
       .where('asset_face.sourceType', '=', SourceType.MachineLearning)
       .where('asset_face.deletedAt', 'is', null)
       .execute();
