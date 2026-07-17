@@ -577,6 +577,7 @@
   "app_settings": "App Settings",
   "app_stores": "App Stores",
   "app_update_available": "App update is available",
+  "appearance_count": "{count, plural, one {# appearance} other {# appearances}}",
   "appears_in": "Appears in",
   "appears_in_videos": "Appears in videos",
   "apply_count": "Apply ({count, number})",

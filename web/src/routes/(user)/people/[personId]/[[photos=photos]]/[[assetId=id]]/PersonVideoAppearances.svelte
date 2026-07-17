@@ -17,6 +17,18 @@
   const PREVIEW_PADDING_SECONDS = 4;
   const HOVER_INTENT_DELAY_MS = 200;
 
+  let selectedAssetId = $state<string | undefined>();
+
+  // Most-appearances-first, so the video worth looking at first is at the top of the list
+  // instead of requiring a scroll through everything to find it.
+  const sortedOccurrences = $derived([...occurrences].sort((a, b) => b.timestampsMs.length - a.timestampsMs.length));
+
+  // Falls back to the top of the sorted list whenever selectedAssetId is unset or no longer
+  // matches an occurrence (e.g. on first render, or if the underlying data changes).
+  const selectedOccurrence = $derived(
+    sortedOccurrences.find((occurrence) => occurrence.assetId === selectedAssetId) ?? sortedOccurrences[0],
+  );
+
   let hovered = $state<{ assetId: string; timestampMs: number } | undefined>();
   let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
   let clipVideo: HTMLVideoElement | undefined = $state();
@@ -76,32 +88,63 @@
 {#if occurrences.length > 0}
   <section class="px-4 pb-4 sm:px-6">
     <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{$t('appears_in_videos')}</p>
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {#each occurrences as occurrence (occurrence.assetId)}
-        <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-          <div class="mb-2 flex items-baseline justify-between gap-2">
-            <span class="truncate text-sm font-medium" title={occurrence.originalFileName}>
+    <div class="flex h-96 gap-4">
+      <div
+        class="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto border-e border-gray-200 pe-3 dark:border-gray-700"
+      >
+        {#each sortedOccurrences as occurrence (occurrence.assetId)}
+          {@const isSelected = occurrence.assetId === selectedOccurrence?.assetId}
+          <button
+            type="button"
+            class="flex shrink-0 flex-col items-center gap-1 rounded-lg p-2 text-center {isSelected
+              ? 'bg-immich-primary/10 dark:bg-immich-dark-primary/15'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800'}"
+            onclick={() => (selectedAssetId = occurrence.assetId)}
+          >
+            <span class="w-full truncate text-xs font-medium" title={occurrence.originalFileName}>
               {occurrence.originalFileName}
             </span>
-            {#if occurrence.durationMs != null}
+            <div class="h-16 w-full overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+              <img
+                src={getAssetVideoFrameUrl(occurrence.assetId, occurrence.timestampsMs[0])}
+                alt=""
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+            </div>
+            <span class="text-xs text-gray-500 dark:text-gray-400">
+              {$t('appearance_count', { values: { count: occurrence.timestampsMs.length } })}
+            </span>
+          </button>
+        {/each}
+      </div>
+
+      {#if selectedOccurrence}
+        <div class="min-w-0 flex-1 overflow-y-auto">
+          <div class="mb-2 flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium" title={selectedOccurrence.originalFileName}>
+              {selectedOccurrence.originalFileName}
+            </span>
+            {#if selectedOccurrence.durationMs != null}
               <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">
-                {formatTimestamp(occurrence.durationMs)}
+                {formatTimestamp(selectedOccurrence.durationMs)}
               </span>
             {/if}
           </div>
           <div class="flex flex-wrap gap-3">
-            {#each occurrence.timestampsMs as timestampMs (timestampMs)}
-              {@const isHovered = hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
+            {#each selectedOccurrence.timestampsMs as timestampMs (timestampMs)}
+              {@const isHovered =
+                hovered?.assetId === selectedOccurrence.assetId && hovered.timestampMs === timestampMs}
               <button
                 type="button"
-                class="flex w-24 flex-col items-center gap-1"
-                onclick={() => openAppearance(occurrence.assetId, timestampMs)}
-                onfocus={() => showPreview(occurrence.assetId, timestampMs)}
+                class="flex w-28 flex-col items-center gap-1"
+                onclick={() => openAppearance(selectedOccurrence.assetId, timestampMs)}
+                onfocus={() => showPreview(selectedOccurrence.assetId, timestampMs)}
                 onblur={hidePreview}
-                onpointerenter={() => showPreview(occurrence.assetId, timestampMs)}
+                onpointerenter={() => showPreview(selectedOccurrence.assetId, timestampMs)}
                 onpointerleave={hidePreview}
               >
-                <div class="h-16 w-24 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+                <div class="h-20 w-28 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
                   {#if isHovered}
                     <video
                       bind:this={clipVideo}
@@ -109,13 +152,13 @@
                       preload="metadata"
                       playsinline
                       class="h-full w-full object-cover"
-                      src={getAssetPlaybackUrl({ id: occurrence.assetId })}
+                      src={getAssetPlaybackUrl({ id: selectedOccurrence.assetId })}
                       onloadedmetadata={(event) => onClipLoaded(event.currentTarget, timestampMs)}
                       ontimeupdate={(event) => onClipTimeUpdate(event.currentTarget, timestampMs)}
                     ></video>
                   {:else}
                     <img
-                      src={getAssetVideoFrameUrl(occurrence.assetId, timestampMs)}
+                      src={getAssetVideoFrameUrl(selectedOccurrence.assetId, timestampMs)}
                       alt=""
                       loading="lazy"
                       class="h-full w-full object-cover"
@@ -127,7 +170,7 @@
             {/each}
           </div>
         </div>
-      {/each}
+      {/if}
     </div>
   </section>
 {/if}
