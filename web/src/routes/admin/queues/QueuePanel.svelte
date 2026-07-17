@@ -65,6 +65,11 @@
       missingText: $t('missing'),
       disabled: !featureFlags.facialRecognition,
     },
+    [QueueName.VideoFaceDetection]: {
+      allText: $t('all'),
+      missingText: $t('missing'),
+      disabled: !featureFlags.facialRecognition,
+    },
     [QueueName.FacialRecognition]: {
       allText: $t('reset'),
       missingText: $t('missing'),

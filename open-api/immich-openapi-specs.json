@@ -19885,8 +19885,7 @@
           "integrity-checksum-mismatch-refresh",
           "integrity-missing-files-delete-all",
           "integrity-untracked-files-delete-all",
-          "integrity-checksum-mismatch-delete-all",
-          "video-face-detection"
+          "integrity-checksum-mismatch-delete-all"
         ],
         "type": "string"
       },
@@ -21793,6 +21792,7 @@
           "metadataExtraction",
           "videoConversion",
           "faceDetection",
+          "videoFaceDetection",
           "facialRecognition",
           "smartSearch",
           "duplicateDetection",
@@ -21977,6 +21977,9 @@
           "videoConversion": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
+          "videoFaceDetection": {
+            "$ref": "#/components/schemas/QueueResponseLegacyDto"
+          },
           "workflow": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           }
@@ -22000,6 +22003,7 @@
           "storageTemplateMigration",
           "thumbnailGeneration",
           "videoConversion",
+          "videoFaceDetection",
           "workflow"
         ],
         "type": "object"
@@ -26244,6 +26248,9 @@
           "videoConversion": {
             "$ref": "#/components/schemas/JobSettingsDto"
           },
+          "videoFaceDetection": {
+            "$ref": "#/components/schemas/JobSettingsDto"
+          },
           "workflow": {
             "$ref": "#/components/schemas/JobSettingsDto"
           }
@@ -26263,6 +26270,7 @@
           "smartSearch",
           "thumbnailGeneration",
           "videoConversion",
+          "videoFaceDetection",
           "workflow"
         ],
         "type": "object"

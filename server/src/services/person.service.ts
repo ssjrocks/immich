@@ -398,7 +398,7 @@ export class PersonService extends BaseService {
     return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.AssetVideoDetectFacesQueueAll, queue: QueueName.FaceDetection })
+  @OnJob({ name: JobName.AssetVideoDetectFacesQueueAll, queue: QueueName.VideoFaceDetection })
   async handleQueueVideoDetectFaces({ force }: JobOf<JobName.AssetVideoDetectFacesQueueAll>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: false });
     if (!isFacialRecognitionEnabled(machineLearning)) {
@@ -421,7 +421,7 @@ export class PersonService extends BaseService {
     return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.AssetVideoDetectFaces, queue: QueueName.FaceDetection })
+  @OnJob({ name: JobName.AssetVideoDetectFaces, queue: QueueName.VideoFaceDetection })
   async handleVideoDetectFaces({ id }: JobOf<JobName.AssetVideoDetectFaces>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: true });
     if (!isFacialRecognitionEnabled(machineLearning)) {
@@ -437,6 +437,11 @@ export class PersonService extends BaseService {
       return JobStatus.Skipped;
     }
 
+    // A re-scan (e.g. after raising the frame rate) should replace this asset's previously
+    // detected video faces rather than pile new ones on top of the old set.
+    const existingVideoFaces = await this.personRepository.getVideoFacesWithEmbeddings(id);
+    const faceIdsToRemove = existingVideoFaces.map((face) => face.id);
+
     const { videoFrameRate, videoMaxFrames } = machineLearning.facialRecognition;
     let tempDir: string | undefined;
     try {
@@ -450,6 +455,9 @@ export class PersonService extends BaseService {
 
       if (framePaths.length === 0) {
         this.logger.debug(`No frames extracted for video ${id}`);
+        if (faceIdsToRemove.length > 0) {
+          await this.personRepository.refreshFaces([], faceIdsToRemove);
+        }
         await this.assetRepository.upsertJobStatus({ assetId: id, videoFacesRecognizedAt: new Date() });
         return JobStatus.Success;
       }
@@ -483,10 +491,12 @@ export class PersonService extends BaseService {
         }
       }
 
-      if (facesToAdd.length > 0) {
-        await this.personRepository.refreshFaces(facesToAdd, [], embeddings);
+      if (facesToAdd.length > 0 || faceIdsToRemove.length > 0) {
+        await this.personRepository.refreshFaces(facesToAdd, faceIdsToRemove, embeddings);
         this.logger.log(`Detected ${facesToAdd.length} faces across ${framePaths.length} frames in video ${id}`);
-        await this.jobRepository.queue({ name: JobName.AssetVideoClusterFaces, data: { id } });
+        if (facesToAdd.length > 0) {
+          await this.jobRepository.queue({ name: JobName.AssetVideoClusterFaces, data: { id } });
+        }
       }
     } finally {
       if (tempDir) {
@@ -499,7 +509,7 @@ export class PersonService extends BaseService {
     return JobStatus.Success;
   }
 
-  @OnJob({ name: JobName.AssetVideoClusterFaces, queue: QueueName.FaceDetection })
+  @OnJob({ name: JobName.AssetVideoClusterFaces, queue: QueueName.VideoFaceDetection })
   async handleVideoClusterFaces({ id }: JobOf<JobName.AssetVideoClusterFaces>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: true });
     if (!isFacialRecognitionEnabled(machineLearning)) {

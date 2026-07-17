@@ -1045,6 +1045,7 @@ describe(PersonService.name, () => {
     it('should succeed with no frames extracted', async () => {
       const asset = AssetFactory.from({ type: AssetType.Video }).build();
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({ framePaths: [], effectiveFrameRate: 0.5 });
 
@@ -1062,6 +1063,7 @@ describe(PersonService.name, () => {
       const face = AssetFaceFactory.create({ assetId: asset.id });
 
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({
         framePaths: ['/tmp/test-frames/frame_0001.jpg', '/tmp/test-frames/frame_0002.jpg'],
@@ -1085,9 +1087,53 @@ describe(PersonService.name, () => {
       expect(mocks.storage.unlinkDir).toHaveBeenCalledWith('/tmp/test-frames', { recursive: true, force: true });
     });
 
+    it('should replace previously detected video faces on a re-scan instead of duplicating them', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      const oldFace = AssetFaceFactory.create({ assetId: asset.id });
+      const newFace = AssetFaceFactory.create({ assetId: asset.id });
+
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([
+        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]' },
+      ]);
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({
+        framePaths: ['/tmp/test-frames/frame_0001.jpg'],
+        effectiveFrameRate: 0.5,
+      });
+      mocks.machineLearning.detectFaces.mockResolvedValue(getAsDetectedFace(newFace));
+      mocks.crypto.randomUUID.mockReturnValue(newFace.id);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith(
+        [expect.objectContaining({ assetId: asset.id, timestampMs: 0 })],
+        [oldFace.id],
+        [{ faceId: newFace.id, embedding: '[1, 2, 3, 4]' }],
+      );
+    });
+
+    it('should clear previously detected video faces when a re-scan finds none', async () => {
+      const asset = AssetFactory.from({ type: AssetType.Video }).build();
+      const oldFace = AssetFaceFactory.create({ assetId: asset.id });
+
+      mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([
+        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]' },
+      ]);
+      mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
+      mocks.media.extractVideoFrames.mockResolvedValue({ framePaths: [], effectiveFrameRate: 0.5 });
+
+      await expect(sut.handleVideoDetectFaces({ id: asset.id })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], [oldFace.id]);
+    });
+
     it('should set correct timestampMs per frame using the effective frame rate', async () => {
       const asset = AssetFactory.from({ type: AssetType.Video }).build();
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({
         framePaths: [
@@ -1113,6 +1159,7 @@ describe(PersonService.name, () => {
     it('should clean up temp dir even if detection fails', async () => {
       const asset = AssetFactory.from({ type: AssetType.Video }).build();
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({
         framePaths: ['/tmp/test-frames/frame_0001.jpg'],

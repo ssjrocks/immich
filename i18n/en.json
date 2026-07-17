@@ -79,7 +79,7 @@
     "export_config_as_json_description": "Download the current system config as a JSON file",
     "external_libraries_page_description": "Admin external library page",
     "face_detection": "Face detection",
-    "face_detection_description": "Detect the faces in assets using machine learning. For videos, the first frame is checked, then additional frames are sampled throughout the video at the configured frame rate and deduplicated, so people who only appear partway through are still found. \"Refresh\" (re-)processes all assets. \"Reset\" additionally clears all current face data. \"Missing\" queues assets that haven't been processed yet. Detected faces will be queued for Facial Recognition after Face Detection is complete, grouping them into existing or new people.",
+    "face_detection_description": "Detect the faces in assets using machine learning, checking a video's first frame. \"Refresh\" (re-)processes all assets. \"Reset\" additionally clears all current face data. \"Missing\" queues assets that haven't been processed yet. Detected faces will be queued for Facial Recognition after Face Detection is complete, grouping them into existing or new people.",
     "facial_recognition_job_description": "Group detected faces into people. This step runs after Face Detection is complete. \"Reset\" (re-)clusters all faces. \"Missing\" queues faces that don't have a person assigned.",
     "failed_job_command": "Command {command} failed for job: {job}",
     "force_delete_user_warning": "WARNING: This will immediately remove the user and all assets. This cannot be undone and the files cannot be recovered.",
@@ -490,7 +490,8 @@
     "version_check_settings_description": "Enable/disable the new version notification",
     "video_conversion_job": "Transcode videos",
     "video_conversion_job_description": "Transcode videos for wider compatibility with browsers and devices",
-    "video_face_detection_job": "Video face detection"
+    "video_face_detection_job": "Video face detection",
+    "video_face_detection_job_description": "Sample frames throughout each video at the configured frame rate and detect faces in each, deduplicating repeated detections of the same appearance, so people who only appear partway through a video are still found. \"All\" (re-)processes every video, replacing any previously detected video faces. \"Missing\" queues videos that haven't been scanned yet. Detected faces will be queued for Facial Recognition once clustered."
   },
   "admin_email": "Admin Email",
   "admin_password": "Admin Password",
