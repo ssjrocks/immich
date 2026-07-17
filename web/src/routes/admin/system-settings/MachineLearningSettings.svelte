@@ -18,6 +18,11 @@
   const disabled = $derived(featureFlagsManager.value.configFile);
   const config = $derived(systemConfigManager.value);
   let configToEdit = $state(systemConfigManager.cloneValue());
+  const maxFramesDescriptionKey = $derived(
+    configToEdit.machineLearning.facialRecognition.video.samplingMethod === VideoFaceSamplingMethod.FrameCount
+      ? 'admin.machine_learning_video_face_detection_max_frames_description_frame_count'
+      : 'admin.machine_learning_video_face_detection_max_frames_description_interval',
+  );
 </script>
 
 <div class="mt-2">
@@ -326,7 +331,7 @@
             <SettingInputField
               inputType={SettingInputFieldType.NUMBER}
               label={$t('admin.machine_learning_video_face_detection_max_frames')}
-              description={$t('admin.machine_learning_video_face_detection_max_frames_description')}
+              description={$t(maxFramesDescriptionKey)}
               bind:value={configToEdit.machineLearning.facialRecognition.video.maxFrames}
               step="1"
               min={1}
