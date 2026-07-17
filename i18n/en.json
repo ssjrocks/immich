@@ -1444,6 +1444,7 @@
   "merge": "Merge",
   "merge_people": "Merge people",
   "merge_people_limit": "You can only merge up to 5 faces at a time",
+  "merge_into_existing_person_prompt": "A person named \"{name}\" already exists. Merge this face into them instead of renaming?",
   "merge_people_prompt": "Do you want to merge these people? This action is irreversible.",
   "merge_people_successfully": "Merge people successfully",
   "merged_people_count": "Merged {count, plural, one {# person} other {# people}}",

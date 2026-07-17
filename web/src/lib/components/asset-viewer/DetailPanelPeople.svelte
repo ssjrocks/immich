@@ -2,6 +2,7 @@
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import MergeIntoPersonModal from '$lib/modals/MergeIntoPersonModal.svelte';
   import { Route } from '$lib/route';
   import { faceManager } from '$lib/stores/face.svelte';
   import { locale } from '$lib/stores/preferences.store';
@@ -10,13 +11,15 @@
   import {
     AssetTypeEnum,
     deleteFace,
+    mergePerson,
+    searchPerson,
     updatePerson,
     type AssetFaceResponseDto,
     type AssetResponseDto,
     type PersonResponseDto,
   } from '@immich/sdk';
   import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
-  import { mdiAccountOff, mdiCheck, mdiClose, mdiEye, mdiEyeOff, mdiPencil, mdiPlus } from '@mdi/js';
+  import { mdiAccountOff, mdiCheck, mdiClose, mdiEye, mdiEyeOff, mdiMerge, mdiPencil, mdiPlus } from '@mdi/js';
   import { DateTime, Duration } from 'luxon';
   import { t } from 'svelte-i18n';
 
@@ -30,6 +33,7 @@
 
   const isVideo = $derived(asset.type === AssetTypeEnum.Video);
   let expandedPersonId = $state<string | undefined>();
+  let expandedPersonAnchor = $state<{ top: number; right: number } | undefined>();
   let renamingPersonId = $state<string | undefined>();
   let renameValue = $state('');
 
@@ -40,13 +44,40 @@
       (a, b) => a - b,
     );
 
-  const toggleAppearances = (personId: string) => {
-    expandedPersonId = expandedPersonId === personId ? undefined : personId;
+  const closeAppearances = () => {
+    expandedPersonId = undefined;
+    expandedPersonAnchor = undefined;
   };
+
+  // Rendered with position:fixed anchored to the trigger's own viewport rect (rather than
+  // position:absolute within the sidebar) so the popover can float out over the video instead of
+  // being clipped by the sidebar's overflow-y-auto ancestor, which implicitly clips overflow-x too.
+  const toggleAppearances = (personId: string, event: MouseEvent) => {
+    if (expandedPersonId === personId) {
+      closeAppearances();
+      return;
+    }
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    expandedPersonAnchor = { top: rect.bottom, right: window.innerWidth - rect.right };
+    expandedPersonId = personId;
+  };
+
+  $effect(() => {
+    if (!expandedPersonId) {
+      return;
+    }
+    const close = () => closeAppearances();
+    window.addEventListener('scroll', close, { capture: true });
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, { capture: true });
+      window.removeEventListener('resize', close);
+    };
+  });
 
   const seekToAppearance = (timestampMs: number) => {
     assetViewerManager.seekVideoTo(timestampMs);
-    expandedPersonId = undefined;
+    closeAppearances();
   };
 
   const focusOnMount = (node: HTMLInputElement) => {
@@ -71,6 +102,16 @@
     renamingPersonId = undefined;
   };
 
+  const mergeInto = async (survivor: PersonResponseDto, absorbed: PersonResponseDto) => {
+    try {
+      await mergePerson({ id: survivor.id, mergePersonDto: { ids: [absorbed.id] } });
+      toastManager.primary($t('merged_people_count', { values: { count: 1 } }));
+      await refreshFaces();
+    } catch (error) {
+      handleError(error, $t('cannot_merge_people'));
+    }
+  };
+
   const submitRename = async (person: PersonResponseDto, event?: Event) => {
     event?.preventDefault();
     event?.stopPropagation();
@@ -80,6 +121,22 @@
       return;
     }
     try {
+      // Typing an existing person's name usually signals "this is actually them" rather
+      // than a coincidental duplicate name, so offer to merge instead of just renaming.
+      const matches = await searchPerson({ name, withHidden: true });
+      const existingPerson = matches.find(
+        (match) => match.id !== person.id && match.name.toLowerCase() === name.toLowerCase(),
+      );
+      if (existingPerson) {
+        const isConfirmed = await modalManager.showDialog({
+          prompt: $t('merge_into_existing_person_prompt', { values: { name: existingPerson.name } }),
+        });
+        if (isConfirmed) {
+          await mergeInto(existingPerson, person);
+        }
+        return;
+      }
+
       await updatePerson({ id: person.id, personUpdateDto: { name } });
       toastManager.primary($t('change_name_successfully'));
       await refreshFaces();
@@ -105,6 +162,22 @@
     } catch (error) {
       handleError(error, $t('error_delete_face'));
     }
+  };
+
+  const openMergeIntoExisting = async (person: PersonResponseDto, event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const target = await modalManager.show(MergeIntoPersonModal, { person });
+    if (!target) {
+      return;
+    }
+    const isConfirmed = await modalManager.showDialog({
+      prompt: $t('merge_into_existing_person_prompt', { values: { name: target.name || $t('face_unassigned') } }),
+    });
+    if (!isConfirmed) {
+      return;
+    }
+    await mergeInto(target, person);
   };
 
   const people = $derived(Array.from(faceManager.people));
@@ -257,14 +330,15 @@
               onblur={() => assetViewerManager.clearHighlightedFaces()}
               onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
               onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
-              onclick={() => toggleAppearances(person.id)}
+              onclick={(event) => toggleAppearances(person.id, event)}
             >
               {@render personCard()}
             </button>
 
-            {#if expandedPersonId === person.id}
+            {#if expandedPersonId === person.id && expandedPersonAnchor}
               <div
-                class="absolute top-full right-0 z-10 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                class="fixed z-50 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
+                style="top: {expandedPersonAnchor.top}px; right: {expandedPersonAnchor.right}px;"
               >
                 {#each appearances as timestampMs (timestampMs)}
                   <button
@@ -302,6 +376,15 @@
                 color="primary"
                 variant="filled"
                 onclick={(event: Event) => startRename(person, event)}
+              />
+              <IconButton
+                aria-label={$t('merge_people')}
+                icon={mdiMerge}
+                size="medium"
+                shape="round"
+                color="secondary"
+                variant="filled"
+                onclick={(event: Event) => handlePromiseError(openMergeIntoExisting(person, event))}
               />
               <IconButton
                 aria-label={$t('delete_face')}
