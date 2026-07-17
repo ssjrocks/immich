@@ -8,6 +8,53 @@
   <br/>
 </p>
 
+# 🍴 This fork
+
+This is a personal fork of [immich-app/immich](https://github.com/immich-app/immich), kept in sync with
+upstream `main`, with two extra capabilities layered on top of a stock install. See
+[FORK_CHANGES.md](FORK_CHANGES.md) for the full technical changelog (schema, config, API).
+
+## Facial recognition throughout videos
+
+Stock Immich only runs face detection on a video's first-frame thumbnail — if someone isn't in that
+exact frame, they're never recognized anywhere in that video. This fork samples frames throughout the
+full video at a configurable rate, runs each through Immich's existing face-detection model, dedupes
+repeated detections of the same appearance, and surfaces every distinct moment a person shows up:
+
+- A person's page lists every video they appear in, grouped in its own card with the filename and
+  duration, and a frame thumbnail per appearance — hover one for a short preview clip, click to jump
+  straight there.
+- While watching a video, clicking a person in the sidebar shows their appearance timestamps for
+  *that* video in place, without navigating away, and seeks the player when you pick one.
+- An in-place edit mode on the People sidebar for quickly renaming or unassigning a face without
+  leaving the video.
+
+<p align="center">
+  <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos panel showing grouped timestamps and hover preview"><br/>
+  <sub>A person's page: every video they appear in, grouped by video, with a hover preview per timestamp.</sub>
+</p>
+<p align="center">
+  <img src="design/fork/video-face-detection-viewer.gif" width="700" alt="In-video People sidebar showing inline appearance timestamps"><br/>
+  <sub>Watching a video: appearance timestamps for the people in this clip, seeking in place.</sub>
+</p>
+
+## AI-generated photo descriptions via Immich Analyze
+
+Credit for this one goes entirely to **Timofey Klester** ([@timasoft](https://github.com/timasoft)) —
+his [immich-analyze](https://github.com/timasoft/immich-analyze) project runs alongside Immich as a
+companion container. It analyzes photos with a vision-capable model (via Ollama or a llama.cpp
+server) and writes a generated description back into each asset, making the library's existing
+metadata search far more useful — you can search for what's actually *in* a photo, not just its
+filename, date, or tags. It's not part of this fork's codebase; it's a separate open-source project
+I run in front of the same library, and it's genuinely great work — go star it.
+
+<p align="center">
+  <img src="design/fork/immich-analyze-description.png" width="700" alt="Immich asset detail panel showing an AI-generated description"><br/>
+  <sub>An AI-generated description written into a photo's metadata by immich-analyze.</sub>
+</p>
+
+---
+
 <p align="center">
 <img src="design/immich-logo-stacked-light.svg" width="300" title="Login With Custom URL">
 </p>
