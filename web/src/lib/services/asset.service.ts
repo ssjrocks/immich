@@ -406,12 +406,13 @@ const getAssetJobMessage = ($t: MessageFormatter, job: AssetJobName) => {
     [AssetJobName.RefreshMetadata]: $t('refreshing_metadata'),
     [AssetJobName.RegenerateThumbnail]: $t('regenerating_thumbnails'),
     [AssetJobName.TranscodeVideo]: $t('refreshing_encoded_video'),
+    [AssetJobName.ScanVideoFaces]: $t('scanning_video_faces'),
   };
 
   return messages[job];
 };
 
-const handleRunAssetJob = async (dto: AssetJobsDto) => {
+export const handleRunAssetJob = async (dto: AssetJobsDto) => {
   const $t = await getFormatter();
 
   try {

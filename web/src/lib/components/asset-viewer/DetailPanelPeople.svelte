@@ -2,25 +2,40 @@
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
   import MergeIntoPersonModal from '$lib/modals/MergeIntoPersonModal.svelte';
   import { Route } from '$lib/route';
+  import { handleRunAssetJob } from '$lib/services/asset.service';
   import { faceManager } from '$lib/stores/face.svelte';
   import { locale } from '$lib/stores/preferences.store';
   import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
   import {
+    AssetJobName,
     AssetTypeEnum,
     deleteFace,
     mergePerson,
     searchPerson,
     updatePerson,
+    VideoFaceScanMode,
     type AssetFaceResponseDto,
     type AssetResponseDto,
     type PersonResponseDto,
   } from '@immich/sdk';
   import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
-  import { mdiAccountOff, mdiCheck, mdiClose, mdiEye, mdiEyeOff, mdiMerge, mdiPencil, mdiPlus } from '@mdi/js';
+  import {
+    mdiAccountOff,
+    mdiCheck,
+    mdiClose,
+    mdiEye,
+    mdiEyeOff,
+    mdiFaceRecognition,
+    mdiMerge,
+    mdiPencil,
+    mdiPlus,
+  } from '@mdi/js';
   import { DateTime, Duration } from 'luxon';
+  import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
 
   type Props = {
@@ -32,6 +47,30 @@
   const { asset, isOwner, previousRoute }: Props = $props();
 
   const isVideo = $derived(asset.type === AssetTypeEnum.Video);
+  const isAdmin = $derived(authManager.authenticated && authManager.user.isAdmin);
+  let videoFaceScanEnabled = $state(false);
+
+  onMount(async () => {
+    if (!isAdmin || !isVideo) {
+      return;
+    }
+    try {
+      try {
+        // Throws if no other admin page has loaded the config yet this session.
+        void systemConfigManager.value;
+      } catch {
+        await systemConfigManager.init();
+      }
+      const { enabled, video } = systemConfigManager.value.machineLearning.facialRecognition;
+      videoFaceScanEnabled = enabled && video.scanMode === VideoFaceScanMode.FullScan;
+    } catch {
+      // A failed config load just means no button; this isn't essential enough to surface an error for.
+    }
+  });
+
+  const scanVideoFaces = () =>
+    handlePromiseError(handleRunAssetJob({ name: AssetJobName.ScanVideoFaces, assetIds: [asset.id] }));
+
   let expandedPersonId = $state<string | undefined>();
   let expandedPersonAnchor = $state<{ top: number; right: number } | undefined>();
   let renamingPersonId = $state<string | undefined>();
@@ -254,6 +293,19 @@
             variant={assetViewerManager.isPeopleEditMode ? 'filled' : 'ghost'}
             class="h-[3.125rem] w-[3.125rem]"
             onclick={() => assetViewerManager.togglePeopleEditMode()}
+          />
+        {/if}
+
+        {#if videoFaceScanEnabled}
+          <IconButton
+            aria-label={$t('scan_video_faces')}
+            icon={mdiFaceRecognition}
+            size="medium"
+            shape="round"
+            color="secondary"
+            variant="ghost"
+            class="h-[3.125rem] w-[3.125rem]"
+            onclick={scanVideoFaces}
           />
         {/if}
       </div>

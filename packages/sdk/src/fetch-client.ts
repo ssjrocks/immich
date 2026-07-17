@@ -7386,7 +7386,8 @@ export enum AssetJobName {
     RefreshFaces = "refresh-faces",
     RefreshMetadata = "refresh-metadata",
     RegenerateThumbnail = "regenerate-thumbnail",
-    TranscodeVideo = "transcode-video"
+    TranscodeVideo = "transcode-video",
+    ScanVideoFaces = "scan-video-faces"
 }
 export enum AssetTypeEnum {
     Image = "IMAGE",

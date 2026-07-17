@@ -35,6 +35,7 @@ vite.config.js.timestamp-*
 # Deliberately broad: this repo is public, so anything matching these patterns
 # should be treated as sensitive by default rather than reviewed case-by-case.
 ssh-sudo-info.md
+ML_SERVER_SETUP.md
 .env
 .env.*
 *.pem

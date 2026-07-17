@@ -481,6 +481,11 @@ export class AssetService extends BaseService {
           jobs.push({ name: JobName.AssetEncodeVideo, data: { id } });
           break;
         }
+
+        case AssetJobName.SCAN_VIDEO_FACES: {
+          jobs.push({ name: JobName.AssetVideoDetectFaces, data: { id } });
+          break;
+        }
       }
     }
 
