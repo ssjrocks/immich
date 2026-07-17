@@ -4,6 +4,7 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
   import MergeIntoPersonModal from '$lib/modals/MergeIntoPersonModal.svelte';
+  import ReassignFaceModal from '$lib/modals/ReassignFaceModal.svelte';
   import { Route } from '$lib/route';
   import { handleRunAssetJob } from '$lib/services/asset.service';
   import { faceManager } from '$lib/stores/face.svelte';
@@ -16,25 +17,13 @@
     deleteFace,
     mergePerson,
     reassignFaces,
-    searchPerson,
-    updatePerson,
     VideoFaceScanMode,
     type AssetFaceResponseDto,
     type AssetResponseDto,
     type PersonResponseDto,
   } from '@immich/sdk';
   import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
-  import {
-    mdiAccountOff,
-    mdiCheck,
-    mdiClose,
-    mdiEye,
-    mdiEyeOff,
-    mdiFaceRecognition,
-    mdiMerge,
-    mdiPencil,
-    mdiPlus,
-  } from '@mdi/js';
+  import { mdiAccountOff, mdiEye, mdiEyeOff, mdiFaceRecognition, mdiMerge, mdiPencil, mdiPlus } from '@mdi/js';
   import { DateTime, Duration } from 'luxon';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -74,8 +63,6 @@
 
   let expandedPersonId = $state<string | undefined>();
   let expandedPersonAnchor = $state<{ top: number; right: number } | undefined>();
-  let renamingPersonId = $state<string | undefined>();
-  let renameValue = $state('');
 
   const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
 
@@ -120,26 +107,9 @@
     closeAppearances();
   };
 
-  const focusOnMount = (node: HTMLInputElement) => {
-    node.focus();
-  };
-
   const refreshFaces = async () => {
     faceManager.clear();
     await faceManager.getAssetFaces(asset.id);
-  };
-
-  const startRename = (person: PersonResponseDto, event: Event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    renamingPersonId = person.id;
-    renameValue = person.name;
-  };
-
-  const cancelRename = (event?: Event) => {
-    event?.preventDefault();
-    event?.stopPropagation();
-    renamingPersonId = undefined;
   };
 
   const mergeInto = async (survivor: PersonResponseDto, absorbed: PersonResponseDto) => {
@@ -168,38 +138,17 @@
     }
   };
 
-  const submitRename = async (person: PersonResponseDto, event?: Event) => {
-    event?.preventDefault();
-    event?.stopPropagation();
-    const name = renameValue.trim();
-    renamingPersonId = undefined;
-    if (name === person.name) {
+  // This never touches person's actual name/identity -- it's specifically for "this face was
+  // tagged as the wrong person", scoped to this asset only via reassignFaceToExisting. Renaming
+  // a person's real name is a different action, done from that person's own page.
+  const openReassignFace = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const target = await modalManager.show(ReassignFaceModal, { person, faceId: personFaces[0]?.id });
+    if (!target) {
       return;
     }
-    try {
-      // Typing an existing person's name usually signals "this face is actually them" rather
-      // than a coincidental duplicate name, so offer to reassign this asset's face(s) to that
-      // person instead of just renaming -- not a full merge of the two people everywhere.
-      const matches = await searchPerson({ name, withHidden: true });
-      const existingPerson = matches.find(
-        (match) => match.id !== person.id && match.name.toLowerCase() === name.toLowerCase(),
-      );
-      if (existingPerson) {
-        const isConfirmed = await modalManager.showDialog({
-          prompt: $t('reassign_face_to_existing_person_prompt', { values: { name: existingPerson.name } }),
-        });
-        if (isConfirmed) {
-          await reassignFaceToExisting(existingPerson, person);
-        }
-        return;
-      }
-
-      await updatePerson({ id: person.id, personUpdateDto: { name } });
-      toastManager.primary($t('change_name_successfully'));
-      await refreshFaces();
-    } catch (error) {
-      handleError(error, $t('errors.unable_to_save_name'));
-    }
+    await reassignFaceToExisting(target, person);
   };
 
   const markNotAFace = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
@@ -353,43 +302,7 @@
             highlighted={isHighlighted}
             class="outline-offset-2 outline-immich-primary group-focus-visible:outline-2 dark:outline-immich-dark-primary"
           />
-          {#if renamingPersonId === person.id}
-            <div class="mt-1 flex items-center gap-1" role="presentation" onclick={(event) => event.stopPropagation()}>
-              <input
-                type="text"
-                class="w-full min-w-0 rounded border border-gray-300 bg-white px-1 py-0.5 text-xs dark:border-gray-600 dark:bg-gray-700"
-                bind:value={renameValue}
-                use:focusOnMount
-                onkeydown={(event) => {
-                  if (event.key === 'Enter') {
-                    handlePromiseError(submitRename(person, event));
-                  } else if (event.key === 'Escape') {
-                    cancelRename(event);
-                  }
-                }}
-              />
-              <IconButton
-                aria-label={$t('save')}
-                icon={mdiCheck}
-                size="small"
-                shape="round"
-                color="primary"
-                variant="ghost"
-                onclick={(event: Event) => handlePromiseError(submitRename(person, event))}
-              />
-              <IconButton
-                aria-label={$t('cancel')}
-                icon={mdiClose}
-                size="small"
-                shape="round"
-                color="secondary"
-                variant="ghost"
-                onclick={cancelRename}
-              />
-            </div>
-          {:else}
-            <p class="mt-1 truncate font-medium" title={person.name}>{person.name}</p>
-          {/if}
+          <p class="mt-1 truncate font-medium" title={person.name}>{person.name}</p>
           {#if person.birthDate && person.formattedAge}
             <p class="font-light {visiblePeople.length > 6 ? 'text-xs' : ''}" title={person.formattedBirthDate!}>
               {person.formattedAge}
@@ -436,18 +349,18 @@
             </a>
           {/if}
 
-          {#if assetViewerManager.isPeopleEditMode && renamingPersonId !== person.id}
+          {#if assetViewerManager.isPeopleEditMode}
             <div
               class="absolute top-0 right-0 flex gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
             >
               <IconButton
-                aria-label={$t('edit_name')}
+                aria-label={$t('wrong_person')}
                 icon={mdiPencil}
                 size="small"
                 shape="round"
                 color="primary"
                 variant="filled"
-                onclick={(event: Event) => startRename(person, event)}
+                onclick={(event: Event) => handlePromiseError(openReassignFace(person, personFaces, event))}
               />
               <IconButton
                 aria-label={$t('merge_people')}

@@ -2306,6 +2306,8 @@
   "workflow_update_success": "Workflow updated successfully",
   "workflows": "Workflows",
   "workflows_help_text": "Workflows automate actions on your assets based on triggers and filters",
+  "wrong_person": "Wrong person",
+  "wrong_person_description": "Assign this face to who it actually is. Only this face is affected -- their other photos and videos are untouched.",
   "wrong_pin_code": "Wrong PIN code",
   "x_of_total": "{x}/{total}",
   "year": "Year",
