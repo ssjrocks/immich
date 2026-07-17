@@ -259,7 +259,13 @@
       </div>
     </div>
 
-    <div class="mt-2 grid {visiblePeople.length <= 6 ? 'grid-cols-3 gap-3' : 'grid-cols-4 gap-2'}">
+    <div
+      class="mt-2 grid {assetViewerManager.isPeopleEditMode
+        ? 'grid-cols-2 gap-3'
+        : visiblePeople.length <= 6
+          ? 'grid-cols-3 gap-3'
+          : 'grid-cols-4 gap-2'}"
+    >
       {#each visiblePeople as person (person.id)}
         {@const personFaces = faceManager.facesByPersonId.get(person.id) ?? []}
         {@const isHighlighted = personFaces.some((f) => assetViewerManager.highlightedFaces.some((b) => b.id === f.id))}
@@ -321,15 +327,18 @@
           {/if}
         {/snippet}
 
-        <div class="group relative">
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="group relative"
+          onfocusin={() => assetViewerManager.setHighlightedFaces(personFaces)}
+          onfocusout={() => assetViewerManager.clearHighlightedFaces()}
+          onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
+          onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
+        >
           {#if isVideo && appearances.length > 0}
             <button
               type="button"
               class="w-full text-left outline-none"
-              onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
-              onblur={() => assetViewerManager.clearHighlightedFaces()}
-              onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
-              onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
               onclick={(event) => toggleAppearances(person.id, event)}
             >
               {@render personCard()}
@@ -352,14 +361,7 @@
               </div>
             {/if}
           {:else}
-            <a
-              class="outline-none"
-              href={Route.viewPerson(person, { previousRoute })}
-              onfocus={() => assetViewerManager.setHighlightedFaces(personFaces)}
-              onblur={() => assetViewerManager.clearHighlightedFaces()}
-              onpointerenter={() => assetViewerManager.setHighlightedFaces(personFaces)}
-              onpointerleave={() => assetViewerManager.clearHighlightedFaces()}
-            >
+            <a class="outline-none" href={Route.viewPerson(person, { previousRoute })}>
               {@render personCard()}
             </a>
           {/if}
@@ -371,7 +373,7 @@
               <IconButton
                 aria-label={$t('edit_name')}
                 icon={mdiPencil}
-                size="medium"
+                size="small"
                 shape="round"
                 color="primary"
                 variant="filled"
@@ -380,7 +382,7 @@
               <IconButton
                 aria-label={$t('merge_people')}
                 icon={mdiMerge}
-                size="medium"
+                size="small"
                 shape="round"
                 color="secondary"
                 variant="filled"
@@ -389,7 +391,7 @@
               <IconButton
                 aria-label={$t('delete_face')}
                 icon={mdiAccountOff}
-                size="medium"
+                size="small"
                 shape="round"
                 color="danger"
                 variant="filled"

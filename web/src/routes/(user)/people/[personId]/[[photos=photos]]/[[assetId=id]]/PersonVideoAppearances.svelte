@@ -74,9 +74,9 @@
 </script>
 
 {#if occurrences.length > 0}
-  <section class="w-fit max-w-64 px-4 pb-4 sm:max-w-none sm:px-6">
+  <section class="px-4 pb-4 sm:px-6">
     <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{$t('appears_in_videos')}</p>
-    <div class="flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {#each occurrences as occurrence (occurrence.assetId)}
         <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
           <div class="mb-2 flex items-baseline justify-between gap-2">
