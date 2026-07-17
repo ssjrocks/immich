@@ -4665,6 +4665,83 @@
         "x-immich-state": "Stable"
       }
     },
+    "/assets/{id}/video/frame": {
+      "get": {
+        "description": "Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.",
+        "operationId": "getVideoFrame",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestampMs",
+            "required": true,
+            "in": "query",
+            "description": "Timestamp in milliseconds to extract a frame at",
+            "schema": {
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get a video frame at a timestamp",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3",
+            "state": "Added"
+          },
+          {
+            "version": "v3",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.view",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/assets/{id}/video/playback": {
       "get": {
         "description": "Streams the video file for the specified asset. This endpoint also supports byte range requests.",
@@ -21306,6 +21383,17 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
             "type": "string"
           },
+          "durationMs": {
+            "description": "Duration of the video in milliseconds",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "originalFileName": {
+            "description": "Original filename of the video",
+            "type": "string"
+          },
           "timestampsMs": {
             "description": "Timestamps (ms from video start) where this person appears",
             "items": {
@@ -21318,6 +21406,8 @@
         },
         "required": [
           "assetId",
+          "durationMs",
+          "originalFileName",
           "timestampsMs"
         ],
         "type": "object"

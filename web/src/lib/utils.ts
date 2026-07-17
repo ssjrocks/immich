@@ -6,6 +6,7 @@ import {
   getAssetOriginalPath,
   getAssetPlaybackPath,
   getAssetThumbnailPath,
+  getAssetVideoFramePath,
   getBaseUrl,
   getPeopleThumbnailPath,
   getUserProfileImagePath,
@@ -242,6 +243,10 @@ export const getAssetMediaUrl = (options: AssetUrlOptions) => {
 export const getAssetPlaybackUrl = (options: AssetUrlOptions) => {
   const { id, cacheKey: c } = options;
   return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c });
+};
+
+export const getAssetVideoFrameUrl = (id: string, timestampMs: number) => {
+  return createUrl(getAssetVideoFramePath(id), { ...authManager.params, timestampMs });
 };
 
 export const getAssetHlsUrl = (id: string) => {

@@ -2,8 +2,8 @@
   import { goto } from '$app/navigation';
   import { QueryParameter } from '$lib/constants';
   import { Route } from '$lib/route';
-  import { getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { AssetMediaSize, type PersonResponseDto, type PersonVideoOccurrenceResponseDto } from '@immich/sdk';
+  import { getAssetPlaybackUrl, getAssetVideoFrameUrl } from '$lib/utils';
+  import { type PersonResponseDto, type PersonVideoOccurrenceResponseDto } from '@immich/sdk';
   import { Duration } from 'luxon';
   import { t } from 'svelte-i18n';
 
@@ -28,8 +28,8 @@
     await goto(url);
   };
 
-  // Debounced so quickly scanning the mouse across many chips doesn't fire off a
-  // burst of video loads for chips the user never intended to linger on.
+  // Debounced so quickly scanning the mouse across many thumbnails doesn't fire off a
+  // burst of video loads for ones the user never intended to linger on.
   const showPreview = (assetId: string, timestampMs: number) => {
     clearTimeout(hoverTimeout);
     hoverTimeout = setTimeout(() => {
@@ -56,7 +56,7 @@
   };
 
   $effect(() => {
-    // re-run (and clean up the previous run) whenever the hovered chip changes
+    // re-run (and clean up the previous run) whenever the hovered thumbnail changes
     hovered;
     return () => releaseVideo(clipVideo);
   });
@@ -74,50 +74,56 @@
 </script>
 
 {#if occurrences.length > 0}
-  <section class="w-fit max-w-64 px-4 pb-4 sm:max-w-96 sm:px-6">
+  <section class="w-fit max-w-64 px-4 pb-4 sm:max-w-none sm:px-6">
     <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{$t('appears_in_videos')}</p>
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-4">
       {#each occurrences as occurrence (occurrence.assetId)}
-        <div class="flex items-center gap-3 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-          <img
-            src={getAssetMediaUrl({ id: occurrence.assetId, size: AssetMediaSize.Thumbnail })}
-            alt=""
-            class="h-16 w-24 shrink-0 rounded object-cover"
-          />
-          <div class="flex flex-wrap items-center gap-1">
+        <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+          <div class="mb-2 flex items-baseline justify-between gap-2">
+            <span class="truncate text-sm font-medium" title={occurrence.originalFileName}>
+              {occurrence.originalFileName}
+            </span>
+            {#if occurrence.durationMs != null}
+              <span class="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+                {formatTimestamp(occurrence.durationMs)}
+              </span>
+            {/if}
+          </div>
+          <div class="flex flex-wrap gap-3">
             {#each occurrence.timestampsMs as timestampMs (timestampMs)}
-              <div class="relative inline-block">
-                <button
-                  type="button"
-                  class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-                  onclick={() => openAppearance(occurrence.assetId, timestampMs)}
-                  onfocus={() => showPreview(occurrence.assetId, timestampMs)}
-                  onblur={hidePreview}
-                  onpointerenter={() => showPreview(occurrence.assetId, timestampMs)}
-                  onpointerleave={hidePreview}
-                >
-                  {formatTimestamp(timestampMs)}
-                </button>
-
-                {#if hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
-                  <div
-                    class="absolute top-full left-0 z-10 mt-1 rounded-lg border border-gray-200 bg-white p-1 shadow-lg dark:border-gray-700 dark:bg-gray-800"
-                    style="width: 28rem;"
-                  >
+              {@const isHovered = hovered?.assetId === occurrence.assetId && hovered.timestampMs === timestampMs}
+              <button
+                type="button"
+                class="flex w-24 flex-col items-center gap-1"
+                onclick={() => openAppearance(occurrence.assetId, timestampMs)}
+                onfocus={() => showPreview(occurrence.assetId, timestampMs)}
+                onblur={hidePreview}
+                onpointerenter={() => showPreview(occurrence.assetId, timestampMs)}
+                onpointerleave={hidePreview}
+              >
+                <div class="h-16 w-24 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+                  {#if isHovered}
                     <video
                       bind:this={clipVideo}
                       muted
                       preload="metadata"
                       playsinline
-                      class="rounded object-cover"
-                      style="width: 28rem; height: 16rem;"
+                      class="h-full w-full object-cover"
                       src={getAssetPlaybackUrl({ id: occurrence.assetId })}
                       onloadedmetadata={(event) => onClipLoaded(event.currentTarget, timestampMs)}
                       ontimeupdate={(event) => onClipTimeUpdate(event.currentTarget, timestampMs)}
                     ></video>
-                  </div>
-                {/if}
-              </div>
+                  {:else}
+                    <img
+                      src={getAssetVideoFrameUrl(occurrence.assetId, timestampMs)}
+                      alt=""
+                      loading="lazy"
+                      class="h-full w-full object-cover"
+                    />
+                  {/if}
+                </div>
+                <span class="text-xs text-gray-700 dark:text-gray-300">{formatTimestamp(timestampMs)}</span>
+              </button>
             {/each}
           </div>
         </div>

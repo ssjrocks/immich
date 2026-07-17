@@ -29,6 +29,12 @@ const AssetMediaOptionsSchema = z
   })
   .meta({ id: 'AssetMediaOptionsDto' });
 
+const AssetVideoFrameSchema = z
+  .object({
+    timestampMs: z.coerce.number().int().min(0).describe('Timestamp in milliseconds to extract a frame at'),
+  })
+  .meta({ id: 'AssetVideoFrameDto' });
+
 export enum UploadFieldName {
   ASSET_DATA = 'assetData',
   SIDECAR_DATA = 'sidecarData',
@@ -72,3 +78,4 @@ const AssetBulkUploadCheckSchema = z
 export class AssetMediaOptionsDto extends createZodDto(AssetMediaOptionsSchema) {}
 export class AssetMediaCreateDto extends createZodDto(AssetMediaCreateSchema) {}
 export class AssetBulkUploadCheckDto extends createZodDto(AssetBulkUploadCheckSchema) {}
+export class AssetVideoFrameDto extends createZodDto(AssetVideoFrameSchema) {}

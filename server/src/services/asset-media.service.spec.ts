@@ -2,6 +2,7 @@ import {
   BadRequestException,
   InternalServerErrorException,
   NotFoundException,
+  StreamableFile,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AssetFile } from 'src/database';
@@ -757,6 +758,52 @@ describe(AssetMediaService.name, () => {
           contentType: 'application/octet-stream',
         }),
       );
+    });
+  });
+
+  describe('getVideoFrame', () => {
+    it('should require asset.view permissions', async () => {
+      await expect(sut.getVideoFrame(authStub.admin, 'id', 1000)).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.access.asset.checkOwnerAccess).toHaveBeenCalledWith(userStub.admin.id, new Set(['id']), undefined);
+    });
+
+    it('should throw an error if the video asset could not be found', async () => {
+      const asset = AssetFactory.create();
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+
+      await expect(sut.getVideoFrame(authStub.admin, asset.id, 1000)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('should extract a frame from the encoded video path if available', async () => {
+      const asset = AssetFactory.from()
+        .file({ type: AssetFileType.EncodedVideo, path: '/path/to/encoded/video.mp4' })
+        .build();
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      mocks.asset.getForVideo.mockResolvedValue({
+        originalPath: asset.originalPath,
+        encodedVideoPath: asset.files[0].path,
+      });
+      mocks.media.extractVideoFrameAt.mockResolvedValue(Buffer.from('jpeg-bytes'));
+
+      const result = await sut.getVideoFrame(authStub.admin, asset.id, 5000);
+
+      expect(mocks.media.extractVideoFrameAt).toHaveBeenCalledWith('/path/to/encoded/video.mp4', 5000);
+      expect(result).toBeInstanceOf(StreamableFile);
+    });
+
+    it('should fall back to the original path', async () => {
+      const asset = AssetFactory.create({ type: AssetType.Video, originalPath: '/original/path.ext' });
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      mocks.asset.getForVideo.mockResolvedValue({
+        originalPath: asset.originalPath,
+        encodedVideoPath: null,
+      });
+      mocks.media.extractVideoFrameAt.mockResolvedValue(Buffer.from('jpeg-bytes'));
+
+      await sut.getVideoFrame(authStub.admin, asset.id, 5000);
+
+      expect(mocks.media.extractVideoFrameAt).toHaveBeenCalledWith(asset.originalPath, 5000);
     });
   });
 

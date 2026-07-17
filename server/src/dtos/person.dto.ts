@@ -229,6 +229,8 @@ export function mapFaces(
 const PersonVideoOccurrenceResponseSchema = z
   .object({
     assetId: z.uuidv4().describe('Asset ID of the video'),
+    originalFileName: z.string().describe('Original filename of the video'),
+    durationMs: z.int().min(0).nullable().describe('Duration of the video in milliseconds'),
     timestampsMs: z.array(z.int().min(0)).describe('Timestamps (ms from video start) where this person appears'),
   })
   .meta({ id: 'PersonVideoOccurrenceResponseDto' });

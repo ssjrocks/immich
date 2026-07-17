@@ -1,5 +1,12 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  StreamableFile,
+} from '@nestjs/common';
 import { extname } from 'node:path';
+import { Readable } from 'node:stream';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
 import { AuthSharedLink } from 'src/database';
@@ -309,6 +316,19 @@ export class AssetMediaService extends BaseService {
       contentType: mimeTypes.lookup(filepath),
       cacheControl: CacheControl.PrivateWithCache,
     });
+  }
+
+  async getVideoFrame(auth: AuthDto, id: string, timestampMs: number): Promise<StreamableFile> {
+    await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
+
+    const asset = await this.assetRepository.getForVideo(id);
+    if (!asset) {
+      throw new NotFoundException('Asset not found or asset is not a video');
+    }
+
+    const filepath = asset.encodedVideoPath || asset.originalPath;
+    const frame = await this.mediaRepository.extractVideoFrameAt(filepath, timestampMs);
+    return new StreamableFile(Readable.from(frame), { type: 'image/jpeg', length: frame.length });
   }
 
   async bulkUploadCheck(auth: AuthDto, dto: AssetBulkUploadCheckDto): Promise<AssetBulkUploadCheckResponseDto> {

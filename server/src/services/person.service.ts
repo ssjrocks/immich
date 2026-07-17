@@ -165,7 +165,12 @@ export class PersonService extends BaseService {
   async getVideoOccurrences(auth: AuthDto, id: string): Promise<PersonVideoOccurrenceResponseDto[]> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
     const rows = await this.personRepository.getVideoOccurrences(id);
-    return rows.map((row) => ({ assetId: row.assetId, timestampsMs: row.timestampsMs }));
+    return rows.map((row) => ({
+      assetId: row.assetId,
+      originalFileName: row.originalFileName,
+      durationMs: row.durationMs,
+      timestampsMs: row.timestampsMs,
+    }));
   }
 
   async getThumbnail(auth: AuthDto, id: string): Promise<ImmichFileResponse> {

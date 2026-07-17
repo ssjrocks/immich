@@ -1593,13 +1593,13 @@ describe(PersonService.name, () => {
       const auth = AuthFactory.create();
       mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
       mocks.person.getVideoOccurrences.mockResolvedValue([
-        { assetId: 'asset-1', timestampsMs: [1000, 5000] },
-        { assetId: 'asset-2', timestampsMs: [2000] },
+        { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 5000] },
+        { assetId: 'asset-2', originalFileName: 'video-2.mp4', durationMs: null, timestampsMs: [2000] },
       ]);
 
       await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
-        { assetId: 'asset-1', timestampsMs: [1000, 5000] },
-        { assetId: 'asset-2', timestampsMs: [2000] },
+        { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 5000] },
+        { assetId: 'asset-2', originalFileName: 'video-2.mp4', durationMs: null, timestampsMs: [2000] },
       ]);
       expect(mocks.person.getVideoOccurrences).toHaveBeenCalledWith('person-1');
     });

@@ -1527,6 +1527,10 @@ export type PersonStatisticsResponseDto = {
 export type PersonVideoOccurrenceResponseDto = {
     /** Asset ID of the video */
     assetId: string;
+    /** Duration of the video in milliseconds */
+    durationMs: number | null;
+    /** Original filename of the video */
+    originalFileName: string;
     /** Timestamps (ms from video start) where this person appears */
     timestampsMs: number[];
 };
@@ -4418,6 +4422,23 @@ export function viewAsset({ edited, id, key, size, slug }: {
         key,
         size,
         slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get a video frame at a timestamp
+ */
+export function getVideoFrame({ id, key, slug, timestampMs }: {
+    id: string;
+    key?: string;
+    slug?: string;
+    timestampMs: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/assets/${encodeURIComponent(id)}/video/frame${QS.query(QS.explode({
+        key,
+        slug,
+        timestampMs
     }))}`, {
         ...opts
     }));

@@ -11,6 +11,7 @@ import {
   Query,
   Req,
   Res,
+  StreamableFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
@@ -27,6 +28,7 @@ import {
   AssetMediaCreateDto,
   AssetMediaOptionsDto,
   AssetMediaSize,
+  AssetVideoFrameDto,
 } from 'src/dtos/asset-media.dto';
 import { AssetDownloadOriginalDto } from 'src/dtos/asset.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
@@ -175,6 +177,22 @@ export class AssetMediaController {
     @Next() next: NextFunction,
   ) {
     await sendFile(res, next, () => this.service.playbackVideo(auth, id), this.logger);
+  }
+
+  @Get(':id/video/frame')
+  @Authenticated({ permission: Permission.AssetView, sharedLink: true })
+  @Endpoint({
+    summary: 'Get a video frame at a timestamp',
+    description:
+      'Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.',
+    history: new HistoryBuilder().added('v3').alpha('v3'),
+  })
+  getVideoFrame(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Query() { timestampMs }: AssetVideoFrameDto,
+  ): Promise<StreamableFile> {
+    return this.service.getVideoFrame(auth, id, timestampMs);
   }
 
   @Post('bulk-upload-check')

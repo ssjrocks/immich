@@ -152,8 +152,11 @@ export class PersonRepository {
   getVideoOccurrences(personId: string) {
     return this.db
       .selectFrom('asset_face')
+      .innerJoin('asset', 'asset.id', 'asset_face.assetId')
       .select([
         'asset_face.assetId',
+        'asset.originalFileName',
+        'asset.duration as durationMs',
         () => sql<number[]>`array_agg("asset_face"."timestampMs" order by "asset_face"."timestampMs" asc)`.as(
           'timestampsMs',
         ),
@@ -161,7 +164,7 @@ export class PersonRepository {
       .where('asset_face.personId', '=', personId)
       .where('asset_face.timestampMs', 'is not', null)
       .where('asset_face.deletedAt', 'is', null)
-      .groupBy('asset_face.assetId')
+      .groupBy(['asset_face.assetId', 'asset.originalFileName', 'asset.duration'])
       .orderBy((eb) => eb.fn.min('asset_face.timestampMs'), 'asc')
       .execute();
   }
