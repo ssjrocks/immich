@@ -19,7 +19,15 @@ upstream `main`, with two extra capabilities layered on top of a stock install. 
 Stock Immich only runs face detection on a video's first-frame thumbnail — if someone isn't in that
 exact frame, they're never recognized anywhere in that video. This fork samples frames throughout the
 full video at a configurable rate, runs each through Immich's existing face-detection model, dedupes
-repeated detections of the same appearance, and surfaces every distinct moment a person shows up:
+repeated detections of the same appearance, and surfaces every distinct moment a person shows up.
+
+The detection/clustering approach here is adapted closely from
+[Tom Holland](https://github.com/0thomasholland)'s
+[`feature/video-face-phase-5`](https://github.com/0thomasholland/immich/tree/feature/video-face-phase-5)
+branch — thank you, Tom, for the original design. Several real bugs shared with that lineage were
+caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the original
+[GitHub discussion](https://github.com/immich-app/immich/discussions/5936); see
+[FORK_CHANGES.md](FORK_CHANGES.md#credit) for the full credit and bug list.
 
 - A person's page lists every video they appear in, grouped in its own card with the filename and
   duration, and a frame thumbnail per appearance — hover one for a short preview clip, click to jump
@@ -33,9 +41,9 @@ repeated detections of the same appearance, and surfaces every distinct moment a
 > **Backfilling an existing library:** if your videos already went through stock Immich's face
 > detection before you installed this fork, the regular Face Detection queue's "Missing" button on
 > the admin Jobs page won't pick them up for a video-wide scan — it only tracks the first-frame job,
-> which those videos have already completed. Use **Admin → Jobs → Create Job → Video face detection**
-> instead; it queues the full-video scan for every video and is separate from the regular Face
-> Detection queue.
+> which those videos have already completed. Video face detection has its own row on the
+> **Admin → Job Queues** page with its own **All**/**Missing** buttons — use **All** once to
+> backfill your existing library.
 
 <p align="center">
   <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos panel showing grouped timestamps and hover preview"><br/>

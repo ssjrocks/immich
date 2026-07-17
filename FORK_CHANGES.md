@@ -13,6 +13,28 @@ video, detects faces in each, deduplicates repeated appearances of the same
 person, and surfaces those appearances in the UI so you can jump straight to the
 moment someone appears.
 
+## Credit
+
+The video-face detection and deduplication approach in this fork is directly
+based on [Tom Holland](https://github.com/0thomasholland)'s
+[`feature/video-face-phase-5`](https://github.com/0thomasholland/immich/tree/feature/video-face-phase-5)
+branch — several pieces here (notably the video-faces query and the
+greedy cosine-distance clustering job) are adapted closely from his
+implementation, not written independently from scratch as earlier notes here
+implied. Thank you, Tom, for the original design.
+
+Several real bugs in that shared lineage — timestamp drift on capped videos,
+missing `videoFacesRecognizedAt` persistence, wrong person thumbnails, and (most
+seriously) a stale-face sweep that could silently delete every detected video
+face on a routine Face Detection re-run — were identified by
+[IAfanasov](https://github.com/IAfanasov), who rebased Tom's branch onto current
+`main`, fixed them, and wrote them up on the original
+[GitHub discussion](https://github.com/immich-app/immich/discussions/5936) (see
+also [their fork](https://github.com/IAfanasov/immich/tree/feat/video-face-recognition)).
+This fork was built independently and didn't share code with IAfanasov's, but
+their write-up caught two bugs present here too (see **Fixed**, below) — thank
+you for the thorough review.
+
 ## What's new
 
 ### Server
@@ -33,7 +55,8 @@ moment someone appears.
   face record, not dozens.
 - **API**: `GET /people/:id/video-occurrences` — returns, for each video a person
   appears in, every distinct timestamp (ms) they were detected at.
-- A manual "Video face detection" job trigger (Administration → Jobs).
+- A dedicated `videoFaceDetection` queue with its own row on the admin Job
+  Queues page (All/Missing, concurrency setting) — not a one-off manual job.
 
 ### Web
 
@@ -61,6 +84,20 @@ moment someone appears.
   timestamp it links to) was correct. Fixed by extracting the actual frame at
   that face's timestamp (`MediaRepository.extractVideoFrameAt`) instead of
   reusing the first-frame preview whenever a face has a `timestampMs`.
+- **A routine Face Detection re-run could silently delete every video face.**
+  `handleDetectFaces`'s stale-face sweep collected *every* machine-learning
+  face on the asset, including ones detected on other video frames, and
+  deleted any that didn't spatially match the freshly re-detected preview
+  frame — which timestamped video faces never do, since they're a different
+  frame's coordinates entirely. Clicking "Refresh"/"Reset" on the regular
+  Face Detection queue for a video would wipe its video faces. Fixed by
+  scoping that sweep (and the scale/IOU matching it depends on) to the
+  asset's preview-frame face only.
+- **The preview-frame face was never deduplicated against video faces.**
+  Video face clustering excluded the un-timestamped preview-derived face, so
+  a person visible in both the preview frame and a nearby sampled frame ended
+  up with two near-identical face rows instead of one. Fixed by including
+  that face in the clustering pass.
 
 ## Configuration reference
 
