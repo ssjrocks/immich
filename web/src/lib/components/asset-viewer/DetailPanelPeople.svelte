@@ -15,6 +15,7 @@
     AssetTypeEnum,
     deleteFace,
     mergePerson,
+    reassignFaces,
     searchPerson,
     updatePerson,
     VideoFaceScanMode,
@@ -151,6 +152,22 @@
     }
   };
 
+  // Scoped to this asset only, unlike mergeInto -- renaming a face is usually correcting a
+  // single misidentification (e.g. one video frame tagged as the wrong person), not a claim
+  // that the two whole identities are the same person and should be combined everywhere.
+  const reassignFaceToExisting = async (target: PersonResponseDto, source: PersonResponseDto) => {
+    try {
+      await reassignFaces({
+        id: target.id,
+        assetFaceUpdateDto: { data: [{ personId: source.id, assetId: asset.id }] },
+      });
+      toastManager.primary($t('reassigned_face_to_person', { values: { name: target.name } }));
+      await refreshFaces();
+    } catch (error) {
+      handleError(error, $t('cannot_reassign_face'));
+    }
+  };
+
   const submitRename = async (person: PersonResponseDto, event?: Event) => {
     event?.preventDefault();
     event?.stopPropagation();
@@ -160,18 +177,19 @@
       return;
     }
     try {
-      // Typing an existing person's name usually signals "this is actually them" rather
-      // than a coincidental duplicate name, so offer to merge instead of just renaming.
+      // Typing an existing person's name usually signals "this face is actually them" rather
+      // than a coincidental duplicate name, so offer to reassign this asset's face(s) to that
+      // person instead of just renaming -- not a full merge of the two people everywhere.
       const matches = await searchPerson({ name, withHidden: true });
       const existingPerson = matches.find(
         (match) => match.id !== person.id && match.name.toLowerCase() === name.toLowerCase(),
       );
       if (existingPerson) {
         const isConfirmed = await modalManager.showDialog({
-          prompt: $t('merge_into_existing_person_prompt', { values: { name: existingPerson.name } }),
+          prompt: $t('reassign_face_to_existing_person_prompt', { values: { name: existingPerson.name } }),
         });
         if (isConfirmed) {
-          await mergeInto(existingPerson, person);
+          await reassignFaceToExisting(existingPerson, person);
         }
         return;
       }
