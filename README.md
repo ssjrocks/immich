@@ -29,6 +29,14 @@ repeated detections of the same appearance, and surfaces every distinct moment a
 - An in-place edit mode on the People sidebar for quickly renaming or unassigning a face without
   leaving the video.
 
+> [!NOTE]
+> **Backfilling an existing library:** if your videos already went through stock Immich's face
+> detection before you installed this fork, the regular Face Detection queue's "Missing" button on
+> the admin Jobs page won't pick them up for a video-wide scan — it only tracks the first-frame job,
+> which those videos have already completed. Use **Admin → Jobs → Create Job → Video face detection**
+> instead; it queues the full-video scan for every video and is separate from the regular Face
+> Detection queue.
+
 <p align="center">
   <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos panel showing grouped timestamps and hover preview"><br/>
   <sub>A person's page: every video they appear in, grouped by video, with a hover preview per timestamp.</sub>
