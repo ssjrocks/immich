@@ -16,7 +16,9 @@
 
   let { screenHeight, people, peopleToNotShow, onSelect, handleSearch }: Props = $props();
   let searchedPeopleLocal: PersonResponseDto[] = $state([]);
-  let sortBySimilarirty = $state(false);
+  // Defaults on: when hunting for duplicate people to merge, ranking unnamed candidates by
+  // similarity to the person you're merging from is far more useful than the plain listing.
+  let sortBySimilarirty = $state(true);
   let name = $state('');
 
   const showPeople = $derived(

@@ -34,7 +34,8 @@
     people = data.people;
   };
 
-  onMount(handleSearch);
+  // Matches PeopleList's default of sortBySimilarirty = true.
+  onMount(() => handleSearch(true));
 
   const handleSwapPeople = async () => {
     [person, selectedPeople[0]] = [selectedPeople[0], person];

@@ -232,26 +232,34 @@ export class PersonRepository {
       )
       .groupBy('person.id')
       .$if(!!options?.closestFaceAssetId, (qb) =>
-        qb.orderBy((eb) =>
-          eb(
-            (eb) =>
-              eb
-                .selectFrom('face_search')
-                .select('face_search.embedding')
-                .whereRef('face_search.faceId', '=', 'person.faceAssetId'),
-            '<=>',
-            (eb) =>
-              eb
-                .selectFrom('face_search')
-                .select('face_search.embedding')
-                .where('face_search.faceId', '=', options!.closestFaceAssetId!),
+        qb
+          // Named people stay ahead of unnamed ones even in similarity-ranked results --
+          // otherwise a well-matched but still-unlabeled cluster could outrank someone
+          // whose name you're specifically trying to merge duplicates into.
+          .orderBy(sql`NULLIF(person.name, '') is null`, 'asc')
+          .orderBy((eb) =>
+            eb(
+              (eb) =>
+                eb
+                  .selectFrom('face_search')
+                  .select('face_search.embedding')
+                  .whereRef('face_search.faceId', '=', 'person.faceAssetId'),
+              '<=>',
+              (eb) =>
+                eb
+                  .selectFrom('face_search')
+                  .select('face_search.embedding')
+                  .where('face_search.faceId', '=', options!.closestFaceAssetId!),
+            ),
           ),
-        ),
       )
       .$if(!options?.closestFaceAssetId, (qb) =>
         qb
           .orderBy(sql`NULLIF(person.name, '') is null`, 'asc')
-          .orderBy((eb) => eb.fn.count('asset_face.assetId'), 'desc')
+          // Distinct, not a raw face-row count -- a person with several timestamped video
+          // appearances in one asset shouldn't outrank someone tagged across many separate
+          // assets just because a single video contributed more face rows.
+          .orderBy((eb) => eb.fn.count('asset_face.assetId').distinct(), 'desc')
           .orderBy(sql`NULLIF(person.name, '')`, (om) => om.asc().nullsLast())
           .orderBy('person.createdAt'),
       )

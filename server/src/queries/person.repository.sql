@@ -35,6 +35,8 @@ where
 -- PersonRepository.getVideoOccurrences
 select
   "asset_face"."assetId",
+  "asset"."originalFileName",
+  "asset"."duration" as "durationMs",
   array_agg(
     "asset_face"."timestampMs"
     order by
@@ -42,12 +44,15 @@ select
   ) as "timestampsMs"
 from
   "asset_face"
+  inner join "asset" on "asset"."id" = "asset_face"."assetId"
 where
   "asset_face"."personId" = $1
   and "asset_face"."timestampMs" is not null
   and "asset_face"."deletedAt" is null
 group by
-  "asset_face"."assetId"
+  "asset_face"."assetId",
+  "asset"."originalFileName",
+  "asset"."duration"
 order by
   min("asset_face"."timestampMs") asc
 
@@ -98,7 +103,7 @@ order by
   "person"."isHidden" asc,
   "person"."isFavorite" desc,
   NULLIF(person.name, '') is null asc,
-  count("asset_face"."assetId") desc,
+  count(distinct "asset_face"."assetId") desc,
   NULLIF(person.name, '') asc nulls last,
   "person"."createdAt"
 limit
@@ -215,6 +220,7 @@ select
   "asset_face"."boundingBoxY2" as "y2",
   "asset_face"."imageWidth" as "oldWidth",
   "asset_face"."imageHeight" as "oldHeight",
+  "asset_face"."timestampMs",
   "asset"."type",
   "asset"."originalPath",
   "asset_exif"."orientation" as "exifOrientation",
