@@ -9,7 +9,7 @@
   import { mediaCapabilitiesManager } from '$lib/managers/media-capabilities-manager.svelte';
   import { autoPlayVideo, lang, loopVideo as loopVideoPreference } from '$lib/stores/preferences.store';
   import { getAssetHlsSessionUrl, getAssetHlsUrl, getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
-  import { getNaturalSize, scaleToFit, type Size } from '$lib/utils/container-utils';
+  import { getNaturalSize, scaleToFit, type ContentMetrics } from '$lib/utils/container-utils';
   import { getBoundingBox } from '$lib/utils/people-utils';
   import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
   import { Icon, LoadingSpinner, shortcuts } from '@immich/ui';
@@ -355,11 +355,24 @@
   let containerWidth = $state(0);
   let containerHeight = $state(0);
 
-  const overlaySize = $derived.by((): Size => {
+  // The video element is centered (letterboxed) within the container whenever its aspect ratio
+  // doesn't exactly match the container's, so overlay positions need the centering offset baked
+  // in -- not just the scaled content size -- or they land off to one side. Mirrors FaceEditor's
+  // `imageContentMetrics`.
+  const overlayMetrics = $derived.by((): ContentMetrics => {
     if (!videoPlayer || !containerWidth || !containerHeight) {
-      return { width: 0, height: 0 };
+      return { contentWidth: 0, contentHeight: 0, offsetX: 0, offsetY: 0 };
     }
-    return scaleToFit(getNaturalSize(videoPlayer), { width: containerWidth, height: containerHeight });
+    const { width: contentWidth, height: contentHeight } = scaleToFit(getNaturalSize(videoPlayer), {
+      width: containerWidth,
+      height: containerHeight,
+    });
+    return {
+      contentWidth,
+      contentHeight,
+      offsetX: (containerWidth - contentWidth) / 2,
+      offsetY: (containerHeight - contentHeight) / 2,
+    };
   });
 
   const confirmedFaceBoxRect = $derived.by(() => {
@@ -367,7 +380,7 @@
     if (!box) {
       return undefined;
     }
-    return getBoundingBox([box.face], overlaySize)[0];
+    return getBoundingBox([box.face], overlayMetrics)[0];
   });
 
   $effect(() => {
