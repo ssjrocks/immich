@@ -216,13 +216,13 @@ class AssetViewerManager extends BaseEventManager<Events> {
   togglePeopleEditMode() {
     this.#isPeopleEditMode = !this.#isPeopleEditMode;
     if (!this.#isPeopleEditMode) {
-      this.#confirmedFaceBox = undefined;
+      this.clearConfirmedFaceBox();
     }
   }
 
   closePeopleEditMode() {
     this.#isPeopleEditMode = false;
-    this.#confirmedFaceBox = undefined;
+    this.clearConfirmedFaceBox();
   }
 
   resetPanelState() {
@@ -270,20 +270,50 @@ class AssetViewerManager extends BaseEventManager<Events> {
     return this.#confirmedFaceBox;
   }
 
+  #cancelPendingSeek?: () => void;
+
+  // True while confirmFaceAtTimestamp's own seek is in flight, so VideoNativeViewer's
+  // "user scrubbed away manually" listener can tell that seek apart from a real manual scrub
+  // and not cancel it out from under us.
+  get hasPendingConfirmSeek() {
+    return this.#cancelPendingSeek !== undefined;
+  }
+
   // Seeks to and pauses on the exact frame a face was detected on, and records that face so its
   // bounding box can be drawn -- used to let a user visually confirm which face they're about to
   // act on before reassigning/deleting it, rather than guessing from a timestamp label alone.
+  //
+  // Seeking is asynchronous, so the box is only shown once the 'seeked' event confirms the target
+  // frame has actually decoded -- otherwise it briefly overlays whatever frame was on screen
+  // before the seek, which is exactly the wrong info for a confirmation UI to show.
   confirmFaceAtTimestamp(face: Faces, timestampMs: number) {
     const video = this.videoPlayer;
     if (!video) {
       return;
     }
-    video.currentTime = timestampMs / 1000;
+
+    this.#cancelPendingSeek?.();
+    this.#cancelPendingSeek = undefined;
     video.pause();
-    this.#confirmedFaceBox = { face, timestampMs };
+
+    if (Math.abs(video.currentTime * 1000 - timestampMs) < 50) {
+      this.#confirmedFaceBox = { face, timestampMs };
+      return;
+    }
+
+    const onSeeked = () => {
+      video.removeEventListener('seeked', onSeeked);
+      this.#cancelPendingSeek = undefined;
+      this.#confirmedFaceBox = { face, timestampMs };
+    };
+    video.addEventListener('seeked', onSeeked);
+    this.#cancelPendingSeek = () => video.removeEventListener('seeked', onSeeked);
+    video.currentTime = timestampMs / 1000;
   }
 
   clearConfirmedFaceBox() {
+    this.#cancelPendingSeek?.();
+    this.#cancelPendingSeek = undefined;
     this.#confirmedFaceBox = undefined;
   }
 

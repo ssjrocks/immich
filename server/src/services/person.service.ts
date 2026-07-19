@@ -131,6 +131,20 @@ export class PersonService extends BaseService {
     return await this.findOrFail(personId).then(mapPerson);
   }
 
+  // Detaches a face from its person without deleting it or requiring a replacement person --
+  // covers "this named person is wrong and I don't know who this actually is", where the
+  // alternative today is either keeping the misattribution or inventing a name for a stranger.
+  // The face becomes unassigned and is picked back up by the next non-force facial-recognition
+  // run for reclustering, same as any newly detected face.
+  async unassignFace(auth: AuthDto, id: string): Promise<void> {
+    await this.requireAccess({ auth, permission: Permission.FaceDelete, ids: [id] });
+    const face = await this.personRepository.getFaceById(id);
+    await this.personRepository.reassignFace(id, null);
+    if (face.person && face.person.faceAssetId === face.id) {
+      await this.createNewFeaturePhoto([face.person.id]);
+    }
+  }
+
   async getFacesById(auth: AuthDto, dto: FaceDto): Promise<AssetFaceResponseDto[]> {
     await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [dto.id] });
     const faces = await this.personRepository.getFaces(dto.id);

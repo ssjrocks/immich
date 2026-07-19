@@ -78,7 +78,7 @@
 
   $effect(() => {
     // re-run (and clean up the previous run) whenever the hovered thumbnail changes
-    hovered;
+    void hovered;
     return () => releaseVideo(clipVideo);
   });
 

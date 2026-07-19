@@ -68,4 +68,17 @@ export class FaceController {
   deleteFace(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto, @Body() dto: AssetFaceDeleteDto): Promise<void> {
     return this.service.deleteFace(auth, id, dto);
   }
+
+  @Put(':id/unassign')
+  @Authenticated({ permission: Permission.FaceUpdate })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Unassign a face',
+    description:
+      'Detach a face from its currently assigned person without deleting it, leaving it unassigned so facial recognition can reconsider it.',
+    history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
+  })
+  unassignFace(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto): Promise<void> {
+    return this.service.unassignFace(auth, id);
+  }
 }

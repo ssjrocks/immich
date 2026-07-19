@@ -262,6 +262,9 @@
       return;
     }
     const onSeeking = () => {
+      if (assetViewerManager.hasPendingConfirmSeek) {
+        return;
+      }
       const box = assetViewerManager.confirmedFaceBox;
       if (box && Math.abs(video.currentTime * 1000 - box.timestampMs) > 100) {
         assetViewerManager.clearConfirmedFaceBox();

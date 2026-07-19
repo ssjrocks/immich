@@ -4840,6 +4840,17 @@ export function reassignFacesById({ id, faceDto }: {
     })));
 }
 /**
+ * Unassign a face
+ */
+export function unassignFace({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/faces/${encodeURIComponent(id)}/unassign`, {
+        ...opts,
+        method: "PUT"
+    }));
+}
+/**
  * Retrieve queue counts and status
  */
 export function getQueuesLegacy(opts?: Oazapfts.RequestOpts) {

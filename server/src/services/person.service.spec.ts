@@ -612,6 +612,51 @@ describe(PersonService.name, () => {
     });
   });
 
+  describe('unassignFace', () => {
+    it('should null out the face person without deleting it', async () => {
+      const face = AssetFaceFactory.from().person().build();
+
+      mocks.access.person.checkFaceOwnerAccess.mockResolvedValue(new Set([face.id]));
+      mocks.person.getFaceById.mockResolvedValue(getForAssetFace(face));
+      mocks.person.reassignFace.mockResolvedValue(1);
+
+      await sut.unassignFace(AuthFactory.create(), face.id);
+
+      expect(mocks.person.reassignFace).toHaveBeenCalledWith(face.id, null);
+      expect(mocks.person.update).not.toHaveBeenCalled();
+      expect(mocks.job.queueAll).not.toHaveBeenCalled();
+    });
+
+    it('should pick a new feature photo when the detached face was the person feature photo', async () => {
+      const faceId = newUuid();
+      const face = AssetFaceFactory.from({ id: faceId }).person({ faceAssetId: faceId }).build();
+      const replacement = AssetFaceFactory.create();
+
+      mocks.access.person.checkFaceOwnerAccess.mockResolvedValue(new Set([face.id]));
+      mocks.person.getFaceById.mockResolvedValue(getForAssetFace(face));
+      mocks.person.reassignFace.mockResolvedValue(1);
+      mocks.person.getRandomFace.mockResolvedValue(replacement);
+
+      await sut.unassignFace(AuthFactory.create(), face.id);
+
+      expect(mocks.person.reassignFace).toHaveBeenCalledWith(face.id, null);
+      expect(mocks.person.update).toHaveBeenCalledWith({ id: face.person!.id, faceAssetId: replacement.id });
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.PersonGenerateThumbnail, data: { id: face.person!.id } },
+      ]);
+    });
+
+    it('should fail if user does not have access to the face', async () => {
+      const face = AssetFaceFactory.create();
+
+      mocks.access.person.checkFaceOwnerAccess.mockResolvedValue(new Set());
+
+      await expect(sut.unassignFace(AuthFactory.create(), face.id)).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.person.reassignFace).not.toHaveBeenCalled();
+    });
+  });
+
   describe('createPerson', () => {
     it('should create a new person', async () => {
       const auth = AuthFactory.create();

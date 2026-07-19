@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { clickOutside } from '$lib/actions/click-outside';
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
@@ -18,13 +19,23 @@
     deleteFace,
     mergePerson,
     reassignFacesById,
+    unassignFace,
     VideoFaceScanMode,
     type AssetFaceResponseDto,
     type AssetResponseDto,
     type PersonResponseDto,
   } from '@immich/sdk';
   import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
-  import { mdiAccountOff, mdiEye, mdiEyeOff, mdiFaceRecognition, mdiMerge, mdiPencil, mdiPlus } from '@mdi/js';
+  import {
+    mdiAccountOff,
+    mdiAccountRemove,
+    mdiEye,
+    mdiEyeOff,
+    mdiFaceRecognition,
+    mdiMerge,
+    mdiPencil,
+    mdiPlus,
+  } from '@mdi/js';
   import { DateTime, Duration } from 'luxon';
   import { onMount } from 'svelte';
   import { t } from 'svelte-i18n';
@@ -74,6 +85,9 @@
   // One face per distinct timestamp (a person can have duplicate-timestamp face rows left over
   // from a reassign/rescan -- collapse those rather than showing/keying on the raw duplicate).
   const getAppearances = (personFaces: AssetFaceResponseDto[]) => {
+    // Local to a single call, discarded immediately after -- not component state, so the plain
+    // built-in is correct here and SvelteSet's reactivity tracking would be pure overhead.
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const seenTimestamps = new Set<number>();
     const appearances: AssetFaceResponseDto[] = [];
     for (const face of [...personFaces].sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0))) {
@@ -128,13 +142,14 @@
 
   // Edit-mode counterpart to seekToAppearance: pauses on the exact frame instead of playing
   // through it, draws the detected face's box so the user can visually confirm it's the right
-  // one, and remembers it as the target for the wrong-person/delete actions below.
+  // one, and remembers it as the target for the wrong-person/delete actions below. Unlike
+  // seekToAppearance, this leaves the popover open -- comparing several appearances back and
+  // forth before acting is the whole point, so it shouldn't have to be reopened each time.
   const selectAppearanceForEdit = (person: PersonResponseDto, face: AssetFaceResponseDto) => {
     if (face.timestampMs != undefined) {
       assetViewerManager.confirmFaceAtTimestamp(face, face.timestampMs);
     }
     selectedFaceForEdit = { personId: person.id, faceId: face.id };
-    closeAppearances();
   };
 
   // A person can have multiple timestamped faces in one video asset -- resolves which single
@@ -233,6 +248,35 @@
       }
     } catch (error) {
       handleError(error, $t('error_delete_face'));
+    }
+  };
+
+  // For "this named person is wrong and I don't know who this actually is" -- unlike
+  // markNotAFace, the face isn't deleted: it's detached and left unassigned, so facial
+  // recognition can pick it back up and re-cluster it next run instead of losing it entirely.
+  const unassignFaceFromPerson = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const face = resolveFaceForAction(person, personFaces, event.currentTarget as HTMLElement);
+    if (!face) {
+      return;
+    }
+    const isConfirmed = await modalManager.showDialog({
+      prompt: $t('confirm_unassign_face', { values: { name: person.name || $t('face_unassigned') } }),
+    });
+    if (!isConfirmed) {
+      return;
+    }
+    try {
+      await unassignFace({ id: face.id });
+      selectedFaceForEdit = undefined;
+      assetViewerManager.clearConfirmedFaceBox();
+      await refreshFaces();
+      if (personFaces.length === 1) {
+        eventManager.emit('PersonAssetDelete', { id: person.id, assetId: asset.id });
+      }
+    } catch (error) {
+      handleError(error, $t('error_unassign_face'));
     }
   };
 
@@ -397,6 +441,7 @@
               <div
                 class="fixed z-50 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
                 style="top: {expandedPersonAnchor.top}px; right: {expandedPersonAnchor.right}px;"
+                use:clickOutside={{ onOutclick: closeAppearances, onEscape: closeAppearances }}
               >
                 {#each appearances as face (face.id)}
                   {@const isSelected =
@@ -445,6 +490,15 @@
                 color="secondary"
                 variant="filled"
                 onclick={(event: Event) => handlePromiseError(openMergeIntoExisting(person, event))}
+              />
+              <IconButton
+                aria-label={$t('remove_from_person')}
+                icon={mdiAccountRemove}
+                size="small"
+                shape="round"
+                color="warning"
+                variant="filled"
+                onclick={(event: Event) => handlePromiseError(unassignFaceFromPerson(person, personFaces, event))}
               />
               <IconButton
                 aria-label={$t('delete_face')}

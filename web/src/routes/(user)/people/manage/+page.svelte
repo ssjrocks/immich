@@ -7,9 +7,9 @@
   import { locale } from '$lib/stores/preferences.store';
   import { getPeopleThumbnailUrl } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
-  import { getAllPeople, updatePeople, type PersonResponseDto } from '@immich/sdk';
-  import { Button, IconButton, toastManager } from '@immich/ui';
-  import { mdiClose, mdiEye, mdiEyeOff, mdiEyeSettings, mdiRestart } from '@mdi/js';
+  import { deletePeople, getAllPeople, updatePeople, type PersonResponseDto } from '@immich/sdk';
+  import { Button, IconButton, modalManager, toastManager } from '@immich/ui';
+  import { mdiAccountRemove, mdiClose, mdiEye, mdiEyeOff, mdiEyeSettings, mdiRestart } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { SvelteMap } from 'svelte/reactivity';
   import type { PageData } from './$types';
@@ -86,6 +86,47 @@
     }
   };
 
+  let deletingUnnamed = $state(false);
+
+  // A targeted alternative to the admin "reset facial recognition" job, which unassigns and
+  // reconsiders *every* face including already-named people. This only clears people who were
+  // never named -- typically junk clusters from repeated/differing scan runs -- so correctly
+  // named people are left untouched. Deleting a person only unlinks their faces (personId set to
+  // null); the faces themselves aren't deleted and are picked up again by the next facial
+  // recognition run.
+  const deleteAllUnnamedPeople = async () => {
+    deletingUnnamed = true;
+    try {
+      const unnamedIds: string[] = [];
+      let page: number | null = 1;
+      while (page) {
+        const { people: pagePeople, hasNextPage } = await getAllPeople({ withHidden: true, page, size: 1000 });
+        unnamedIds.push(...pagePeople.filter((person) => !person.name).map((person) => person.id));
+        page = hasNextPage ? page + 1 : null;
+      }
+
+      if (unnamedIds.length === 0) {
+        toastManager.primary($t('no_unnamed_people_found'));
+        return;
+      }
+
+      const isConfirmed = await modalManager.showDialog({
+        prompt: $t('confirm_delete_unnamed_people', { values: { count: unnamedIds.length } }),
+      });
+      if (!isConfirmed) {
+        return;
+      }
+
+      await deletePeople({ bulkIdsDto: { ids: unnamedIds } });
+      toastManager.primary($t('deleted_unnamed_people', { values: { count: unnamedIds.length } }));
+      await goto('/people');
+    } catch (error) {
+      handleError(error, $t('error_delete_unnamed_people'));
+    } finally {
+      deletingUnnamed = false;
+    }
+  };
+
   const setHiddenOverride = (person: PersonResponseDto, isHidden: boolean) => {
     if (isHidden === person.isHidden) {
       overrides.delete(person.id);
@@ -142,6 +183,15 @@
           aria-label={toggleButton.label}
           icon={toggleButton.icon}
           onclick={handleToggleVisibility}
+        />
+        <IconButton
+          shape="round"
+          color="warning"
+          variant="ghost"
+          aria-label={$t('delete_unnamed_people')}
+          icon={mdiAccountRemove}
+          loading={deletingUnnamed}
+          onclick={deleteAllUnnamedPeople}
         />
       </div>
       <Button loading={showLoadingSpinner} onclick={handleSaveVisibility} size="small">{$t('done')}</Button>
