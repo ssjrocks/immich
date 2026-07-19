@@ -70,6 +70,10 @@ export class PersonService extends BaseService {
     const { items, hasNextPage } = await this.personRepository.getAllForUser(pagination, auth.user.id, {
       withHidden,
       closestFaceAssetId,
+      // Merging into a named person (closestPersonId) should keep named people bucketed first;
+      // "wrong person" reassignment (closestAssetId) wants a pure similarity ranking so the true
+      // match -- named or not -- comes out on top.
+      preferNamedFirst: !!closestPersonId,
     });
     const { total, hidden } = await this.personRepository.getNumberOfPeople(auth.user.id);
 
@@ -591,8 +595,19 @@ export class PersonService extends BaseService {
     }
 
     if (faceIdsToRemove.length > 0) {
+      // A removed face may be the representative photo (faceAssetId) for its person -- unlike a
+      // plain duplicate, deleting that one leaves the person with no thumbnail source at all
+      // (the FK sets faceAssetId to null on delete, and nothing else would ever repair it).
+      const changeFeaturePhoto = ranked
+        .filter((face) => faceIdsToRemove.includes(face.id) && face.person?.faceAssetId === face.id)
+        .map((face) => face.person!.id);
+
       await this.personRepository.refreshFaces([], faceIdsToRemove, []);
       this.logger.log(`Removed ${faceIdsToRemove.length} duplicate video faces in asset ${id}, kept ${survivors.length}`);
+
+      if (changeFeaturePhoto.length > 0) {
+        await this.createNewFeaturePhoto([...new Set(changeFeaturePhoto)]);
+      }
     }
 
     const jobs = survivors.map((faceId) => ({ name: JobName.FacialRecognition, data: { id: faceId } }) as const);
@@ -925,6 +940,10 @@ export class PersonService extends BaseService {
       boundingBoxY1: Math.round(topLeft.y),
       boundingBoxY2: Math.round(bottomRight.y),
       sourceType: SourceType.Manual,
+      // Without this, a face manually tagged on a paused video frame is indistinguishable from a
+      // preview-frame (photo-style) face -- its bounding box would get cropped out of the wrong
+      // frame for thumbnail generation, and it would never appear in the video-appearances list.
+      timestampMs: dto.timestampMs ?? null,
     });
 
     if (!person.faceAssetId) {

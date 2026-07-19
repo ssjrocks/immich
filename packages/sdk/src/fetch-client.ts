@@ -1191,6 +1191,8 @@ export type AssetFaceCreateDto = {
     imageWidth: number;
     /** Person ID */
     personId: string;
+    /** For a face tagged on a video frame, the timestamp (in ms) of that frame */
+    timestampMs?: number;
     /** Face bounding box width */
     width: number;
     /** Face bounding box X coordinate */
@@ -4442,7 +4444,10 @@ export function getVideoFrame({ id, key, slug, timestampMs }: {
     slug?: string;
     timestampMs: number;
 }, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchText(`/assets/${encodeURIComponent(id)}/video/frame${QS.query(QS.explode({
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/video/frame${QS.query(QS.explode({
         key,
         slug,
         timestampMs

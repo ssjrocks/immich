@@ -69,6 +69,8 @@ describe(PersonService.name, () => {
       });
       expect(mocks.person.getAllForUser).toHaveBeenCalledWith({ skip: 0, take: 10 }, auth.user.id, {
         withHidden: true,
+        closestFaceAssetId: undefined,
+        preferNamedFirst: false,
       });
     });
 
@@ -95,7 +97,42 @@ describe(PersonService.name, () => {
       });
       expect(mocks.person.getAllForUser).toHaveBeenCalledWith({ skip: 0, take: 10 }, auth.user.id, {
         withHidden: false,
+        closestFaceAssetId: undefined,
+        preferNamedFirst: false,
       });
+    });
+
+    it('should prefer named people first when merging into a named person (closestPersonId)', async () => {
+      const auth = AuthFactory.create();
+      const target = PersonFactory.create({ faceAssetId: 'target-face-id' });
+
+      mocks.person.getById.mockResolvedValue(target);
+      mocks.person.getAllForUser.mockResolvedValue({ items: [], hasNextPage: false });
+      mocks.person.getNumberOfPeople.mockResolvedValue({ total: 0, hidden: 0 });
+
+      await sut.getAll(auth, { withHidden: true, page: 1, size: 10, closestPersonId: target.id });
+
+      expect(mocks.person.getAllForUser).toHaveBeenCalledWith({ skip: 0, take: 10 }, auth.user.id, {
+        withHidden: true,
+        closestFaceAssetId: 'target-face-id',
+        preferNamedFirst: true,
+      });
+    });
+
+    it('should use pure similarity ranking for wrong-person reassignment (closestAssetId)', async () => {
+      const auth = AuthFactory.create();
+
+      mocks.person.getAllForUser.mockResolvedValue({ items: [], hasNextPage: false });
+      mocks.person.getNumberOfPeople.mockResolvedValue({ total: 0, hidden: 0 });
+
+      await sut.getAll(auth, { withHidden: true, page: 1, size: 10, closestAssetId: 'mistagged-face-id' });
+
+      expect(mocks.person.getAllForUser).toHaveBeenCalledWith({ skip: 0, take: 10 }, auth.user.id, {
+        withHidden: true,
+        closestFaceAssetId: 'mistagged-face-id',
+        preferNamedFirst: false,
+      });
+      expect(mocks.person.getById).not.toHaveBeenCalled();
     });
   });
 
@@ -427,12 +464,40 @@ describe(PersonService.name, () => {
         boundingBoxY1: 20,
         boundingBoxY2: 130,
         sourceType: SourceType.Manual,
+        timestampMs: null,
       });
       expect(mocks.person.getRandomFace).toHaveBeenCalledWith(person.id);
       expect(mocks.person.update).toHaveBeenCalledWith({ id: person.id, faceAssetId: featureFace.id });
       expect(mocks.job.queueAll).toHaveBeenCalledWith([
         { name: JobName.PersonGenerateThumbnail, data: { id: person.id } },
       ]);
+    });
+
+    it('should record the frame timestamp when tagging a face on a video', async () => {
+      const auth = AuthFactory.create();
+      const asset = AssetFactory.create();
+      const person = PersonFactory.create({ faceAssetId: newUuid() });
+
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([asset.id]));
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set([person.id]));
+      mocks.asset.getById.mockResolvedValue(getForAsset(asset));
+      mocks.person.getById.mockResolvedValue(person);
+
+      await expect(
+        sut.createFace(auth, {
+          assetId: asset.id,
+          personId: person.id,
+          imageHeight: 500,
+          imageWidth: 400,
+          x: 10,
+          y: 20,
+          width: 100,
+          height: 110,
+          timestampMs: 2500,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(mocks.person.createAssetFace).toHaveBeenCalledWith(expect.objectContaining({ timestampMs: 2500 }));
     });
 
     it('should not update the person feature photo if one already exists', async () => {
@@ -1171,7 +1236,7 @@ describe(PersonService.name, () => {
 
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
       mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([
-        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]' },
+        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]', person: null },
       ]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({
@@ -1197,7 +1262,7 @@ describe(PersonService.name, () => {
 
       mocks.assetJob.getForVideoDetectFacesJob.mockResolvedValue(getForVideoDetectFacesJob(asset));
       mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([
-        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]' },
+        { ...oldFace, timestampMs: 0, embedding: '[1, 2, 3, 4]', person: null },
       ]);
       mocks.storage.createTempDir.mockResolvedValue('/tmp/test-frames');
       mocks.media.extractVideoFrames.mockResolvedValue({ framePaths: [], effectiveFrameRate: 0.5 });
@@ -1250,7 +1315,15 @@ describe(PersonService.name, () => {
   });
 
   describe('handleVideoClusterFaces', () => {
-    const makeFace = (id: string, x1: number, y1: number, x2: number, y2: number, embedding: number[]) => ({
+    const makeFace = (
+      id: string,
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      embedding: number[],
+      person: { id: string; faceAssetId: string | null } | null = null,
+    ) => ({
       id,
       imageWidth: 100,
       imageHeight: 100,
@@ -1260,6 +1333,20 @@ describe(PersonService.name, () => {
       boundingBoxY2: y2,
       timestampMs: 0,
       embedding: JSON.stringify(embedding),
+      person: person && {
+        id: person.id,
+        faceAssetId: person.faceAssetId,
+        updatedAt: '2021-01-01T00:00:00.000Z',
+        updateId: 'update-id',
+        createdAt: '2021-01-01T00:00:00.000Z',
+        ownerId: 'owner-id',
+        name: '',
+        thumbnailPath: '',
+        isHidden: false,
+        birthDate: null,
+        isFavorite: false,
+        color: null,
+      },
     });
 
     beforeEach(() => {
@@ -1374,6 +1461,38 @@ describe(PersonService.name, () => {
         { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
         { name: JobName.FacialRecognition, data: { id: 'face-2' } },
       ]);
+    });
+
+    it('should repair a person whose representative photo was removed as a duplicate', async () => {
+      // face-1 is person-A's faceAssetId (its representative thumbnail); the larger face-2 wins
+      // clustering and face-1 is removed -- person-A must get a new representative photo, or it's
+      // left with faceAssetId=null (the FK sets it null on delete) and no thumbnail forever.
+      const faceSmall = makeFace('face-1', 10, 10, 20, 20, [1, 0, 0], { id: 'person-A', faceAssetId: 'face-1' });
+      const faceLarge = makeFace('face-2', 10, 10, 80, 80, [0.99, 0.01, 0], { id: 'person-A', faceAssetId: 'face-1' });
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceSmall, faceLarge]);
+      mocks.person.refreshFaces.mockResolvedValue();
+      mocks.person.getRandomFace.mockResolvedValue(AssetFaceFactory.create({ id: 'face-2' }));
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], ['face-1'], []);
+      expect(mocks.person.getRandomFace).toHaveBeenCalledWith('person-A');
+      expect(mocks.person.update).toHaveBeenCalledWith({ id: 'person-A', faceAssetId: 'face-2' });
+    });
+
+    it('should not repair a person when the removed duplicate was not their representative photo', async () => {
+      const faceSmall = makeFace('face-1', 10, 10, 20, 20, [1, 0, 0], { id: 'person-A', faceAssetId: 'some-other-face' });
+      const faceLarge = makeFace('face-2', 10, 10, 80, 80, [0.99, 0.01, 0], { id: 'person-A', faceAssetId: 'some-other-face' });
+
+      mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceSmall, faceLarge]);
+      mocks.person.refreshFaces.mockResolvedValue();
+
+      await expect(sut.handleVideoClusterFaces({ id: 'asset-1' })).resolves.toBe(JobStatus.Success);
+
+      expect(mocks.person.refreshFaces).toHaveBeenCalledWith([], ['face-1'], []);
+      expect(mocks.person.getRandomFace).not.toHaveBeenCalled();
+      expect(mocks.person.update).not.toHaveBeenCalled();
     });
   });
 

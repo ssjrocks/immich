@@ -9,6 +9,8 @@
   import { mediaCapabilitiesManager } from '$lib/managers/media-capabilities-manager.svelte';
   import { autoPlayVideo, lang, loopVideo as loopVideoPreference } from '$lib/stores/preferences.store';
   import { getAssetHlsSessionUrl, getAssetHlsUrl, getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
+  import { getNaturalSize, scaleToFit, type Size } from '$lib/utils/container-utils';
+  import { getBoundingBox } from '$lib/utils/people-utils';
   import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
   import { Icon, LoadingSpinner, shortcuts } from '@immich/ui';
   import {
@@ -248,7 +250,25 @@
       if (assetViewerManager.videoPlayer === videoPlayer) {
         assetViewerManager.videoPlayer = undefined;
       }
+      assetViewerManager.clearConfirmedFaceBox();
     };
+  });
+
+  // The confirmed face box is only valid at the exact timestamp it was set for -- if the user
+  // scrubs the timeline themselves afterward, drop it rather than leave a stale/mispositioned box.
+  $effect(() => {
+    const video = videoPlayer;
+    if (!video) {
+      return;
+    }
+    const onSeeking = () => {
+      const box = assetViewerManager.confirmedFaceBox;
+      if (box && Math.abs(video.currentTime * 1000 - box.timestampMs) > 100) {
+        assetViewerManager.clearConfirmedFaceBox();
+      }
+    };
+    video.addEventListener('seeking', onSeeking);
+    return () => video.removeEventListener('seeking', onSeeking);
   });
 
   $effect(() => {
@@ -334,6 +354,21 @@
 
   let containerWidth = $state(0);
   let containerHeight = $state(0);
+
+  const overlaySize = $derived.by((): Size => {
+    if (!videoPlayer || !containerWidth || !containerHeight) {
+      return { width: 0, height: 0 };
+    }
+    return scaleToFit(getNaturalSize(videoPlayer), { width: containerWidth, height: containerHeight });
+  });
+
+  const confirmedFaceBoxRect = $derived.by(() => {
+    const box = assetViewerManager.confirmedFaceBox;
+    if (!box) {
+      return undefined;
+    }
+    return getBoundingBox([box.face], overlaySize)[0];
+  });
 
   $effect(() => {
     if (assetViewerManager.isFaceEditMode) {
@@ -506,6 +541,13 @@
 
       {#if assetViewerManager.isFaceEditMode && videoPlayer}
         <FaceEditor htmlElement={videoPlayer} {containerWidth} {containerHeight} {assetId} />
+      {/if}
+
+      {#if confirmedFaceBoxRect}
+        <div
+          class="pointer-events-none absolute rounded-lg border-3 border-solid border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
+          style="top: {confirmedFaceBoxRect.top}px; left: {confirmedFaceBoxRect.left}px; height: {confirmedFaceBoxRect.height}px; width: {confirmedFaceBoxRect.width}px;"
+        ></div>
       {/if}
     {/if}
   </div>

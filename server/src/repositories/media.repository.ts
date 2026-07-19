@@ -335,7 +335,11 @@ export class MediaRepository {
     const files = await fs.readdir(outputDir);
     const framePaths = files
       .filter((file) => file.startsWith('frame_') && file.endsWith('.jpg'))
-      .sort()
+      // Numeric, not lexicographic: ffmpeg's %04d pattern only pads to a *minimum* of 4 digits,
+      // so a plain string sort would place frame_10000.jpg between frame_1000.jpg and
+      // frame_1001.jpg once a video's frame count reaches 5 digits (reachable at maxFrames' own
+      // upper bound), corrupting the frame order downstream timestamps are computed from.
+      .sort((a, b) => Number.parseInt(a.slice(6, -4), 10) - Number.parseInt(b.slice(6, -4), 10))
       .map((file) => path.join(outputDir, file));
 
     return { framePaths, effectiveFrameRate };

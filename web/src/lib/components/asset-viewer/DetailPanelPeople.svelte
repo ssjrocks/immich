@@ -11,12 +11,13 @@
   import { locale } from '$lib/stores/preferences.store';
   import { getPeopleThumbnailUrl, handlePromiseError } from '$lib/utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { eventManager } from '$lib/managers/event-manager.svelte';
   import {
     AssetJobName,
     AssetTypeEnum,
     deleteFace,
     mergePerson,
-    reassignFaces,
+    reassignFacesById,
     VideoFaceScanMode,
     type AssetFaceResponseDto,
     type AssetResponseDto,
@@ -63,13 +64,27 @@
 
   let expandedPersonId = $state<string | undefined>();
   let expandedPersonAnchor = $state<{ top: number; right: number } | undefined>();
+  // Which specific face (of possibly several timestamped occurrences) the edit-mode actions
+  // (wrong person / delete) should act on -- set by picking an appearance from the popover below.
+  // Scoped per person so switching cards doesn't carry a stale selection over.
+  let selectedFaceForEdit = $state<{ personId: string; faceId: string } | undefined>();
 
   const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
 
-  const getAppearanceTimestamps = (personFaces: { timestampMs?: number }[]) =>
-    [...new Set(personFaces.map((face) => face.timestampMs).filter((ms): ms is number => ms != undefined))].sort(
-      (a, b) => a - b,
-    );
+  // One face per distinct timestamp (a person can have duplicate-timestamp face rows left over
+  // from a reassign/rescan -- collapse those rather than showing/keying on the raw duplicate).
+  const getAppearances = (personFaces: AssetFaceResponseDto[]) => {
+    const seenTimestamps = new Set<number>();
+    const appearances: AssetFaceResponseDto[] = [];
+    for (const face of [...personFaces].sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0))) {
+      if (face.timestampMs == undefined || seenTimestamps.has(face.timestampMs)) {
+        continue;
+      }
+      seenTimestamps.add(face.timestampMs);
+      appearances.push(face);
+    }
+    return appearances;
+  };
 
   const closeAppearances = () => {
     expandedPersonId = undefined;
@@ -79,14 +94,18 @@
   // Rendered with position:fixed anchored to the trigger's own viewport rect (rather than
   // position:absolute within the sidebar) so the popover can float out over the video instead of
   // being clipped by the sidebar's overflow-y-auto ancestor, which implicitly clips overflow-x too.
+  const openAppearances = (personId: string, trigger: HTMLElement) => {
+    const rect = trigger.getBoundingClientRect();
+    expandedPersonAnchor = { top: rect.bottom, right: window.innerWidth - rect.right };
+    expandedPersonId = personId;
+  };
+
   const toggleAppearances = (personId: string, event: MouseEvent) => {
     if (expandedPersonId === personId) {
       closeAppearances();
       return;
     }
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    expandedPersonAnchor = { top: rect.bottom, right: window.innerWidth - rect.right };
-    expandedPersonId = personId;
+    openAppearances(personId, event.currentTarget as HTMLElement);
   };
 
   $effect(() => {
@@ -107,6 +126,41 @@
     closeAppearances();
   };
 
+  // Edit-mode counterpart to seekToAppearance: pauses on the exact frame instead of playing
+  // through it, draws the detected face's box so the user can visually confirm it's the right
+  // one, and remembers it as the target for the wrong-person/delete actions below.
+  const selectAppearanceForEdit = (person: PersonResponseDto, face: AssetFaceResponseDto) => {
+    if (face.timestampMs != undefined) {
+      assetViewerManager.confirmFaceAtTimestamp(face, face.timestampMs);
+    }
+    selectedFaceForEdit = { personId: person.id, faceId: face.id };
+    closeAppearances();
+  };
+
+  // A person can have multiple timestamped faces in one video asset -- resolves which single
+  // face an edit action should target. With only one occurrence there's nothing to disambiguate.
+  // With several, an appearance must have already been explicitly picked (selectAppearanceForEdit);
+  // if not, this opens the appearance picker instead of guessing and returns undefined so the
+  // caller bails out -- the user re-triggers the action once they've picked one.
+  const resolveFaceForAction = (
+    person: PersonResponseDto,
+    personFaces: AssetFaceResponseDto[],
+    trigger: HTMLElement,
+  ): AssetFaceResponseDto | undefined => {
+    if (personFaces.length === 1) {
+      return personFaces[0];
+    }
+    const selected =
+      selectedFaceForEdit?.personId === person.id
+        ? personFaces.find((face) => face.id === selectedFaceForEdit!.faceId)
+        : undefined;
+    if (selected) {
+      return selected;
+    }
+    openAppearances(person.id, trigger);
+    return undefined;
+  };
+
   const refreshFaces = async () => {
     faceManager.clear();
     await faceManager.getAssetFaces(asset.id);
@@ -122,16 +176,15 @@
     }
   };
 
-  // Scoped to this asset only, unlike mergeInto -- renaming a face is usually correcting a
-  // single misidentification (e.g. one video frame tagged as the wrong person), not a claim
-  // that the two whole identities are the same person and should be combined everywhere.
-  const reassignFaceToExisting = async (target: PersonResponseDto, source: PersonResponseDto) => {
+  // Scoped to a single face, unlike mergeInto -- renaming a face is usually correcting a single
+  // misidentification (e.g. one video frame tagged as the wrong person), not a claim that the two
+  // whole identities are the same person and should be combined everywhere.
+  const reassignFaceToExisting = async (target: PersonResponseDto, face: AssetFaceResponseDto) => {
     try {
-      await reassignFaces({
-        id: target.id,
-        assetFaceUpdateDto: { data: [{ personId: source.id, assetId: asset.id }] },
-      });
+      await reassignFacesById({ id: target.id, faceDto: { id: face.id } });
       toastManager.primary($t('reassigned_face_to_person', { values: { name: target.name } }));
+      selectedFaceForEdit = undefined;
+      assetViewerManager.clearConfirmedFaceBox();
       await refreshFaces();
     } catch (error) {
       handleError(error, $t('cannot_reassign_face'));
@@ -139,21 +192,29 @@
   };
 
   // This never touches person's actual name/identity -- it's specifically for "this face was
-  // tagged as the wrong person", scoped to this asset only via reassignFaceToExisting. Renaming
+  // tagged as the wrong person", scoped to a single face via reassignFaceToExisting. Renaming
   // a person's real name is a different action, done from that person's own page.
   const openReassignFace = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
     event.preventDefault();
     event.stopPropagation();
-    const target = await modalManager.show(ReassignFaceModal, { person, faceId: personFaces[0]?.id });
+    const face = resolveFaceForAction(person, personFaces, event.currentTarget as HTMLElement);
+    if (!face) {
+      return;
+    }
+    const target = await modalManager.show(ReassignFaceModal, { person, faceId: face.id });
     if (!target) {
       return;
     }
-    await reassignFaceToExisting(target, person);
+    await reassignFaceToExisting(target, face);
   };
 
   const markNotAFace = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
     event.preventDefault();
     event.stopPropagation();
+    const face = resolveFaceForAction(person, personFaces, event.currentTarget as HTMLElement);
+    if (!face) {
+      return;
+    }
     const isConfirmed = await modalManager.showDialog({
       prompt: $t('confirm_delete_face', { values: { name: person.name || $t('face_unassigned') } }),
     });
@@ -161,10 +222,15 @@
       return;
     }
     try {
-      for (const face of personFaces) {
-        await deleteFace({ id: face.id, assetFaceDeleteDto: { force: false } });
-      }
+      await deleteFace({ id: face.id, assetFaceDeleteDto: { force: false } });
+      selectedFaceForEdit = undefined;
+      assetViewerManager.clearConfirmedFaceBox();
       await refreshFaces();
+      // Only drop the asset from the person's own timeline once none of their faces remain in
+      // it -- deleting one of several timestamped appearances still leaves them tagged here.
+      if (personFaces.length === 1) {
+        eventManager.emit('PersonAssetDelete', { id: person.id, assetId: asset.id });
+      }
     } catch (error) {
       handleError(error, $t('error_delete_face'));
     }
@@ -288,7 +354,7 @@
       {#each visiblePeople as person (person.id)}
         {@const personFaces = faceManager.facesByPersonId.get(person.id) ?? []}
         {@const isHighlighted = personFaces.some((f) => assetViewerManager.highlightedFaces.some((b) => b.id === f.id))}
-        {@const appearances = getAppearanceTimestamps(personFaces)}
+        {@const appearances = getAppearances(personFaces)}
 
         {#snippet personCard()}
           <ImageThumbnail
@@ -332,13 +398,22 @@
                 class="fixed z-50 mt-1 flex w-max max-w-56 flex-wrap gap-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800"
                 style="top: {expandedPersonAnchor.top}px; right: {expandedPersonAnchor.right}px;"
               >
-                {#each appearances as timestampMs (timestampMs)}
+                {#each appearances as face (face.id)}
+                  {@const isSelected =
+                    assetViewerManager.isPeopleEditMode &&
+                    selectedFaceForEdit?.personId === person.id &&
+                    selectedFaceForEdit.faceId === face.id}
                   <button
                     type="button"
-                    class="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
-                    onclick={() => seekToAppearance(timestampMs)}
+                    class="rounded-full px-2 py-0.5 text-xs {isSelected
+                      ? 'bg-immich-primary text-white dark:bg-immich-dark-primary dark:text-immich-dark-bg'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600'}"
+                    onclick={() =>
+                      assetViewerManager.isPeopleEditMode
+                        ? selectAppearanceForEdit(person, face)
+                        : seekToAppearance(face.timestampMs!)}
                   >
-                    {formatTimestamp(timestampMs)}
+                    {formatTimestamp(face.timestampMs!)}
                   </button>
                 {/each}
               </div>

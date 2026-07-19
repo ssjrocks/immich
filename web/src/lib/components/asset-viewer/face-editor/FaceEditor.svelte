@@ -319,11 +319,18 @@
         return;
       }
 
+      // Record which frame this tag came from when tagging over a paused video -- otherwise the
+      // face is indistinguishable from a preview-frame (photo-style) tag, which gets cropped from
+      // the wrong frame for its thumbnail and never shows up in the video-appearances list.
+      const timestampMs =
+        htmlElement instanceof HTMLVideoElement ? Math.round(htmlElement.currentTime * 1000) : undefined;
+
       await createFace({
         assetFaceCreateDto: {
           assetId,
           personId: person.id,
           ...data,
+          timestampMs,
         },
       });
 

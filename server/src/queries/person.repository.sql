@@ -22,7 +22,20 @@ select
   "asset_face"."boundingBoxX2",
   "asset_face"."boundingBoxY2",
   "asset_face"."timestampMs",
-  "face_search"."embedding"
+  "face_search"."embedding",
+  (
+    select
+      to_json(obj)
+    from
+      (
+        select
+          "person".*
+        from
+          "person"
+        where
+          "person"."id" = "asset_face"."personId"
+      ) as obj
+  ) as "person"
 from
   "asset_face"
   inner join "face_search" on "face_search"."faceId" = "asset_face"."id"
@@ -38,7 +51,7 @@ select
   "asset"."originalFileName",
   "asset"."duration" as "durationMs",
   array_agg(
-    "asset_face"."timestampMs"
+    distinct "asset_face"."timestampMs"
     order by
       "asset_face"."timestampMs" asc
   ) as "timestampsMs"
@@ -412,3 +425,10 @@ from
 where
   "asset_face"."assetId" = $2
   and "asset_face"."personId" = $3
+order by
+  (
+    "asset_face"."boundingBoxX2" - "asset_face"."boundingBoxX1"
+  ) * (
+    "asset_face"."boundingBoxY2" - "asset_face"."boundingBoxY1"
+  ) desc,
+  "asset_face"."id" asc

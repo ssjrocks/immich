@@ -19,9 +19,18 @@
 
   let selectedAssetId = $state<string | undefined>();
 
+  // Defends against duplicate timestampMs values reaching the client (e.g. from overlapping
+  // face detections on a reassign/rescan) -- the keyed {#each} below would otherwise throw
+  // each_key_duplicate and leave the whole panel stuck.
+  const dedupeTimestamps = (timestampsMs: number[]) => [...new Set(timestampsMs)];
+
   // Most-appearances-first, so the video worth looking at first is at the top of the list
   // instead of requiring a scroll through everything to find it.
-  const sortedOccurrences = $derived([...occurrences].sort((a, b) => b.timestampsMs.length - a.timestampsMs.length));
+  const sortedOccurrences = $derived(
+    occurrences
+      .map((occurrence) => ({ ...occurrence, timestampsMs: dedupeTimestamps(occurrence.timestampsMs) }))
+      .sort((a, b) => b.timestampsMs.length - a.timestampsMs.length),
+  );
 
   // Falls back to the top of the sorted list whenever selectedAssetId is unset or no longer
   // matches an occurrence (e.g. on first render, or if the underlying data changes).

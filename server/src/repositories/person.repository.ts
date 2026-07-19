@@ -15,6 +15,11 @@ import { paginationHelper, PaginationOptions } from 'src/utils/pagination';
 export interface PersonSearchOptions {
   withHidden: boolean;
   closestFaceAssetId?: string;
+  // Only meaningful alongside closestFaceAssetId. True for "merge duplicates into this named
+  // person" (closestPersonId), where a well-matched unnamed cluster shouldn't outrank the named
+  // person you're specifically merging into. False for "wrong person" (closestAssetId), where the
+  // whole point is finding the actual best match for a mistagged face -- which may well be unnamed.
+  preferNamedFirst?: boolean;
 }
 
 export interface PersonNameSearchOptions {
@@ -146,6 +151,7 @@ export class PersonRepository {
         'asset_face.boundingBoxY2',
         'asset_face.timestampMs',
         'face_search.embedding',
+        withPerson,
       ])
       .where('asset_face.assetId', '=', assetId)
       .$if(!options.includeUntimedFace, (qb) => qb.where('asset_face.timestampMs', 'is not', null))
@@ -163,9 +169,10 @@ export class PersonRepository {
         'asset_face.assetId',
         'asset.originalFileName',
         'asset.duration as durationMs',
-        () => sql<number[]>`array_agg("asset_face"."timestampMs" order by "asset_face"."timestampMs" asc)`.as(
-          'timestampsMs',
-        ),
+        () =>
+          sql<number[]>`array_agg(distinct "asset_face"."timestampMs" order by "asset_face"."timestampMs" asc)`.as(
+            'timestampsMs',
+          ),
       ])
       .where('asset_face.personId', '=', personId)
       .where('asset_face.timestampMs', 'is not', null)
@@ -233,10 +240,10 @@ export class PersonRepository {
       .groupBy('person.id')
       .$if(!!options?.closestFaceAssetId, (qb) =>
         qb
-          // Named people stay ahead of unnamed ones even in similarity-ranked results --
-          // otherwise a well-matched but still-unlabeled cluster could outrank someone
-          // whose name you're specifically trying to merge duplicates into.
-          .orderBy(sql`NULLIF(person.name, '') is null`, 'asc')
+          // Named-first only applies when the caller asked for it (merging into a named person);
+          // "wrong person" reassignment wants the true best match ranked first regardless of
+          // whether it happens to be named yet -- see PersonSearchOptions.preferNamedFirst.
+          .$if(!!options?.preferNamedFirst, (qb) => qb.orderBy(sql`NULLIF(person.name, '') is null`, 'asc'))
           .orderBy((eb) =>
             eb(
               (eb) =>
@@ -643,6 +650,15 @@ export class PersonRepository {
       .where('asset_face.assetId', '=', assetId)
       .where('asset_face.personId', '=', personId)
       .innerJoin('asset', (join) => join.onRef('asset.id', '=', 'asset_face.assetId').on('asset.isOffline', '=', false))
+      // A person can have several timestamped faces in one video asset -- without an explicit
+      // order, whichever row the index happens to return becomes the featured photo, arbitrarily
+      // and unpredictably. Largest bounding box first (a bigger, usually more frontal crop makes
+      // a better thumbnail), id as a final deterministic tiebreaker.
+      .orderBy(
+        sql`("asset_face"."boundingBoxX2" - "asset_face"."boundingBoxX1") * ("asset_face"."boundingBoxY2" - "asset_face"."boundingBoxY1")`,
+        'desc',
+      )
+      .orderBy('asset_face.id', 'asc')
       .executeTakeFirst();
   }
 }

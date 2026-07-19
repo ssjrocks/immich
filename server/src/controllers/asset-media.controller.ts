@@ -180,6 +180,7 @@ export class AssetMediaController {
   }
 
   @Get(':id/video/frame')
+  @FileResponse()
   @Authenticated({ permission: Permission.AssetView, sharedLink: true })
   @Endpoint({
     summary: 'Get a video frame at a timestamp',

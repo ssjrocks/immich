@@ -142,6 +142,10 @@ const AssetFaceCreateSchema = AssetFaceUpdateItemSchema.extend({
   y: z.int().describe('Face bounding box Y coordinate'),
   width: z.int().describe('Face bounding box width'),
   height: z.int().describe('Face bounding box height'),
+  timestampMs: z
+    .int()
+    .optional()
+    .describe('For a face tagged on a video frame, the timestamp (in ms) of that frame'),
 }).meta({ id: 'AssetFaceCreateDto' });
 
 const AssetFaceDeleteSchema = z

@@ -60,6 +60,10 @@ class AssetViewerManager extends BaseEventManager<Events> {
   #viewingAssetStoreState = $state<AssetResponseDto>();
   #viewState = $state<boolean>(false);
   #highlightedFaces = $state<Faces[]>([]);
+  // Separate from #highlightedFaces (which is also driven by photo-hover previews): a video
+  // bounding box is only valid at the exact timestamp it was detected on, so it must only ever
+  // be set alongside an explicit seek-and-pause to that same face's timestamp, never on hover.
+  #confirmedFaceBox = $state<{ face: Faces; timestampMs: number } | undefined>();
   #showingHiddenPeople = $state(false);
   gridScrollTarget = $state<AssetGridRouteSearchParams | null | undefined>();
 
@@ -211,10 +215,14 @@ class AssetViewerManager extends BaseEventManager<Events> {
 
   togglePeopleEditMode() {
     this.#isPeopleEditMode = !this.#isPeopleEditMode;
+    if (!this.#isPeopleEditMode) {
+      this.#confirmedFaceBox = undefined;
+    }
   }
 
   closePeopleEditMode() {
     this.#isPeopleEditMode = false;
+    this.#confirmedFaceBox = undefined;
   }
 
   resetPanelState() {
@@ -256,6 +264,27 @@ class AssetViewerManager extends BaseEventManager<Events> {
     if (video.paused) {
       void video.play().catch(() => {});
     }
+  }
+
+  get confirmedFaceBox() {
+    return this.#confirmedFaceBox;
+  }
+
+  // Seeks to and pauses on the exact frame a face was detected on, and records that face so its
+  // bounding box can be drawn -- used to let a user visually confirm which face they're about to
+  // act on before reassigning/deleting it, rather than guessing from a timestamp label alone.
+  confirmFaceAtTimestamp(face: Faces, timestampMs: number) {
+    const video = this.videoPlayer;
+    if (!video) {
+      return;
+    }
+    video.currentTime = timestampMs / 1000;
+    video.pause();
+    this.#confirmedFaceBox = { face, timestampMs };
+  }
+
+  clearConfirmedFaceBox() {
+    this.#confirmedFaceBox = undefined;
   }
 
   setAsset(asset: AssetResponseDto) {

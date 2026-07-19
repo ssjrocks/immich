@@ -734,6 +734,21 @@ describe(MediaRepository.name, () => {
       expect(result.framePaths).toEqual(['/tmp/frames/frame_0001.jpg', '/tmp/frames/frame_0002.jpg']);
     });
 
+    it('should sort numerically, not lexicographically, once frame numbers reach 5 digits', async () => {
+      // ffmpeg's %04d pattern only pads to a minimum of 4 digits -- a plain string sort would
+      // place frame_10000.jpg between frame_1000.jpg and frame_1001.jpg.
+      vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_10000.jpg', 'frame_0002.jpg', 'frame_1001.jpg', 'frame_1000.jpg'] as any);
+
+      const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', frameCount(), 10_000);
+
+      expect(result.framePaths).toEqual([
+        '/tmp/frames/frame_0002.jpg',
+        '/tmp/frames/frame_1000.jpg',
+        '/tmp/frames/frame_1001.jpg',
+        '/tmp/frames/frame_10000.jpg',
+      ]);
+    });
+
     it('should filter out non-frame files', async () => {
       vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_0001.jpg', 'other.jpg', 'frame_0002.png'] as any);
 
