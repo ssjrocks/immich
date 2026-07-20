@@ -24,6 +24,7 @@ class NativeVideoViewer extends ConsumerStatefulWidget {
   final bool isCurrent;
   final bool showControls;
   final Widget image;
+  final int? initialSeekMs;
 
   const NativeVideoViewer({
     super.key,
@@ -32,6 +33,7 @@ class NativeVideoViewer extends ConsumerStatefulWidget {
     required this.image,
     this.isCurrent = false,
     this.showControls = true,
+    this.initialSeekMs,
   });
 
   @override
@@ -46,6 +48,7 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
   Timer? _loadTimer;
   bool _isVideoReady = false;
   bool _shouldPlayOnForeground = true;
+  bool _hasAppliedInitialSeek = false;
 
   VideoPlayerNotifier get _notifier => ref.read(videoPlayerProvider(widget.asset.heroTag).notifier);
 
@@ -204,6 +207,12 @@ class _NativeVideoViewerState extends ConsumerState<NativeVideoViewer> with Widg
     }
 
     _notifier.onNativePlaybackReady();
+
+    final seekMs = widget.initialSeekMs;
+    if (seekMs != null && !_hasAppliedInitialSeek) {
+      _hasAppliedInitialSeek = true;
+      _notifier.seekTo(Duration(milliseconds: seekMs));
+    }
 
     // onPlaybackReady may be called multiple times, usually when more data
     // loads. If this is not the first time that the player has become ready, we

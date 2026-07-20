@@ -183,6 +183,56 @@ class FacesApi {
     return null;
   }
 
+  /// Detach a face from its person without deleting it
+  ///
+  /// Detach a face from its currently assigned person without deleting it, leaving it unassigned so facial recognition can reconsider it.
+  ///
+  /// Note: This method returns the HTTP [Response].
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<Response> unassignFaceWithHttpInfo(String id, { Future<void>? abortTrigger, }) async {
+    // ignore: prefer_const_declarations
+    final apiPath = r'/faces/{id}/unassign'
+      .replaceAll('{id}', id);
+
+    // ignore: prefer_final_locals
+    Object? postBody;
+
+    final queryParams = <QueryParam>[];
+    final headerParams = <String, String>{};
+    final formParams = <String, String>{};
+
+    const contentTypes = <String>[];
+
+
+    return apiClient.invokeAPI(
+      apiPath,
+      'PUT',
+      queryParams,
+      postBody,
+      headerParams,
+      formParams,
+      contentTypes.isEmpty ? null : contentTypes.first,
+      abortTrigger: abortTrigger,
+    );
+  }
+
+  /// Detach a face from its person without deleting it
+  ///
+  /// Detach a face from its currently assigned person without deleting it, leaving it unassigned so facial recognition can reconsider it.
+  ///
+  /// Parameters:
+  ///
+  /// * [String] id (required):
+  Future<void> unassignFace(String id, { Future<void>? abortTrigger, }) async {
+    final response = await unassignFaceWithHttpInfo(id, abortTrigger: abortTrigger,);
+    if (response.statusCode >= HttpStatus.badRequest) {
+      throw ApiException(response.statusCode, await _decodeBodyBytes(response));
+    }
+  }
+
   /// Re-assign a face to another person
   ///
   /// Re-assign the face provided in the body to the person identified by the id in the path parameter.

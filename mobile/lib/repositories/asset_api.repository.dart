@@ -106,6 +106,10 @@ class AssetApiRepository extends ApiRepository {
   Future<void> removeEdits(String assetId) async {
     return _api.removeAssetEdits(assetId);
   }
+
+  Future<void> runJob(String assetId, AssetJobName name) async {
+    return _api.runAssetJobs(AssetJobsDto(assetIds: [assetId], name: name));
+  }
 }
 
 extension on StackResponseDto {

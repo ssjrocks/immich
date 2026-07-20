@@ -32,6 +32,7 @@ class AssetViewerPage extends StatelessWidget {
   final TimelineService timelineService;
   final int? heroOffset;
   final RemoteAlbum? currentAlbum;
+  final int? initialSeekMs;
 
   const AssetViewerPage({
     super.key,
@@ -39,6 +40,7 @@ class AssetViewerPage extends StatelessWidget {
     required this.timelineService,
     this.heroOffset,
     this.currentAlbum,
+    this.initialSeekMs,
   });
 
   @override
@@ -50,7 +52,7 @@ class AssetViewerPage extends StatelessWidget {
         timelineServiceProvider.overrideWithValue(timelineService),
         currentRemoteAlbumScopedProvider.overrideWithValue(currentAlbum),
       ],
-      child: AssetViewer(initialIndex: initialIndex, heroOffset: heroOffset),
+      child: AssetViewer(initialIndex: initialIndex, heroOffset: heroOffset, initialSeekMs: initialSeekMs),
     );
   }
 }
@@ -58,8 +60,9 @@ class AssetViewerPage extends StatelessWidget {
 class AssetViewer extends ConsumerStatefulWidget {
   final int initialIndex;
   final int? heroOffset;
+  final int? initialSeekMs;
 
-  const AssetViewer({super.key, required this.initialIndex, this.heroOffset});
+  const AssetViewer({super.key, required this.initialIndex, this.heroOffset, this.initialSeekMs});
 
   @override
   ConsumerState createState() => _AssetViewerState();
@@ -317,8 +320,12 @@ class _AssetViewerState extends ConsumerState<AssetViewer> {
                       ? const FastScrollPhysics()
                       : const FastClampingScrollPhysics(),
                   itemCount: _totalAssets,
-                  itemBuilder: (context, index) =>
-                      AssetPage(index: index, heroOffset: _heroOffset, onTapNavigate: _onTapNavigate),
+                  itemBuilder: (context, index) => AssetPage(
+                    index: index,
+                    heroOffset: _heroOffset,
+                    onTapNavigate: _onTapNavigate,
+                    initialSeekMs: index == widget.initialIndex ? widget.initialSeekMs : null,
+                  ),
                 ),
               ),
             ),

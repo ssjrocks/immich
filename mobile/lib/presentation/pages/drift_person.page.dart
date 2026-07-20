@@ -4,7 +4,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:immich_mobile/domain/models/person.model.dart';
 import 'package:immich_mobile/extensions/build_context_extensions.dart';
 import 'package:immich_mobile/presentation/widgets/people/person_option_sheet.widget.dart';
+import 'package:immich_mobile/presentation/widgets/people/person_video_appearances.widget.dart';
 import 'package:immich_mobile/presentation/widgets/timeline/timeline.widget.dart';
+import 'package:immich_mobile/providers/infrastructure/people.provider.dart';
 import 'package:immich_mobile/providers/infrastructure/timeline.provider.dart';
 import 'package:immich_mobile/providers/user.provider.dart';
 import 'package:immich_mobile/utils/people.utils.dart';
@@ -72,6 +74,10 @@ class _DriftPersonPageState extends ConsumerState<DriftPersonPage> {
 
   @override
   Widget build(BuildContext context) {
+    final videoOccurrencesCount = ref
+        .watch(personVideoOccurrencesProvider(_person.id))
+        .maybeWhen(data: (occurrences) => occurrences.length, orElse: () => 0);
+
     return ProviderScope(
       overrides: [
         timelineServiceProvider.overrideWith((ref) {
@@ -92,6 +98,10 @@ class _DriftPersonPageState extends ConsumerState<DriftPersonPage> {
           onBirthdayTap: () => handleEditBirthday(context),
           onShowOptions: () => showOptionSheet(context),
         ),
+        topSliverWidget: videoOccurrencesCount > 0
+            ? SliverToBoxAdapter(child: PersonVideoAppearances(personId: _person.id))
+            : null,
+        topSliverWidgetHeight: estimatePersonVideoAppearancesHeight(videoOccurrencesCount),
       ),
     );
   }

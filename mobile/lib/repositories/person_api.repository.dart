@@ -26,6 +26,32 @@ class PersonApiRepository extends ApiRepository {
     return _toPerson(response);
   }
 
+  /// Candidates for a face-reassignment or person-merge picker, ranked by embedding similarity to
+  /// [closestAssetId] (a specific mistagged face) or [closestPersonId] (a whole person's identity).
+  Future<List<PersonDto>> getCandidates({String? closestAssetId, String? closestPersonId}) async {
+    final dto = await checkNull(
+      _api.getAllPeople(closestAssetId: closestAssetId, closestPersonId: closestPersonId, withHidden: true),
+    );
+    return dto.people.map(_toPerson).toList();
+  }
+
+  Future<PersonDto> create({String? name}) async {
+    final response = await checkNull(
+      _api.createPerson(PersonCreateDto(name: name == null ? const Optional.absent() : Optional.present(name))),
+    );
+    return _toPerson(response);
+  }
+
+  /// Merges the entire [sourcePersonId] identity (all of their faces/assets) into [targetPersonId].
+  /// [sourcePersonId] stops existing as a separate person afterward.
+  Future<void> mergeInto(String targetPersonId, String sourcePersonId) async {
+    await _api.mergePerson(targetPersonId, MergePersonDto(ids: [sourcePersonId]));
+  }
+
+  Future<List<PersonVideoOccurrenceResponseDto>> getVideoOccurrences(String personId) async {
+    return checkNull(_api.getPersonVideoOccurrences(personId));
+  }
+
   static PersonDto _toPerson(PersonResponseDto dto) => PersonDto(
     birthDate: dto.birthDate,
     id: dto.id,

@@ -23,3 +23,7 @@ String getPlaybackUrlForRemoteId(final String id) {
 String getFaceThumbnailUrl(final String personId) {
   return '${Store.get(StoreKey.serverEndpoint)}/people/$personId/thumbnail';
 }
+
+String getVideoFrameUrl(final String assetId, final int timestampMs) {
+  return '${Store.get(StoreKey.serverEndpoint)}/assets/$assetId/video/frame?timestampMs=$timestampMs';
+}

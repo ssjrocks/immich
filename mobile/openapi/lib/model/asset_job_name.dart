@@ -26,6 +26,7 @@ class AssetJobName {
   static const refreshFaces = AssetJobName._(r'refresh-faces');
   static const refreshMetadata = AssetJobName._(r'refresh-metadata');
   static const regenerateThumbnail = AssetJobName._(r'regenerate-thumbnail');
+  static const scanVideoFaces = AssetJobName._(r'scan-video-faces');
   static const transcodeVideo = AssetJobName._(r'transcode-video');
 
   /// List of all possible values in this [enum][AssetJobName].
@@ -33,6 +34,7 @@ class AssetJobName {
     refreshFaces,
     refreshMetadata,
     regenerateThumbnail,
+    scanVideoFaces,
     transcodeVideo,
   ];
 
@@ -75,6 +77,7 @@ class AssetJobNameTypeTransformer {
         case r'refresh-faces': return AssetJobName.refreshFaces;
         case r'refresh-metadata': return AssetJobName.refreshMetadata;
         case r'regenerate-thumbnail': return AssetJobName.regenerateThumbnail;
+        case r'scan-video-faces': return AssetJobName.scanVideoFaces;
         case r'transcode-video': return AssetJobName.transcodeVideo;
         default:
           if (!allowNull) {
