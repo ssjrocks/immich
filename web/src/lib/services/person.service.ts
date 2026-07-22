@@ -1,6 +1,7 @@
-import { updatePerson, type PersonResponseDto } from '@immich/sdk';
+import { deletePerson, updatePerson, type PersonResponseDto } from '@immich/sdk';
 import { modalManager, toastManager, type ActionItem } from '@immich/ui';
 import {
+  mdiAccountRemoveOutline,
   mdiCalendarEditOutline,
   mdiEyeOffOutline,
   mdiEyeOutline,
@@ -8,8 +9,10 @@ import {
   mdiHeartOutline,
 } from '@mdi/js';
 import type { MessageFormatter } from 'svelte-i18n';
+import { goto } from '$app/navigation';
 import { eventManager } from '$lib/managers/event-manager.svelte';
 import PersonEditBirthDateModal from '$lib/modals/PersonEditBirthDateModal.svelte';
+import { Route } from '$lib/route';
 import { handleError } from '$lib/utils/handle-error';
 import { getFormatter } from '$lib/utils/i18n';
 
@@ -48,7 +51,14 @@ export const getPersonActions = ($t: MessageFormatter, person: PersonResponseDto
     onAction: () => handleShowPerson(person),
   };
 
-  return { SetDateOfBirth, Favorite, Unfavorite, HidePerson, ShowPerson };
+  const DeletePersonResetFaces: ActionItem = {
+    title: $t('delete_person_reset_faces'),
+    icon: mdiAccountRemoveOutline,
+    color: 'danger',
+    onAction: () => handleDeletePersonResetFaces(person),
+  };
+
+  return { SetDateOfBirth, Favorite, Unfavorite, HidePerson, ShowPerson, DeletePersonResetFaces };
 };
 
 const handleFavoritePerson = async (person: { id: string }) => {
@@ -96,6 +106,31 @@ const handleShowPerson = async (person: { id: string }) => {
     eventManager.emit('PersonUpdate', response);
   } catch (error) {
     handleError(error, $t('errors.something_went_wrong'));
+  }
+};
+
+// Deletes the person outright rather than merely unassigning their faces, so a badly-merged
+// cluster (faces of several different real people wrongly grouped under one name) can be fully
+// undone. Deleting a person only unlinks their faces (personId set to null); the faces themselves
+// aren't deleted and are picked up again by the next facial recognition run, same as
+// deleteAllUnnamedPeople on the people-manage page.
+const handleDeletePersonResetFaces = async (person: PersonResponseDto) => {
+  const $t = await getFormatter();
+  const name = person.name || $t('unnamed_person');
+
+  const isConfirmed = await modalManager.showDialog({
+    prompt: $t('confirm_delete_person_reset_faces', { values: { name } }),
+  });
+  if (!isConfirmed) {
+    return;
+  }
+
+  try {
+    await deletePerson({ id: person.id });
+    toastManager.primary($t('deleted_person_reset_faces', { values: { name } }));
+    await goto(Route.people());
+  } catch (error) {
+    handleError(error, $t('error_delete_person_reset_faces'));
   }
 };
 

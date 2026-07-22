@@ -461,6 +461,12 @@
                     {formatTimestamp(face.timestampMs!)}
                   </button>
                 {/each}
+                <a
+                  class="mt-1 w-full border-t border-gray-200 pt-1 text-center text-xs text-immich-primary outline-none hover:underline dark:border-gray-700 dark:text-immich-dark-primary"
+                  href={Route.viewPerson(person, { previousRoute })}
+                >
+                  {$t('view_person')}
+                </a>
               </div>
             {/if}
           {:else}
