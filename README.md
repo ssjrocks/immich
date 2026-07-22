@@ -14,6 +14,12 @@ This is a personal fork of [immich-app/immich](https://github.com/immich-app/imm
 upstream `main`, with two extra capabilities layered on top of a stock install. See
 [FORK_CHANGES.md](FORK_CHANGES.md) for the full technical changelog (schema, config, API).
 
+****************************************************************************************************************************************************************************************
+Warning, probably buggy and unstable, changes made with claude code and should not be trusted with any library your not comfortable restoring from scratch if this fork breaks something
+****************************************************************************************************************************************************************************************
+
+
+
 ## Facial recognition throughout videos
 
 Stock Immich only runs face detection on a video's first-frame thumbnail — if someone isn't in that
