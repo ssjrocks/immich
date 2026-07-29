@@ -79,6 +79,20 @@ const withFaceSearch = (eb: ExpressionBuilder<DB, 'asset_face'>) => {
   ).as('faceSearch');
 };
 
+// Cosine distance from a reference face to the *closest face this person still has*.
+//
+// Ranking used to read `person.faceAssetId` directly, but a person's feature face is set to null
+// whenever that face is deleted (FK on delete set null) and nothing repairs it -- so a person with
+// hundreds of good faces silently ranked as "no match at all". Taking the minimum over their
+// remaining faces is both robust to that and a better answer to "how alike are these two people?"
+// than whichever single face happened to be featured. Null only when they have no faces left.
+const closestFaceDistance = (referenceFaceId: string) => sql<number | null>`(
+  SELECT MIN(fs.embedding <=> (SELECT embedding FROM face_search WHERE "faceId" = ${referenceFaceId}))
+  FROM asset_face af
+  JOIN face_search fs ON fs."faceId" = af.id
+  WHERE af."personId" = person.id AND af."deletedAt" IS NULL AND af."isVisible"
+)`;
+
 @Injectable()
 export class PersonRepository {
   constructor(@InjectKysely() private db: Kysely<DB>) {}
@@ -209,6 +223,8 @@ export class PersonRepository {
     const items = await this.db
       .selectFrom('person')
       .selectAll('person')
+      // Cast to int: pg hands int8 back as a string, and this crosses the API boundary as a number.
+      .select(sql<number>`count(distinct asset_face.id)::int`.as('faceCount'))
       .innerJoin('asset_face', 'asset_face.personId', 'person.id')
       .innerJoin('asset', (join) =>
         join
@@ -240,25 +256,19 @@ export class PersonRepository {
       .groupBy('person.id')
       .$if(!!options?.closestFaceAssetId, (qb) =>
         qb
+          // Surfaced so the merge UI can show "how alike are these two, really?" next to each
+          // candidate, using the exact distance the ordering below sorts on. Cosine distance runs
+          // 0..2, so 1 - distance is plain cosine similarity; the negative tail is clamped in
+          // mapPerson rather than here, because SQL's GREATEST() swallows nulls and would report
+          // "no faces at all" as a confident 0% match.
+          .select(sql<number | null>`1 - ${closestFaceDistance(options!.closestFaceAssetId!)}`.as('similarity'))
           // Named-first only applies when the caller asked for it (merging into a named person);
           // "wrong person" reassignment wants the true best match ranked first regardless of
           // whether it happens to be named yet -- see PersonSearchOptions.preferNamedFirst.
           .$if(!!options?.preferNamedFirst, (qb) => qb.orderBy(sql`NULLIF(person.name, '') is null`, 'asc'))
-          .orderBy((eb) =>
-            eb(
-              (eb) =>
-                eb
-                  .selectFrom('face_search')
-                  .select('face_search.embedding')
-                  .whereRef('face_search.faceId', '=', 'person.faceAssetId'),
-              '<=>',
-              (eb) =>
-                eb
-                  .selectFrom('face_search')
-                  .select('face_search.embedding')
-                  .where('face_search.faceId', '=', options!.closestFaceAssetId!),
-            ),
-          ),
+          // Ascending distance = descending similarity; people with no faces sort last (Postgres
+          // puts nulls last for ASC).
+          .orderBy(closestFaceDistance(options!.closestFaceAssetId!)),
       )
       .$if(!options?.closestFaceAssetId, (qb) =>
         qb
@@ -280,15 +290,24 @@ export class PersonRepository {
 
   @GenerateSql()
   getAllWithoutFaces() {
-    return this.db
-      .selectFrom('person')
-      .selectAll('person')
-      .leftJoin('asset_face', 'asset_face.personId', 'person.id')
-      .where('asset_face.deletedAt', 'is', null)
-      .where('asset_face.isVisible', 'is', true)
-      .having((eb) => eb.fn.count('asset_face.assetId'), '=', 0)
-      .groupBy('person.id')
-      .execute();
+    return (
+      this.db
+        .selectFrom('person')
+        .selectAll('person')
+        // These conditions have to live in the join, not a where. As a where they filter out the
+        // null row a non-matching left join produces (`isVisible is true` is false for it), so the
+        // people with *no* faces -- the only ones this query exists to find -- were discarded before
+        // `having count = 0` ever saw them, and the cleanup job could never delete anything.
+        .leftJoin('asset_face', (join) =>
+          join
+            .onRef('asset_face.personId', '=', 'person.id')
+            .on('asset_face.deletedAt', 'is', null)
+            .on('asset_face.isVisible', 'is', true),
+        )
+        .having((eb) => eb.fn.count('asset_face.assetId'), '=', 0)
+        .groupBy('person.id')
+        .execute()
+    );
   }
 
   @GenerateSql({ params: [DummyValue.UUID] })
@@ -644,21 +663,25 @@ export class PersonRepository {
 
   @GenerateSql({ params: [{ personId: DummyValue.UUID, assetId: DummyValue.UUID }] })
   getForFeatureFaceUpdate({ personId, assetId }: { personId: string; assetId: string }) {
-    return this.db
-      .selectFrom('asset_face')
-      .select('asset_face.id')
-      .where('asset_face.assetId', '=', assetId)
-      .where('asset_face.personId', '=', personId)
-      .innerJoin('asset', (join) => join.onRef('asset.id', '=', 'asset_face.assetId').on('asset.isOffline', '=', false))
-      // A person can have several timestamped faces in one video asset -- without an explicit
-      // order, whichever row the index happens to return becomes the featured photo, arbitrarily
-      // and unpredictably. Largest bounding box first (a bigger, usually more frontal crop makes
-      // a better thumbnail), id as a final deterministic tiebreaker.
-      .orderBy(
-        sql`("asset_face"."boundingBoxX2" - "asset_face"."boundingBoxX1") * ("asset_face"."boundingBoxY2" - "asset_face"."boundingBoxY1")`,
-        'desc',
-      )
-      .orderBy('asset_face.id', 'asc')
-      .executeTakeFirst();
+    return (
+      this.db
+        .selectFrom('asset_face')
+        .select('asset_face.id')
+        .where('asset_face.assetId', '=', assetId)
+        .where('asset_face.personId', '=', personId)
+        .innerJoin('asset', (join) =>
+          join.onRef('asset.id', '=', 'asset_face.assetId').on('asset.isOffline', '=', false),
+        )
+        // A person can have several timestamped faces in one video asset -- without an explicit
+        // order, whichever row the index happens to return becomes the featured photo, arbitrarily
+        // and unpredictably. Largest bounding box first (a bigger, usually more frontal crop makes
+        // a better thumbnail), id as a final deterministic tiebreaker.
+        .orderBy(
+          sql`("asset_face"."boundingBoxX2" - "asset_face"."boundingBoxX1") * ("asset_face"."boundingBoxY2" - "asset_face"."boundingBoxY1")`,
+          'desc',
+        )
+        .orderBy('asset_face.id', 'asc')
+        .executeTakeFirst()
+    );
   }
 }

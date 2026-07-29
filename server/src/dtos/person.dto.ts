@@ -83,6 +83,13 @@ export const PersonResponseSchema = z
       .optional()
       .describe('Person color (hex)')
       .meta(new HistoryBuilder().added('v1.126.0').stable('v2').getExtensions()),
+    faceCount: z.int().min(0).optional().describe('Number of visible faces assigned to this person'),
+    similarity: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('Cosine similarity (0-1) of this person to the reference face, when one was requested'),
   })
   .meta({ id: 'PersonResponseDto' });
 
@@ -142,10 +149,7 @@ const AssetFaceCreateSchema = AssetFaceUpdateItemSchema.extend({
   y: z.int().describe('Face bounding box Y coordinate'),
   width: z.int().describe('Face bounding box width'),
   height: z.int().describe('Face bounding box height'),
-  timestampMs: z
-    .int()
-    .optional()
-    .describe('For a face tagged on a video frame, the timestamp (in ms) of that frame'),
+  timestampMs: z.int().optional().describe('For a face tagged on a video frame, the timestamp (in ms) of that frame'),
 }).meta({ id: 'AssetFaceCreateDto' });
 
 const AssetFaceDeleteSchema = z
@@ -181,7 +185,11 @@ const PeopleResponseSchema = z
   .describe('People response');
 export class PeopleResponseDto extends createZodDto(PeopleResponseSchema) {}
 
-export function mapPerson(person: MaybeDehydrated<Person>): PersonResponseDto {
+// faceCount/similarity only come off the people-listing query, so they're extras on top of the
+// row rather than columns on `person` -- every other caller just leaves them undefined.
+type PersonRow = MaybeDehydrated<Person> & { faceCount?: number; similarity?: number | null };
+
+export function mapPerson(person: PersonRow): PersonResponseDto {
   return {
     id: person.id,
     name: person.name,
@@ -191,6 +199,11 @@ export function mapPerson(person: MaybeDehydrated<Person>): PersonResponseDto {
     isFavorite: person.isFavorite,
     color: person.color ?? undefined,
     updatedAt: asDateTimeString(person.updatedAt),
+    faceCount: person.faceCount,
+    // Null means "nothing to compare against" (no faces), which must stay undefined rather than
+    // collapsing to 0 -- a real 0 means "compared, and nothing alike". Past orthogonal, negative
+    // cosine carries no extra meaning, so the tail clamps to 0.
+    similarity: person.similarity == null ? undefined : Math.max(0, person.similarity),
   };
 }
 

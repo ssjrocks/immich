@@ -51,7 +51,10 @@ describe(PersonService.name, () => {
       const [person, hiddenPerson] = [PersonFactory.create(), PersonFactory.create({ isHidden: true })];
 
       mocks.person.getAllForUser.mockResolvedValue({
-        items: [person, hiddenPerson],
+        items: [
+          { ...person, faceCount: 3 },
+          { ...hiddenPerson, faceCount: 1 },
+        ],
         hasNextPage: false,
       });
       mocks.person.getNumberOfPeople.mockResolvedValue({ total: 2, hidden: 1 });
@@ -79,7 +82,10 @@ describe(PersonService.name, () => {
       const [isFavorite, person] = [PersonFactory.create({ isFavorite: true }), PersonFactory.create()];
 
       mocks.person.getAllForUser.mockResolvedValue({
-        items: [isFavorite, person],
+        items: [
+          { ...isFavorite, faceCount: 5 },
+          { ...person, faceCount: 2 },
+        ],
         hasNextPage: false,
       });
       mocks.person.getNumberOfPeople.mockResolvedValue({ total: 2, hidden: 1 });
@@ -1193,7 +1199,9 @@ describe(PersonService.name, () => {
       await sut.handleQueueVideoDetectFaces({ force: false });
 
       expect(mocks.assetJob.streamForVideoDetectFacesJob).toHaveBeenCalledWith(false);
-      expect(mocks.job.queueAll).toHaveBeenCalledWith([{ name: JobName.AssetVideoDetectFaces, data: { id: asset.id } }]);
+      expect(mocks.job.queueAll).toHaveBeenCalledWith([
+        { name: JobName.AssetVideoDetectFaces, data: { id: asset.id } },
+      ]);
     });
   });
 
@@ -1527,8 +1535,14 @@ describe(PersonService.name, () => {
     });
 
     it('should not repair a person when the removed duplicate was not their representative photo', async () => {
-      const faceSmall = makeFace('face-1', 10, 10, 20, 20, [1, 0, 0], { id: 'person-A', faceAssetId: 'some-other-face' });
-      const faceLarge = makeFace('face-2', 10, 10, 80, 80, [0.99, 0.01, 0], { id: 'person-A', faceAssetId: 'some-other-face' });
+      const faceSmall = makeFace('face-1', 10, 10, 20, 20, [1, 0, 0], {
+        id: 'person-A',
+        faceAssetId: 'some-other-face',
+      });
+      const faceLarge = makeFace('face-2', 10, 10, 80, 80, [0.99, 0.01, 0], {
+        id: 'person-A',
+        faceAssetId: 'some-other-face',
+      });
 
       mocks.person.getVideoFacesWithEmbeddings.mockResolvedValue([faceSmall, faceLarge]);
       mocks.person.refreshFaces.mockResolvedValue();

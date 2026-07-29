@@ -835,6 +835,8 @@ export type PersonResponseDto = {
     birthDate: string | null;
     /** Person color (hex) */
     color?: string;
+    /** Number of visible faces assigned to this person */
+    faceCount?: number;
     /** Person ID */
     id: string;
     /** Is favorite */
@@ -843,6 +845,8 @@ export type PersonResponseDto = {
     isHidden: boolean;
     /** Person name */
     name: string;
+    /** Cosine similarity (0-1) of this person to the reference face, when one was requested */
+    similarity?: number;
     /** Thumbnail path */
     thumbnailPath: string;
     /** Last update date */

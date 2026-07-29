@@ -140,11 +140,20 @@
     viewMode = PersonPageViewMode.UNASSIGN_ASSETS;
   };
 
-  const handleMerge = async (person: PersonResponseDto) => {
+  const handleMerge = async (mergedPerson: PersonResponseDto) => {
+    // Merging into a target folds *this* person away, so their page no longer exists. Leave
+    // merge mode before navigating: this route is reused across person ids, so the selector
+    // would otherwise stay mounted over the target's page holding now-deleted people.
+    if (mergedPerson.id !== person.id) {
+      viewMode = PersonPageViewMode.VIEW_ASSETS;
+      await goto(Route.viewPerson(mergedPerson, { previousRoute: Route.people() }));
+      return;
+    }
+
     await updateAssetCount();
     await handleGoBack();
 
-    data = { ...data, person };
+    data = { ...data, person: mergedPerson };
   };
 
   const handleSelectFeaturePhoto = async (asset: TimelineAsset) => {

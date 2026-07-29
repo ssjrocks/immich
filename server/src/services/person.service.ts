@@ -62,10 +62,17 @@ export class PersonService extends BaseService {
 
     if (closestPersonId) {
       const person = await this.personRepository.getById(closestPersonId);
-      if (!person?.faceAssetId) {
+      if (!person) {
         throw new NotFoundException('Person not found');
       }
-      closestFaceAssetId = person.faceAssetId;
+      // Their feature face is nulled out when that face is deleted and nothing repairs it, so
+      // requiring one here 404s the merge screen for people who still have plenty of faces. Fall
+      // back to any face they do have.
+      const fallbackFace = person.faceAssetId ? undefined : await this.personRepository.getRandomFace(closestPersonId);
+      closestFaceAssetId = person.faceAssetId ?? fallbackFace?.id;
+      if (!closestFaceAssetId) {
+        throw new NotFoundException('Person not found');
+      }
     }
     const { items, hasNextPage } = await this.personRepository.getAllForUser(pagination, auth.user.id, {
       withHidden,
@@ -617,7 +624,9 @@ export class PersonService extends BaseService {
         .map((face) => face.person!.id);
 
       await this.personRepository.refreshFaces([], faceIdsToRemove, []);
-      this.logger.log(`Removed ${faceIdsToRemove.length} duplicate video faces in asset ${id}, kept ${survivors.length}`);
+      this.logger.log(
+        `Removed ${faceIdsToRemove.length} duplicate video faces in asset ${id}, kept ${survivors.length}`,
+      );
 
       if (changeFeaturePhoto.length > 0) {
         await this.createNewFeaturePhoto([...new Set(changeFeaturePhoto)]);

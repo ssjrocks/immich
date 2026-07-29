@@ -21320,6 +21320,12 @@
             ],
             "x-immich-state": "Stable"
           },
+          "faceCount": {
+            "description": "Number of visible faces assigned to this person",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
           "id": {
             "description": "Person ID",
             "format": "uuid",
@@ -21348,6 +21354,12 @@
           "name": {
             "description": "Person name",
             "type": "string"
+          },
+          "similarity": {
+            "description": "Cosine similarity (0-1) of this person to the reference face, when one was requested",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
           },
           "thumbnailPath": {
             "description": "Thumbnail path",

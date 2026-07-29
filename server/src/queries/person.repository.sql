@@ -82,7 +82,8 @@ limit
 
 -- PersonRepository.getAllForUser
 select
-  "person".*
+  "person".*,
+  count(distinct asset_face.id)::int as "faceCount"
 from
   "person"
   inner join "asset_face" on "asset_face"."personId" = "person"."id"
@@ -130,8 +131,7 @@ select
 from
   "person"
   left join "asset_face" on "asset_face"."personId" = "person"."id"
-where
-  "asset_face"."deletedAt" is null
+  and "asset_face"."deletedAt" is null
   and "asset_face"."isVisible" is true
 group by
   "person"."id"
