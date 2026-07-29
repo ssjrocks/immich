@@ -23,9 +23,10 @@ Warning, probably buggy and unstable, changes made with claude code and should n
 ## Facial recognition throughout videos
 
 Stock Immich only runs face detection on a video's first-frame thumbnail — if someone isn't in that
-exact frame, they're never recognized anywhere in that video. This fork samples frames throughout the
-full video at a configurable rate, runs each through Immich's existing face-detection model, dedupes
-repeated detections of the same appearance, and surfaces every distinct moment a person shows up.
+exact frame, they're never recognized anywhere in that video. This fork adds a second, **opt-in**
+pass that samples frames throughout the full video at a configurable rate, runs each through
+Immich's existing face-detection model, dedupes repeated detections of the same appearance, and
+surfaces every distinct moment a person shows up — on web and mobile.
 
 The detection/clustering approach here is adapted closely from
 [Tom Holland](https://github.com/0thomasholland)'s
@@ -35,29 +36,64 @@ caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the 
 [GitHub discussion](https://github.com/immich-app/immich/discussions/5936); see
 [FORK_CHANGES.md](FORK_CHANGES.md#credit) for the full credit and bug list.
 
-- A person's page lists every video they appear in, grouped in its own card with the filename and
-  duration, and a frame thumbnail per appearance — hover one for a short preview clip, click to jump
-  straight there.
-- While watching a video, clicking a person in the sidebar shows their appearance timestamps for
-  *that* video in place, without navigating away, and seeks the player when you pick one.
-- An in-place edit mode on the People sidebar for quickly renaming or unassigning a face without
-  leaving the video.
+- **Opt-in, configurable scanning** (Admin → Machine Learning → Facial Recognition): a three-way
+  mode — off, classic first-frame-only (stock behavior), or full video scan — so installing this
+  fork never silently starts reprocessing an existing library. Full-scan users pick an evenly-spread
+  frame count or a seconds-between-frames interval (sub-second precision), capped at 10,000 frames
+  per video, with disk-space guidance in the settings UI.
+- **Manual per-video scan**: a "Scan video for faces" button next to the People section on any video
+  (admin only, shown only when video scanning is enabled) — (re-)scan a single file without waiting
+  for or re-running the library-wide job.
+- **A person's page** lists every video they appear in as a two-pane, file-explorer-style view: a
+  scrollable video list on the left — thumbnail plus appearance count, sorted so the video most
+  worth checking is always on top — and a larger pane on the right showing a real frame thumbnail
+  per timestamp in the selected video, hover-swappable to a short clip preview.
+- **While watching a video**, clicking a person in the sidebar floats a popover with that person's
+  appearance timestamps *in this video* — seeking the player in place when you pick one — plus a
+  "View person" link straight to their page.
+- **An in-place edit mode** on the People sidebar: inline rename and "not a face" buttons on hover,
+  a "Merge people" picker, and a dedicated "Wrong person" action that opens a picker of candidate
+  people ranked by face-embedding similarity, so you reassign just the one misidentified face
+  without merging the two people's other photos and videos together.
+- **Person page menu**: "Delete person and reset faces" for people that turned into a mess of
+  misgrouped faces after repeated scans — unassigns (doesn't delete) their faces so the next
+  Facial Recognition run reconsiders them from scratch.
+- **Mobile app**: the same "Appears in videos" browsing and in-place edit mode (rename, not-a-face,
+  wrong-person reassignment) are ported to the Flutter app, not just web.
 
 > [!NOTE]
-> **Backfilling an existing library:** if your videos already went through stock Immich's face
-> detection before you installed this fork, the regular Face Detection queue's "Missing" button on
-> the admin Jobs page won't pick them up for a video-wide scan — it only tracks the first-frame job,
-> which those videos have already completed. Video face detection has its own row on the
-> **Admin → Job Queues** page with its own **All**/**Missing** buttons — use **All** once to
-> backfill your existing library.
+> **Enabling on an existing library:** video face scanning is off by default — turn it on under
+> Admin → Machine Learning → Facial Recognition first. Once enabled, the regular Face Detection
+> queue's "Missing" button on the admin Jobs page won't pick up already-processed videos for a
+> video-wide scan — it only tracks the first-frame job. Video face detection has its own row on the
+> **Admin → Job Queues** page with its own **All**/**Missing** buttons — use **All** once to backfill
+> your existing library, or use the per-video "Scan video for faces" button to backfill one file at
+> a time.
 
 <p align="center">
-  <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos panel showing grouped timestamps and hover preview"><br/>
-  <sub>A person's page: every video they appear in, grouped by video, with a hover preview per timestamp.</sub>
+  <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos: two-pane master/detail view with per-timestamp frame thumbnails and hover clip preview"><br/>
+  <sub>A person's page: every video they appear in, master/detail style, with a hover clip preview per timestamp.</sub>
 </p>
 <p align="center">
-  <img src="design/fork/video-face-detection-viewer.gif" width="700" alt="In-video People sidebar showing inline appearance timestamps"><br/>
-  <sub>Watching a video: appearance timestamps for the people in this clip, seeking in place.</sub>
+  <img src="design/fork/video-face-detection-viewer.gif" width="700" alt="Browsing people and appearances in the info sidebar while watching a video"><br/>
+  <sub>Watching a video: browsing people and their appearance timestamps from the info sidebar.</sub>
+</p>
+<p align="center">
+  <img src="design/fork/video-face-detection-view-person-link.gif" width="700" alt="The View person link jumping from a video appearance to that person's page"><br/>
+  <sub>The "View person" link: jump from an appearance timestamp straight to that person's page.</sub>
+</p>
+<p align="center">
+  <img src="design/fork/video-face-detection-edit-mode.gif" width="700" alt="Edit-mode tool buttons on the People sidebar: rename, not-a-face, merge, and wrong-person actions"><br/>
+  <sub>Edit mode on the People sidebar: rename, not-a-face, merge, and "Wrong person" reassignment buttons.</sub>
+</p>
+<p align="center">
+  <img src="design/fork/video-face-detection-scan-mode.png" width="500" alt="Admin Facial Recognition settings: the Video face scanning mode dropdown"><br/>
+  <sub>Admin settings: the opt-in scan-mode dropdown — Classic, Off, or full video scan.</sub>
+</p>
+<p align="center">
+  <img src="design/fork/video-face-detection-scan-frame-count.png" width="500" alt="Frame count sampling settings for full video scanning">
+  <img src="design/fork/video-face-detection-scan-interval.png" width="500" alt="Interval sampling settings for full video scanning"><br/>
+  <sub>Full-scan sampling options: an evenly-spread frame count, or a seconds-between-frames interval.</sub>
 </p>
 
 ## AI-generated photo descriptions via Immich Analyze

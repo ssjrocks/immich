@@ -41,12 +41,19 @@ you for the thorough review.
 
 - **Schema**: `asset_face.timestampMs` (milliseconds from video start; `null` for
   photos), `asset_job_status.videoFacesRecognizedAt`.
-- **Config** (`machineLearning.facialRecognition`): `videoFrameRate` — frames per
-  second to sample (default `0.5`, i.e. one frame every 2 seconds; range
-  0.1–60), and `videoMaxFrames` — cap per video (default `50`, range 1–10,000).
-- **Job pipeline**: after existing first-frame detection, video assets are queued
+- **Config** (`machineLearning.facialRecognition.video`): `scanMode` — a
+  `VideoFaceScanMode` enum: `thumbnailOnly` (stock behavior, the default —
+  installing this fork never silently reprocesses an existing library),
+  `disabled` (videos skipped by facial recognition entirely), or `fullScan`
+  (samples frames throughout the video). `samplingMethod` — a
+  `VideoFaceSamplingMethod` enum: `frameCount` (spread a fixed number of frames
+  evenly across the video) or `interval` (one frame every `intervalSeconds`,
+  sub-second precision, default `2`). `maxFrames` — hard safety cap per video
+  (default `50`, max `10,000`).
+- **Job pipeline**: when `scanMode` is `fullScan`, video assets are queued
   through a new `AssetVideoDetectFacesQueueAll → AssetVideoDetectFaces →
-  AssetVideoClusterFaces` chain. Frames are extracted via ffmpeg
+  AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
+  from stock Face Detection). Frames are extracted via ffmpeg
   (`MediaRepository.extractVideoFrames`), each run through the *existing*
   single-image ML face-detection endpoint (no ML-service/Python changes needed),
   then near-duplicate detections of the same appearance are removed by cosine
@@ -54,24 +61,56 @@ you for the thorough review.
   recognition/clustering job — so a person visible for 30 seconds contributes one
   face record, not dozens.
 - **API**: `GET /people/:id/video-occurrences` — returns, for each video a person
-  appears in, every distinct timestamp (ms) they were detected at.
-- A dedicated `videoFaceDetection` queue with its own row on the admin Job
+  appears in, every distinct timestamp (ms) they were detected at, sorted by
+  appearance count. `PUT /people/:id/reassign` — moves one or more specific faces
+  to a different existing person without merging the two people's other assets
+  (backs the "Wrong person" picker). `unassignFace`/reset-faces path used by
+  "Delete person and reset faces" — deletes the person but unassigns (doesn't
+  delete) their faces so the next non-force Facial Recognition run reconsiders
+  them. Per-asset "scan video for faces" reuses the existing `AssetJobName`
+  single-asset job runner rather than adding a new endpoint.
+- A dedicated `VideoFaceDetection` queue with its own row on the admin Job
   Queues page (All/Missing, concurrency setting) — not a one-off manual job.
+- People-ranking query switched from counting raw `asset_face` rows to counting
+  distinct assets, so a person with many timestamped appearances in one scanned
+  video doesn't outrank someone tagged across many more distinct photos in the
+  unnamed-people sort order.
 
 ### Web
 
-- Two new admin settings (Machine Learning → Facial Recognition): frame rate and
-  max frames.
-- Person page: an "Appears in videos" panel listing every video a person is in,
-  with clickable timestamp chips that open the video at that exact moment.
-  Hovering a chip shows a frame thumbnail plus a short preview clip (4s
-  before/after that timestamp).
+- Admin settings (Machine Learning → Facial Recognition): scan-mode dropdown,
+  frame-count/interval sampling toggle with mode-aware descriptions, max-frames
+  field, and a disk-space guidance callout (sampled frames are written to
+  temporary disk storage while a video is processed).
+- Person page: "Appears in videos" rebuilt as a two-pane, file-explorer-style
+  master/detail view — a scrollable video list on the left (thumbnail,
+  appearance count, sorted by count descending) and a pane on the right showing
+  a real per-timestamp frame thumbnail for the selected video, hover-swappable
+  to a short clip preview.
 - Video asset viewer: clicking a person in the People sidebar no longer
-  navigates away — for videos, it now shows an inline list of that person's
-  appearance timestamps *in the video you're currently watching*, and clicking
-  one seeks the player in place.
+  navigates away. It floats a `position:fixed` popover (so the sidebar's own
+  scroll clipping doesn't cut it off) with that person's appearance timestamps
+  *in the video you're currently watching* — clicking one seeks the player in
+  place — plus a "View person" link to their page.
+- People sidebar in-place edit mode: inline rename and "not a face" mini-buttons
+  on hover, a "Merge people" picker, and a "Wrong person" action
+  (`ReassignFaceModal`) listing candidate people ranked by face-embedding
+  similarity to the specific misidentified face.
+- A "Scan video for faces" button next to the People section on any video asset
+  — admin only, shown only when `scanMode` is `fullScan` — to (re-)scan a single
+  file on demand.
+- Person page menu: "Delete person and reset faces".
 - Updated the "Face detection" job description on the admin Job Queues page to
   describe the new video behavior.
+
+### Mobile
+
+- Ported the web feature to the Flutter app: an "Appears in videos" section on
+  the person page with a per-timestamp thumbnail grid (tapping a timestamp opens
+  the asset viewer seeked to that exact moment), seek-to-timestamp support in
+  the asset viewer, and an edit mode on the people section with timestamp-chip
+  pickers for multi-appearance videos and the same per-person actions as web
+  (wrong person, rename, not-a-face).
 
 ## Fixed
 
@@ -98,6 +137,28 @@ you for the thorough review.
   a person visible in both the preview frame and a nearby sampled frame ended
   up with two near-identical face rows instead of one. Fixed by including
   that face in the clustering pass.
+- **Renaming a face to an existing person's name silently merged whole
+  identities.** A rename meant to correct one misidentified face (e.g. one
+  video frame tagged as the wrong person) would pull every other photo and
+  video of the renamed person over too. Replaced with a dedicated "Wrong
+  person" picker (`ReassignFaceModal`, `PUT /people/:id/reassign`) that
+  reassigns just the specific misidentified face, leaving both people's other
+  assets untouched. The separate "Merge people" button is unchanged for when a
+  full merge really is intended.
+- **Video letterbox offset threw off the confirmed-face bounding box** — a
+  click meant to confirm/correct a face's position on a letterboxed video
+  wasn't accounting for the video element's own letterbox offset, so the
+  bounding box saved didn't match where the user actually clicked. Fixed by
+  correcting for that offset before mapping the click back to frame
+  coordinates.
+- **A seek race in the video confirmation-box flow** could show the
+  confirmation box positioned for the wrong frame if the player was still
+  seeking when it rendered. Fixed the ordering so the box waits for the seek
+  to actually complete.
+- **Face reassignment could affect more than the intended occurrence** —
+  scoped reassignment to the single video occurrence being edited, plus a
+  fork-wide bug sweep (commit `cb29de22d`) for related edge cases turned up
+  during that pass.
 
 ## Configuration reference
 
