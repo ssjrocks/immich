@@ -18,7 +18,6 @@ class FacialRecognitionConfig {
     required this.minFaces,
     required this.minScore,
     required this.modelName,
-    required this.video,
   });
 
   /// Whether the task is enabled
@@ -45,16 +44,13 @@ class FacialRecognitionConfig {
   /// Name of the model to use
   String modelName;
 
-  VideoFacialRecognitionConfig video;
-
   @override
   bool operator ==(Object other) => identical(this, other) || other is FacialRecognitionConfig &&
     other.enabled == enabled &&
     other.maxDistance == maxDistance &&
     other.minFaces == minFaces &&
     other.minScore == minScore &&
-    other.modelName == modelName &&
-    other.video == video;
+    other.modelName == modelName;
 
   @override
   int get hashCode =>
@@ -63,11 +59,10 @@ class FacialRecognitionConfig {
     (maxDistance.hashCode) +
     (minFaces.hashCode) +
     (minScore.hashCode) +
-    (modelName.hashCode) +
-    (video.hashCode);
+    (modelName.hashCode);
 
   @override
-  String toString() => 'FacialRecognitionConfig[enabled=$enabled, maxDistance=$maxDistance, minFaces=$minFaces, minScore=$minScore, modelName=$modelName, video=$video]';
+  String toString() => 'FacialRecognitionConfig[enabled=$enabled, maxDistance=$maxDistance, minFaces=$minFaces, minScore=$minScore, modelName=$modelName]';
 
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
@@ -76,7 +71,6 @@ class FacialRecognitionConfig {
       json[r'minFaces'] = this.minFaces;
       json[r'minScore'] = this.minScore;
       json[r'modelName'] = this.modelName;
-      json[r'video'] = this.video;
     return json;
   }
 
@@ -94,7 +88,6 @@ class FacialRecognitionConfig {
         minFaces: mapValueOfType<int>(json, r'minFaces')!,
         minScore: mapValueOfType<double>(json, r'minScore')!,
         modelName: mapValueOfType<String>(json, r'modelName')!,
-        video: VideoFacialRecognitionConfig.fromJson(json[r'video'])!,
       );
     }
     return null;
@@ -147,7 +140,6 @@ class FacialRecognitionConfig {
     'minFaces',
     'minScore',
     'modelName',
-    'video',
   };
 }
 

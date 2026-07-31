@@ -26,7 +26,7 @@ Stock Immich only runs face detection on a video's first-frame thumbnail — if 
 exact frame, they're never recognized anywhere in that video. This fork adds a second, **opt-in**
 pass that samples frames throughout the full video at a configurable rate, runs each through
 Immich's existing face-detection model, dedupes repeated detections of the same appearance, and
-surfaces every distinct moment a person shows up — on web and mobile.
+surfaces every distinct moment a person shows up.
 
 The detection/clustering approach here is adapted closely from
 [Tom Holland](https://github.com/0thomasholland)'s
@@ -58,8 +58,6 @@ caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the 
 - **Person page menu**: "Delete person and reset faces" for people that turned into a mess of
   misgrouped faces after repeated scans — unassigns (doesn't delete) their faces so the next
   Facial Recognition run reconsiders them from scratch.
-- **Mobile app**: the same "Appears in videos" browsing and in-place edit mode (rename, not-a-face,
-  wrong-person reassignment) are ported to the Flutter app, not just web.
 
 > [!NOTE]
 > **Enabling on an existing library:** video face scanning is off by default — turn it on under

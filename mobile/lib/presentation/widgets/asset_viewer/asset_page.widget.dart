@@ -32,15 +32,8 @@ class AssetPage extends ConsumerStatefulWidget {
   final int index;
   final int heroOffset;
   final void Function(int direction)? onTapNavigate;
-  final int? initialSeekMs;
 
-  const AssetPage({
-    super.key,
-    required this.index,
-    required this.heroOffset,
-    this.onTapNavigate,
-    this.initialSeekMs,
-  });
+  const AssetPage({super.key, required this.index, required this.heroOffset, this.onTapNavigate});
 
   @override
   ConsumerState createState() => _AssetPageState();
@@ -398,7 +391,6 @@ class _AssetPageState extends ConsumerState<AssetPage> {
         localFilePath: localFilePath,
         isCurrent: isCurrent,
         image: Image(image: imageProvider, fit: BoxFit.contain, alignment: Alignment.center),
-        initialSeekMs: widget.initialSeekMs,
       ),
     );
   }

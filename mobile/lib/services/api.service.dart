@@ -25,7 +25,6 @@ class ApiService {
   late MapApi mapApi;
   late PartnersApi partnersApi;
   late PeopleApi peopleApi;
-  late FacesApi facesApi;
   late SharedLinksApi sharedLinksApi;
   late SyncApi syncApi;
   late SystemConfigApi systemConfigApi;
@@ -67,7 +66,6 @@ class ApiService {
     mapApi = MapApi(_apiClient);
     partnersApi = PartnersApi(_apiClient);
     peopleApi = PeopleApi(_apiClient);
-    facesApi = FacesApi(_apiClient);
     sharedLinksApi = SharedLinksApi(_apiClient);
     syncApi = SyncApi(_apiClient);
     systemConfigApi = SystemConfigApi(_apiClient);

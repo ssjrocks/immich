@@ -129,7 +129,6 @@ class AssetViewerRoute extends PageRouteInfo<AssetViewerRouteArgs> {
     required TimelineService timelineService,
     int? heroOffset,
     RemoteAlbum? currentAlbum,
-    int? initialSeekMs,
     List<PageRouteInfo>? children,
   }) : super(
          AssetViewerRoute.name,
@@ -139,7 +138,6 @@ class AssetViewerRoute extends PageRouteInfo<AssetViewerRouteArgs> {
            timelineService: timelineService,
            heroOffset: heroOffset,
            currentAlbum: currentAlbum,
-           initialSeekMs: initialSeekMs,
          ),
          initialChildren: children,
        );
@@ -156,7 +154,6 @@ class AssetViewerRoute extends PageRouteInfo<AssetViewerRouteArgs> {
         timelineService: args.timelineService,
         heroOffset: args.heroOffset,
         currentAlbum: args.currentAlbum,
-        initialSeekMs: args.initialSeekMs,
       );
     },
   );
@@ -169,7 +166,6 @@ class AssetViewerRouteArgs {
     required this.timelineService,
     this.heroOffset,
     this.currentAlbum,
-    this.initialSeekMs,
   });
 
   final Key? key;
@@ -182,11 +178,9 @@ class AssetViewerRouteArgs {
 
   final RemoteAlbum? currentAlbum;
 
-  final int? initialSeekMs;
-
   @override
   String toString() {
-    return 'AssetViewerRouteArgs{key: $key, initialIndex: $initialIndex, timelineService: $timelineService, heroOffset: $heroOffset, currentAlbum: $currentAlbum, initialSeekMs: $initialSeekMs}';
+    return 'AssetViewerRouteArgs{key: $key, initialIndex: $initialIndex, timelineService: $timelineService, heroOffset: $heroOffset, currentAlbum: $currentAlbum}';
   }
 
   @override
@@ -197,8 +191,7 @@ class AssetViewerRouteArgs {
         initialIndex == other.initialIndex &&
         timelineService == other.timelineService &&
         heroOffset == other.heroOffset &&
-        currentAlbum == other.currentAlbum &&
-        initialSeekMs == other.initialSeekMs;
+        currentAlbum == other.currentAlbum;
   }
 
   @override
@@ -207,8 +200,7 @@ class AssetViewerRouteArgs {
       initialIndex.hashCode ^
       timelineService.hashCode ^
       heroOffset.hashCode ^
-      currentAlbum.hashCode ^
-      initialSeekMs.hashCode;
+      currentAlbum.hashCode;
 }
 
 /// generated route for

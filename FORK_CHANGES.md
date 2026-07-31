@@ -150,12 +150,14 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
 
 ### Mobile
 
-- Ported the web feature to the Flutter app: an "Appears in videos" section on
-  the person page with a per-timestamp thumbnail grid (tapping a timestamp opens
-  the asset viewer seeked to that exact moment), seek-to-timestamp support in
-  the asset viewer, and an edit mode on the people section with timestamp-chip
-  pickers for multi-appearance videos and the same per-person actions as web
-  (wrong person, rename, not-a-face).
+Nothing — this fork is web and server only.
+
+An earlier version ported the feature to the Flutter app, but it was dropped: it
+had fallen behind the web featureset, wasn't being used, and `mobile/` accounted
+for most of the merge conflicts when pulling in upstream releases. `mobile/` is
+now byte-identical to upstream, so it merges cleanly and the stock app works
+against this server exactly as it does against an unmodified one. The history is
+still there if it's ever wanted back — see the commits before `2fba27818`.
 
 ## Fixed
 
