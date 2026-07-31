@@ -42,6 +42,16 @@ export const VideoFacialRecognitionConfigSchema = z
       .min(0.1)
       .max(60)
       .describe('Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision.'),
+    appearanceGapSeconds: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(900)
+      .describe(
+        'How long a person must go undetected before their next detection counts as a separate appearance. ' +
+          'Purely a display grouping: every detection is still stored, so changing this re-groups existing ' +
+          'scans immediately and nothing is lost. 0 lists every detection individually.',
+      ),
   })
   .meta({ id: 'VideoFacialRecognitionConfig' });
 

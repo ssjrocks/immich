@@ -136,6 +136,7 @@ const updatedConfig = Object.freeze<SystemConfig>({
         samplingMethod: VideoFaceSamplingMethod.FrameCount,
         maxFrames: 50,
         intervalSeconds: 2,
+        appearanceGapSeconds: 5,
       },
     },
     ocr: {

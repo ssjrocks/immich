@@ -1923,19 +1923,58 @@ describe(PersonService.name, () => {
       expect(mocks.access.person.checkOwnerAccess).toHaveBeenCalledWith(auth.user.id, new Set(['person-1']));
     });
 
-    it('should return video occurrences for a person', async () => {
+    it('should group detections closer together than the appearance gap', async () => {
       const auth = AuthFactory.create();
       mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      // 4s apart, inside the default 5s gap, so this is one appearance rather than two.
       mocks.person.getVideoOccurrences.mockResolvedValue([
         { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 5000] },
         { assetId: 'asset-2', originalFileName: 'video-2.mp4', durationMs: null, timestampsMs: [2000] },
       ]);
 
       await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
-        { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 5000] },
-        { assetId: 'asset-2', originalFileName: 'video-2.mp4', durationMs: null, timestampsMs: [2000] },
+        {
+          assetId: 'asset-1',
+          originalFileName: 'video-1.mp4',
+          durationMs: 60_000,
+          timestampsMs: [1000],
+          appearances: [{ startMs: 1000, endMs: 5000, detections: 2 }],
+        },
+        {
+          assetId: 'asset-2',
+          originalFileName: 'video-2.mp4',
+          durationMs: null,
+          timestampsMs: [2000],
+          appearances: [{ startMs: 2000, endMs: 2000, detections: 1 }],
+        },
       ]);
       expect(mocks.person.getVideoOccurrences).toHaveBeenCalledWith('person-1');
+    });
+
+    it('should split detections separated by more than the appearance gap', async () => {
+      const auth = AuthFactory.create();
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      mocks.person.getVideoOccurrences.mockResolvedValue([
+        {
+          assetId: 'asset-1',
+          originalFileName: 'video-1.mp4',
+          durationMs: 60_000,
+          timestampsMs: [1000, 3000, 40_000],
+        },
+      ]);
+
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
+        {
+          assetId: 'asset-1',
+          originalFileName: 'video-1.mp4',
+          durationMs: 60_000,
+          timestampsMs: [1000, 40_000],
+          appearances: [
+            { startMs: 1000, endMs: 3000, detections: 2 },
+            { startMs: 40_000, endMs: 40_000, detections: 1 },
+          ],
+        },
+      ]);
     });
 
     it('should return empty list when person has no video faces', async () => {

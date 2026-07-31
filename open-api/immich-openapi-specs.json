@@ -21440,8 +21440,43 @@
         },
         "type": "object"
       },
+      "PersonVideoAppearanceDto": {
+        "properties": {
+          "detections": {
+            "description": "How many individual detections this appearance groups together",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "endMs": {
+            "description": "Last detection in this appearance (ms from video start)",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "startMs": {
+            "description": "First detection in this appearance (ms from video start)",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "detections",
+          "endMs",
+          "startMs"
+        ],
+        "type": "object"
+      },
       "PersonVideoOccurrenceResponseDto": {
         "properties": {
+          "appearances": {
+            "description": "Runs of consecutive detections, grouped by the configured appearance gap",
+            "items": {
+              "$ref": "#/components/schemas/PersonVideoAppearanceDto"
+            },
+            "type": "array"
+          },
           "assetId": {
             "description": "Asset ID of the video",
             "format": "uuid",
@@ -21460,7 +21495,7 @@
             "type": "string"
           },
           "timestampsMs": {
-            "description": "Timestamps (ms from video start) where this person appears",
+            "description": "Start timestamp (ms from video start) of each appearance -- one per entry in `appearances`",
             "items": {
               "maximum": 9007199254740991,
               "minimum": 0,
@@ -21470,6 +21505,7 @@
           }
         },
         "required": [
+          "appearances",
           "assetId",
           "durationMs",
           "originalFileName",
@@ -22793,6 +22829,11 @@
             "maximum": 9007199254740991,
             "minimum": -9007199254740991,
             "type": "integer"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds a person must go undetected before their next detection is a new appearance",
+            "format": "double",
+            "type": "number"
           }
         },
         "required": [
@@ -22807,7 +22848,8 @@
           "oauthButtonText",
           "publicUsers",
           "trashDays",
-          "userDeleteDelay"
+          "userDeleteDelay",
+          "videoAppearanceGapSeconds"
         ],
         "type": "object"
       },
@@ -28165,6 +28207,13 @@
       },
       "VideoFacialRecognitionConfig": {
         "properties": {
+          "appearanceGapSeconds": {
+            "description": "How long a person must go undetected before their next detection counts as a separate appearance. Purely a display grouping: every detection is still stored, so changing this re-groups existing scans immediately and nothing is lost. 0 lists every detection individually.",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "type": "number"
+          },
           "intervalSeconds": {
             "description": "Seconds between captured frames when samplingMethod is \"interval\". Supports sub-second precision.",
             "format": "double",
@@ -28186,6 +28235,7 @@
           }
         },
         "required": [
+          "appearanceGapSeconds",
           "intervalSeconds",
           "maxFrames",
           "samplingMethod",

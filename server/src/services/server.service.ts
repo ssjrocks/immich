@@ -129,6 +129,7 @@ export class ServerService extends BaseService {
       mapLightStyleUrl: config.map.lightStyle,
       maintenanceMode: false,
       minFaces: config.machineLearning.facialRecognition.minFaces,
+      videoAppearanceGapSeconds: config.machineLearning.facialRecognition.video.appearanceGapSeconds,
     };
   }
 

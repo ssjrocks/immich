@@ -19,17 +19,18 @@
 
   let selectedAssetId = $state<string | undefined>();
 
-  // Defends against duplicate timestampMs values reaching the client (e.g. from overlapping
-  // face detections on a reassign/rescan) -- the keyed {#each} below would otherwise throw
-  // each_key_duplicate and leave the whole panel stuck.
-  const dedupeTimestamps = (timestampsMs: number[]) => [...new Set(timestampsMs)];
+  // Belt-and-braces against duplicate startMs values reaching the client -- the keyed {#each}
+  // below would otherwise throw each_key_duplicate and leave the whole panel stuck. Comparing
+  // against the previous entry is enough because the server returns appearances sorted by start.
+  const dedupeAppearances = (appearances: PersonVideoOccurrenceResponseDto['appearances']) =>
+    appearances.filter((appearance, index) => index === 0 || appearance.startMs !== appearances[index - 1].startMs);
 
   // Most-appearances-first, so the video worth looking at first is at the top of the list
   // instead of requiring a scroll through everything to find it.
   const sortedOccurrences = $derived(
     occurrences
-      .map((occurrence) => ({ ...occurrence, timestampsMs: dedupeTimestamps(occurrence.timestampsMs) }))
-      .sort((a, b) => b.timestampsMs.length - a.timestampsMs.length),
+      .map((occurrence) => ({ ...occurrence, appearances: dedupeAppearances(occurrence.appearances) }))
+      .sort((a, b) => b.appearances.length - a.appearances.length),
   );
 
   // Falls back to the top of the sorted list whenever selectedAssetId is unset or no longer
@@ -98,9 +99,7 @@
   <section class="px-4 pb-4 sm:px-6">
     <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">{$t('appears_in_videos')}</p>
     <div class="flex h-96 gap-4">
-      <div
-        class="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto border-e border-gray-200 pe-3 dark:border-gray-700"
-      >
+      <div class="flex w-40 shrink-0 flex-col gap-1 overflow-y-auto border-e border-gray-200 pe-3 dark:border-gray-700">
         {#each sortedOccurrences as occurrence (occurrence.assetId)}
           {@const isSelected = occurrence.assetId === selectedOccurrence?.assetId}
           <button
@@ -113,16 +112,16 @@
             <span class="w-full truncate text-xs font-medium" title={occurrence.originalFileName}>
               {occurrence.originalFileName}
             </span>
-            <div class="h-16 w-full overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+            <div class="h-16 w-full overflow-hidden rounded-sm bg-gray-200 dark:bg-gray-700">
               <img
-                src={getAssetVideoFrameUrl(occurrence.assetId, occurrence.timestampsMs[0])}
+                src={getAssetVideoFrameUrl(occurrence.assetId, occurrence.appearances[0].startMs)}
                 alt=""
                 loading="lazy"
-                class="h-full w-full object-cover"
+                class="size-full object-cover"
               />
             </div>
             <span class="text-xs text-gray-500 dark:text-gray-400">
-              {$t('appearance_count', { values: { count: occurrence.timestampsMs.length } })}
+              {$t('appearance_count', { values: { count: occurrence.appearances.length } })}
             </span>
           </button>
         {/each}
@@ -141,7 +140,8 @@
             {/if}
           </div>
           <div class="flex flex-wrap gap-3">
-            {#each selectedOccurrence.timestampsMs as timestampMs (timestampMs)}
+            {#each selectedOccurrence.appearances as appearance (appearance.startMs)}
+              {@const timestampMs = appearance.startMs}
               {@const isHovered =
                 hovered?.assetId === selectedOccurrence.assetId && hovered.timestampMs === timestampMs}
               <button
@@ -153,14 +153,14 @@
                 onpointerenter={() => showPreview(selectedOccurrence.assetId, timestampMs)}
                 onpointerleave={hidePreview}
               >
-                <div class="h-20 w-28 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+                <div class="h-20 w-28 overflow-hidden rounded-sm bg-gray-200 dark:bg-gray-700">
                   {#if isHovered}
                     <video
                       bind:this={clipVideo}
                       muted
                       preload="metadata"
                       playsinline
-                      class="h-full w-full object-cover"
+                      class="size-full object-cover"
                       src={getAssetPlaybackUrl({ id: selectedOccurrence.assetId })}
                       onloadedmetadata={(event) => onClipLoaded(event.currentTarget, timestampMs)}
                       ontimeupdate={(event) => onClipTimeUpdate(event.currentTarget, timestampMs)}
@@ -170,11 +170,22 @@
                       src={getAssetVideoFrameUrl(selectedOccurrence.assetId, timestampMs)}
                       alt=""
                       loading="lazy"
-                      class="h-full w-full object-cover"
+                      class="size-full object-cover"
                     />
                   {/if}
                 </div>
-                <span class="text-xs text-gray-700 dark:text-gray-300">{formatTimestamp(timestampMs)}</span>
+                <span class="text-xs text-gray-700 dark:text-gray-300">
+                  <!-- A grouped run reads as a span; a lone detection keeps the bare timestamp so
+                       the common "seen once, in passing" case isn't dressed up as a range. -->
+                  {appearance.endMs > appearance.startMs
+                    ? `${formatTimestamp(appearance.startMs)} – ${formatTimestamp(appearance.endMs)}`
+                    : formatTimestamp(appearance.startMs)}
+                </span>
+                {#if appearance.detections > 1}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    {$t('detection_count', { values: { count: appearance.detections } })}
+                  </span>
+                {/if}
               </button>
             {/each}
           </div>

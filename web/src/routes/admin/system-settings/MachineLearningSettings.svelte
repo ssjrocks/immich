@@ -343,6 +343,23 @@
                 config.machineLearning.facialRecognition.video.maxFrames}
             />
           {/if}
+
+          <!-- Outside the fullScan block on purpose: grouping applies to whatever has already been
+               scanned, so it stays useful (and adjustable) after scanning is switched back off. -->
+          <SettingInputField
+            inputType={SettingInputFieldType.NUMBER}
+            label={$t('admin.machine_learning_video_face_detection_appearance_gap')}
+            description={$t('admin.machine_learning_video_face_detection_appearance_gap_description')}
+            bind:value={configToEdit.machineLearning.facialRecognition.video.appearanceGapSeconds}
+            step="1"
+            min={0}
+            max={900}
+            disabled={disabled ||
+              !configToEdit.machineLearning.enabled ||
+              !configToEdit.machineLearning.facialRecognition.enabled}
+            isEdited={configToEdit.machineLearning.facialRecognition.video.appearanceGapSeconds !==
+              config.machineLearning.facialRecognition.video.appearanceGapSeconds}
+          />
         </div>
       </SettingAccordion>
 

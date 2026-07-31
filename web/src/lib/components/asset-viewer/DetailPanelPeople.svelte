@@ -3,6 +3,7 @@
   import ImageThumbnail from '$lib/components/assets/thumbnail/ImageThumbnail.svelte';
   import { assetViewerManager } from '$lib/managers/asset-viewer-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
+  import { serverConfigManager } from '$lib/managers/server-config-manager.svelte';
   import { systemConfigManager } from '$lib/managers/system-config-manager.svelte';
   import MergeIntoPersonModal from '$lib/modals/MergeIntoPersonModal.svelte';
   import ReassignFaceModal from '$lib/modals/ReassignFaceModal.svelte';
@@ -82,19 +83,33 @@
 
   const formatTimestamp = (timestampMs: number) => Duration.fromMillis(timestampMs).toFormat('m:ss');
 
-  // One face per distinct timestamp (a person can have duplicate-timestamp face rows left over
-  // from a reassign/rescan -- collapse those rather than showing/keying on the raw duplicate).
+  // One face per appearance, matching how the person page groups the same detections. Someone on
+  // screen continuously is detected in many sampled frames, which would otherwise list a hundred
+  // near-identical timestamps here; consecutive detections within the configured gap collapse to
+  // the first face of the run, which is also the one edit-mode actions then target.
+  //
+  // Grouped on the client because this panel works from the asset's raw face rows (it needs the
+  // face objects themselves for the edit actions), not the pre-grouped occurrences endpoint --
+  // hence the gap being published on the server config.
   const getAppearances = (personFaces: AssetFaceResponseDto[]) => {
-    // Local to a single call, discarded immediately after -- not component state, so the plain
-    // built-in is correct here and SvelteSet's reactivity tracking would be pure overhead.
-    // eslint-disable-next-line svelte/prefer-svelte-reactivity
-    const seenTimestamps = new Set<number>();
+    const gapMs = serverConfigManager.value.videoAppearanceGapSeconds * 1000;
     const appearances: AssetFaceResponseDto[] = [];
+    let lastTimestampMs: number | undefined;
+
     for (const face of [...personFaces].sort((a, b) => (a.timestampMs ?? 0) - (b.timestampMs ?? 0))) {
-      if (face.timestampMs == undefined || seenTimestamps.has(face.timestampMs)) {
+      if (face.timestampMs == undefined) {
         continue;
       }
-      seenTimestamps.add(face.timestampMs);
+      // Also collapses exact duplicate timestamps, which a reassign/rescan can leave behind and
+      // which would otherwise break the keyed {#each} below.
+      if (lastTimestampMs !== undefined && gapMs > 0 && face.timestampMs - lastTimestampMs <= gapMs) {
+        lastTimestampMs = face.timestampMs;
+        continue;
+      }
+      if (lastTimestampMs === face.timestampMs) {
+        continue;
+      }
+      lastTimestampMs = face.timestampMs;
       appearances.push(face);
     }
     return appearances;
@@ -254,7 +269,11 @@
   // For "this named person is wrong and I don't know who this actually is" -- unlike
   // markNotAFace, the face isn't deleted: it's detached and left unassigned, so facial
   // recognition can pick it back up and re-cluster it next run instead of losing it entirely.
-  const unassignFaceFromPerson = async (person: PersonResponseDto, personFaces: AssetFaceResponseDto[], event: Event) => {
+  const unassignFaceFromPerson = async (
+    person: PersonResponseDto,
+    personFaces: AssetFaceResponseDto[],
+    event: Event,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
     const face = resolveFaceForAction(person, personFaces, event.currentTarget as HTMLElement);
@@ -345,7 +364,7 @@
             shape="round"
             color="secondary"
             variant="ghost"
-            class="h-[3.125rem] w-[3.125rem]"
+            class="size-12.5"
             onclick={() => assetViewerManager.toggleHiddenPeople()}
           />
         {/if}
@@ -356,7 +375,7 @@
           shape="round"
           color="secondary"
           variant="ghost"
-          class="h-[3.125rem] w-[3.125rem]"
+          class="size-12.5"
           onclick={() => assetViewerManager.toggleFaceEditMode()}
         />
 
@@ -368,7 +387,7 @@
             shape="round"
             color={assetViewerManager.isPeopleEditMode ? 'primary' : 'secondary'}
             variant={assetViewerManager.isPeopleEditMode ? 'filled' : 'ghost'}
-            class="h-[3.125rem] w-[3.125rem]"
+            class="size-12.5"
             onclick={() => assetViewerManager.togglePeopleEditMode()}
           />
         {/if}
@@ -381,7 +400,7 @@
             shape="round"
             color="secondary"
             variant="ghost"
-            class="h-[3.125rem] w-[3.125rem]"
+            class="size-12.5"
             onclick={scanVideoFaces}
           />
         {/if}

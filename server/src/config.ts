@@ -103,6 +103,7 @@ export type SystemConfig = {
         samplingMethod: VideoFaceSamplingMethod;
         maxFrames: number;
         intervalSeconds: number;
+        appearanceGapSeconds: number;
       };
     };
     ocr: {
@@ -329,6 +330,9 @@ export const defaults = Object.freeze<SystemConfig>({
         samplingMethod: VideoFaceSamplingMethod.FrameCount,
         maxFrames: 50,
         intervalSeconds: 2,
+        // Unlike the scanning settings above, this one is safe to default on: it only groups how
+        // detections are displayed, stores nothing, and is undone by setting it back to 0.
+        appearanceGapSeconds: 5,
       },
     },
     ocr: {

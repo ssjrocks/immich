@@ -125,6 +125,13 @@ const ServerConfigSchema = z
     mapLightStyleUrl: z.string().describe('Map light style URL'),
     maintenanceMode: z.boolean().describe('Whether maintenance mode is active'),
     minFaces: z.int().describe('People min faces server default'),
+    // Surfaced like minFaces above: the asset viewer groups a person's timestamped faces on the
+    // client (it works from the asset's face rows, not the grouped occurrences endpoint), so it
+    // needs the same gap the server applies on the person page or the two disagree.
+    videoAppearanceGapSeconds: z
+      .number()
+      .meta({ format: 'double' })
+      .describe('Seconds a person must go undetected before their next detection is a new appearance'),
   })
   .meta({ id: 'ServerConfigDto' });
 

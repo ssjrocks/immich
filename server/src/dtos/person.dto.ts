@@ -243,12 +243,28 @@ export function mapFaces(
   };
 }
 
+const PersonVideoAppearanceSchema = z
+  .object({
+    startMs: z.int().min(0).describe('First detection in this appearance (ms from video start)'),
+    endMs: z.int().min(0).describe('Last detection in this appearance (ms from video start)'),
+    detections: z.int().min(1).describe('How many individual detections this appearance groups together'),
+  })
+  .meta({ id: 'PersonVideoAppearanceDto' });
+
 const PersonVideoOccurrenceResponseSchema = z
   .object({
     assetId: z.uuidv4().describe('Asset ID of the video'),
     originalFileName: z.string().describe('Original filename of the video'),
     durationMs: z.int().min(0).nullable().describe('Duration of the video in milliseconds'),
-    timestampsMs: z.array(z.int().min(0)).describe('Timestamps (ms from video start) where this person appears'),
+    // Kept as the start of each appearance rather than every raw detection. Clients that only
+    // want somewhere to seek to (the video-viewer popover, the mobile grid) need no changes and
+    // still get the grouping; `appearances` carries the extra detail for richer views.
+    timestampsMs: z
+      .array(z.int().min(0))
+      .describe('Start timestamp (ms from video start) of each appearance -- one per entry in `appearances`'),
+    appearances: z
+      .array(PersonVideoAppearanceSchema)
+      .describe('Runs of consecutive detections, grouped by the configured appearance gap'),
   })
   .meta({ id: 'PersonVideoOccurrenceResponseDto' });
 

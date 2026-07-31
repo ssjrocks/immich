@@ -60,9 +60,31 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
   distance on their embeddings before the survivors are fed into the existing
   recognition/clustering job — so a person visible for 30 seconds contributes one
   face record, not dozens.
+- **Appearance grouping** (`machineLearning.facialRecognition.video.appearanceGapSeconds`,
+  default `5`, range `0`–`900`): how long a person must go undetected before
+  their next detection counts as a _separate_ appearance. Someone on screen
+  continuously is detected in many sampled frames — a 47-minute video produced
+  104 detections for one person — which is accurate but unusable as a list.
+  Grouping happens on read, not at detection: every `asset_face` row is still
+  stored, so changing the setting re-groups existing scans instantly with no
+  rescan, and merging two people later regroups their combined detections
+  correctly rather than inheriting whatever grouping was frozen in at scan time.
+  `0` lists every detection individually. Also published on `ServerConfigDto` as
+  `videoAppearanceGapSeconds`, since the asset viewer groups client-side.
+  **Tuning note**: the useful value tracks how densely a person is _detected_,
+  not the sampling interval. Faces are routinely missed in individual frames
+  (turned away, motion blur, too small), so consecutive detections sit seconds
+  apart even at sub-second sampling. On one real library the default halved the
+  appearance count for typical videos. Videos where someone is on screen almost
+  throughout but detected only sparsely — one case averaged a detection every 27
+  seconds across 47 minutes — barely collapse at any modest gap, and shouldn't be
+  used to pick the setting: a gap wide enough to merge those would swallow
+  genuinely separate appearances everywhere else.
 - **API**: `GET /people/:id/video-occurrences` — returns, for each video a person
-  appears in, every distinct timestamp (ms) they were detected at, sorted by
-  appearance count. `PUT /people/:id/reassign` — moves one or more specific faces
+  appears in, the detections they were seen at, grouped into appearances and
+  sorted by appearance count. `appearances` gives each run's `startMs`, `endMs`
+  and `detections` count; `timestampsMs` is kept as one entry per appearance
+  (its start), so existing clients need no changes to benefit from grouping. `PUT /people/:id/reassign` — moves one or more specific faces
   to a different existing person without merging the two people's other assets
   (backs the "Wrong person" picker). `unassignFace`/reset-faces path used by
   "Delete person and reset faces" — deletes the person but unassigns (doesn't
@@ -85,8 +107,13 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
 
 - Admin settings (Machine Learning → Facial Recognition): scan-mode dropdown,
   frame-count/interval sampling toggle with mode-aware descriptions, max-frames
-  field, and a disk-space guidance callout (sampled frames are written to
-  temporary disk storage while a video is processed).
+  field, a disk-space guidance callout (sampled frames are written to temporary
+  disk storage while a video is processed), and the appearance-gap field. The gap
+  sits outside the full-scan block on purpose — it regroups whatever has already
+  been scanned, so it stays adjustable after scanning is switched back off.
+- Person page appearances show each run as a span (`1:04 – 3:22`) with the number
+  of detections it groups, rather than one tile per detection. A lone detection
+  still shows as a bare timestamp instead of a zero-length range.
 - Person page: "Appears in videos" rebuilt as a two-pane, file-explorer-style
   master/detail view — a scrollable video list on the left (thumbnail,
   appearance count, sorted by count descending) and a pane on the right showing
@@ -96,7 +123,11 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
   navigates away. It floats a `position:fixed` popover (so the sidebar's own
   scroll clipping doesn't cut it off) with that person's appearance timestamps
   _in the video you're currently watching_ — clicking one seeks the player in
-  place — plus a "View person" link to their page.
+  place — plus a "View person" link to their page. Its timestamp list is grouped
+  by the same appearance gap as the person page, collapsed client-side (it works
+  from the asset's raw face rows, which the edit actions need, rather than the
+  pre-grouped occurrences endpoint) — the first face of each run is the one an
+  edit action then targets.
 - People sidebar in-place edit mode: inline rename and "not a face" mini-buttons
   on hover, a "Merge people" picker, and a "Wrong person" action
   (`ReassignFaceModal`) listing candidate people ranked by face-embedding

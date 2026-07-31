@@ -1531,14 +1531,24 @@ export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
 };
+export type PersonVideoAppearanceDto = {
+    /** How many individual detections this appearance groups together */
+    detections: number;
+    /** Last detection in this appearance (ms from video start) */
+    endMs: number;
+    /** First detection in this appearance (ms from video start) */
+    startMs: number;
+};
 export type PersonVideoOccurrenceResponseDto = {
+    /** Runs of consecutive detections, grouped by the configured appearance gap */
+    appearances: PersonVideoAppearanceDto[];
     /** Asset ID of the video */
     assetId: string;
     /** Duration of the video in milliseconds */
     durationMs: number | null;
     /** Original filename of the video */
     originalFileName: string;
-    /** Timestamps (ms from video start) where this person appears */
+    /** Start timestamp (ms from video start) of each appearance -- one per entry in `appearances` */
     timestampsMs: number[];
 };
 export type PluginMethodResponseDto = {
@@ -2036,6 +2046,8 @@ export type ServerConfigDto = {
     trashDays: number;
     /** Delay in days before deleted users are permanently removed */
     userDeleteDelay: number;
+    /** Seconds a person must go undetected before their next detection is a new appearance */
+    videoAppearanceGapSeconds: number;
 };
 export type ServerFeaturesDto = {
     /** Whether config file is available */
@@ -2472,6 +2484,8 @@ export type DuplicateDetectionConfig = {
     maxDistance: number;
 };
 export type VideoFacialRecognitionConfig = {
+    /** How long a person must go undetected before their next detection counts as a separate appearance. Purely a display grouping: every detection is still stored, so changing this re-groups existing scans immediately and nothing is lost. 0 lists every detection individually. */
+    appearanceGapSeconds: number;
     /** Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision. */
     intervalSeconds: number;
     /** Maximum number of frames to sample per video. Used directly as the frame count in "frameCount" mode, or as a hard safety cap in "interval" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails. */
