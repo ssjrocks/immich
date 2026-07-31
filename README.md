@@ -135,6 +135,7 @@ I run in front of the same library, and it's genuinely great work — go star it
   <a href="readme_i18n/README_zh_TW.md">正體中文</a>
   <a href="readme_i18n/README_uk_UA.md">Українська</a>
   <a href="readme_i18n/README_ru_RU.md">Русский</a>
+  <a href="readme_i18n/README_bg_BG.md">Български</a>
   <a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
   <a href="readme_i18n/README_sv_SE.md">Svenska</a>
   <a href="readme_i18n/README_ar_JO.md">العربية</a>
