@@ -10,6 +10,7 @@ import { BoundingBox } from 'src/repositories/machine-learning.repository';
 import { MediaRepository } from 'src/repositories/media.repository';
 import { checkFaceVisibility, checkOcrVisibility } from 'src/utils/editor';
 import { automock } from 'test/utils';
+import type { Mock } from 'vitest';
 
 vi.mock('fluent-ffmpeg', () => {
   const mockFn = vi.fn();
@@ -346,6 +347,7 @@ describe(MediaRepository.name, () => {
       imageHeight: 800,
       sourceType: SourceType.MachineLearning,
       isVisible: true,
+      timestampMs: null,
       updatedAt: new Date(),
       deletedAt: null,
       updateId: '',
@@ -697,7 +699,13 @@ describe(MediaRepository.name, () => {
     };
 
     const mockProbe = (duration: number) => {
-      vi.mocked(ffmpeg).ffprobe.mockImplementation((_path, _opts, cb: any) => cb(null, { format: { duration }, streams: [] }));
+      // `ffprobe` is declared with four overloads, so vi.mocked() can't narrow it to a mock
+      // instance. The vi.mock factory at the top of this file replaces it with a plain vi.fn(),
+      // so assert that directly rather than leaving the callback params implicitly `any`.
+      (ffmpeg.ffprobe as unknown as Mock).mockImplementation(
+        (_path: string, _options: string[], callback: (error: Error | null, data: unknown) => void) =>
+          callback(null, { format: { duration }, streams: [] }),
+      );
     };
 
     beforeEach(() => {
@@ -710,7 +718,8 @@ describe(MediaRepository.name, () => {
       vi.restoreAllMocks();
     });
 
-    const interval = (intervalSeconds: number) => ({ method: VideoFaceSamplingMethod.Interval, intervalSeconds }) as const;
+    const interval = (intervalSeconds: number) =>
+      ({ method: VideoFaceSamplingMethod.Interval, intervalSeconds }) as const;
     const frameCount = () => ({ method: VideoFaceSamplingMethod.FrameCount }) as const;
 
     it('should call ffmpeg with correct options', async () => {
@@ -737,7 +746,12 @@ describe(MediaRepository.name, () => {
     it('should sort numerically, not lexicographically, once frame numbers reach 5 digits', async () => {
       // ffmpeg's %04d pattern only pads to a minimum of 4 digits -- a plain string sort would
       // place frame_10000.jpg between frame_1000.jpg and frame_1001.jpg.
-      vi.spyOn(fs, 'readdir').mockResolvedValue(['frame_10000.jpg', 'frame_0002.jpg', 'frame_1001.jpg', 'frame_1000.jpg'] as any);
+      vi.spyOn(fs, 'readdir').mockResolvedValue([
+        'frame_10000.jpg',
+        'frame_0002.jpg',
+        'frame_1001.jpg',
+        'frame_1000.jpg',
+      ] as any);
 
       const result = await sut.extractVideoFrames('/video.mp4', '/tmp/frames', frameCount(), 10_000);
 

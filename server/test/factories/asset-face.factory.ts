@@ -29,6 +29,9 @@ export class AssetFaceFactory {
       isVisible: true,
       personId: null,
       sourceType: SourceType.MachineLearning,
+      // Null is the photo/preview-frame case; pass a value for a face detected on a sampled
+      // video frame.
+      timestampMs: null,
       updatedAt: newDate(),
       updateId: newUuidV7(),
       ...dto,

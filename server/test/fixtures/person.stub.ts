@@ -15,6 +15,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.jpg',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   newThumbnailMiddle: Object.freeze({
     ownerId: userStub.admin.id,
@@ -28,6 +29,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.jpg',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   newThumbnailEnd: Object.freeze({
     ownerId: userStub.admin.id,
@@ -41,6 +43,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.jpg',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   rawEmbeddedThumbnail: Object.freeze({
     ownerId: userStub.admin.id,
@@ -54,6 +57,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.dng',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   negativeCoordinate: Object.freeze({
     ownerId: userStub.admin.id,
@@ -67,6 +71,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.jpg',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   overflowingCoordinate: Object.freeze({
     ownerId: userStub.admin.id,
@@ -80,6 +85,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.jpg',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   videoThumbnail: Object.freeze({
     ownerId: userStub.admin.id,
@@ -93,6 +99,7 @@ export const personThumbnailStub = {
     originalPath: '/original/path.mp4',
     exifOrientation: '1',
     previewPath: AssetFileFactory.create({ type: AssetFileType.Preview }).path,
+    timestampMs: null,
   }),
   videoThumbnailMidVideo: Object.freeze({
     ownerId: userStub.admin.id,
