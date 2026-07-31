@@ -28,6 +28,7 @@ export const preferencesFactory = Sync.makeFactory<UserPreferencesResponseDto>({
   people: {
     enabled: false,
     sidebarWeb: false,
+    videoAppearanceGapSeconds: null,
   },
   purchase: {
     hideBuyButtonUntil: '',

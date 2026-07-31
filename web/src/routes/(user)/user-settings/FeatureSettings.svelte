@@ -23,6 +23,11 @@
   let peopleEnabled = $state(authManager.preferences.people?.enabled ?? false);
   let peopleSidebar = $state(authManager.preferences.people?.sidebarWeb ?? false);
   let peopleMinFaces = $state(authManager.preferences.people?.minimumFaces ?? serverConfigManager.value.minFaces);
+  // Null means "follow the admin's value", so seed the box with that rather than leaving it blank
+  // -- and send null back when it's cleared, to hand control back to the server default.
+  let peopleVideoGap = $state<number | undefined>(
+    authManager.preferences.people?.videoAppearanceGapSeconds ?? serverConfigManager.value.videoAppearanceGapSeconds,
+  );
 
   // Ratings
   let ratingsEnabled = $state(authManager.preferences.ratings?.enabled ?? false);
@@ -48,7 +53,12 @@
           albums: { defaultAssetOrder },
           folders: { enabled: foldersEnabled, sidebarWeb: foldersSidebar },
           memories: { enabled: memoriesEnabled, duration: memoriesDuration },
-          people: { enabled: peopleEnabled, sidebarWeb: peopleSidebar, minimumFaces: peopleMinFaces },
+          people: {
+            enabled: peopleEnabled,
+            sidebarWeb: peopleSidebar,
+            minimumFaces: peopleMinFaces,
+            videoAppearanceGapSeconds: peopleVideoGap ?? null,
+          },
           ratings: { enabled: ratingsEnabled },
           sharedLinks: { enabled: sharedLinksEnabled, sidebarWeb: sharedLinkSidebar },
           tags: { enabled: tagsEnabled, sidebarWeb: tagsSidebar },
@@ -125,6 +135,14 @@
               </Field>
               <Field label={$t('minFaces')} description={$t('minFaces_description')}>
                 <NumberInput bind:value={peopleMinFaces} />
+              </Field>
+              <Field
+                label={$t('video_appearance_gap')}
+                description={$t('video_appearance_gap_description', {
+                  values: { default: serverConfigManager.value.videoAppearanceGapSeconds },
+                })}
+              >
+                <NumberInput bind:value={peopleVideoGap} min={0} max={900} />
               </Field>
             {/if}
           </div>

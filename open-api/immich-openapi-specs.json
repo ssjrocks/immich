@@ -20977,11 +20977,20 @@
           "sidebarWeb": {
             "description": "Whether people appear in web sidebar",
             "type": "boolean"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds undetected before a video detection counts as a new appearance",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
           }
         },
         "required": [
           "enabled",
-          "sidebarWeb"
+          "sidebarWeb",
+          "videoAppearanceGapSeconds"
         ],
         "type": "object"
       },
@@ -21044,6 +21053,14 @@
           "sidebarWeb": {
             "description": "Whether people appear in web sidebar",
             "type": "boolean"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds undetected before a video detection counts as a new appearance; null uses the server default",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
           }
         },
         "type": "object"

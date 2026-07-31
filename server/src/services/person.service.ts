@@ -48,6 +48,7 @@ import { getDimensions } from 'src/utils/asset.util';
 import { ImmichFileResponse } from 'src/utils/file';
 import { mimeTypes } from 'src/utils/mime-types';
 import { isFacialRecognitionEnabled, isVideoFaceDetectionDisabled, isVideoFaceScanEnabled } from 'src/utils/misc';
+import { getPreferences } from 'src/utils/preferences';
 import { Point, transformPoints } from 'src/utils/transform';
 import { groupIntoAppearances } from 'src/utils/video-appearance';
 
@@ -192,16 +193,23 @@ export class PersonService extends BaseService {
 
   async getVideoOccurrences(auth: AuthDto, id: string): Promise<PersonVideoOccurrenceResponseDto[]> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
-    const [rows, { machineLearning }] = await Promise.all([
+    const [rows, { machineLearning }, metadata] = await Promise.all([
       this.personRepository.getVideoOccurrences(id),
       this.getConfig({ withCache: true }),
+      this.userRepository.getMetadata(auth.user.id),
     ]);
 
     // Grouped on the way out rather than at detection time. Someone on screen for a long stretch
     // produces one detection per sampled frame -- hundreds for a single scene -- which is accurate
     // but unreadable. Collapsing at read time keeps every row in asset_face, so merging two people
     // later still regroups correctly, and changing the setting re-groups without a rescan.
-    const gapMs = machineLearning.facialRecognition.video.appearanceGapSeconds * 1000;
+    //
+    // How readable a given gap is depends on how reliably faces get detected in that library, so
+    // the admin value is only a default -- a user who has set their own overrides it. Null (the
+    // preference default) means they haven't, and follows the admin.
+    const { people } = getPreferences(metadata);
+    const gapSeconds = people.videoAppearanceGapSeconds ?? machineLearning.facialRecognition.video.appearanceGapSeconds;
+    const gapMs = gapSeconds * 1000;
 
     return rows.map((row) => {
       const appearances = groupIntoAppearances(row.timestampsMs, gapMs);

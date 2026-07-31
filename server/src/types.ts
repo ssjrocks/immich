@@ -592,6 +592,8 @@ export type UserPreferences = {
     enabled: boolean;
     sidebarWeb: boolean;
     minimumFaces: number;
+    /** Null follows the server-wide default from machineLearning.facialRecognition.video. */
+    videoAppearanceGapSeconds: number | null;
   };
   ratings: {
     enabled: boolean;

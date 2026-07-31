@@ -2283,6 +2283,8 @@
   "version_history": "Version History",
   "version_history_item": "Installed {version} on {date}",
   "video": "Video",
+  "video_appearance_gap": "Seconds between separate appearances",
+  "video_appearance_gap_description": "How long a person must go undetected in a video before the next detection is listed as a separate appearance. Someone on screen continuously is detected in every sampled frame, which would otherwise list hundreds of appearances for one scene. This only affects how appearances are displayed to you — no detections are lost, and the change applies immediately without rescanning. Set to 0 to list every detection. Leave blank to use the server default ({default} seconds).",
   "video_hover_setting": "Play video thumbnail on hover",
   "video_hover_setting_description": "Play video thumbnail when mouse is hovering over item. Even when disabled, playback can be started by hovering over the play icon.",
   "video_quality": "Video quality",

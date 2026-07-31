@@ -46,6 +46,14 @@ const PeopleUpdateSchema = z
     enabled: z.boolean().optional().describe('Whether people are enabled'),
     sidebarWeb: z.boolean().optional().describe('Whether people appear in web sidebar'),
     minimumFaces: z.int().min(1).optional().describe('People face threshold'),
+    videoAppearanceGapSeconds: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(900)
+      .nullable()
+      .optional()
+      .describe('Seconds undetected before a video detection counts as a new appearance; null uses the server default'),
   })
   .optional()
   .meta({ id: 'PeopleUpdate' });
@@ -148,6 +156,17 @@ const PeopleResponseSchema = z
     enabled: z.boolean().describe('Whether people are enabled'),
     sidebarWeb: z.boolean().describe('Whether people appear in web sidebar'),
     minimumFaces: z.int().min(1).optional().describe('People face threshold'),
+    // Defaults to null rather than a number, unlike minimumFaces above: null means "follow the
+    // admin's value", so changing the server setting still moves every user who hasn't picked
+    // their own. It has to be null and not undefined -- getKeysDeep skips undefined, which would
+    // drop the key in getPreferencesPartial and silently discard whatever the user chose.
+    videoAppearanceGapSeconds: z
+      .number()
+      .meta({ format: 'double' })
+      .min(0)
+      .max(900)
+      .nullable()
+      .describe('Seconds undetected before a video detection counts as a new appearance'),
   })
   .meta({ id: 'PeopleResponse' });
 

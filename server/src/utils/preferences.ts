@@ -22,6 +22,7 @@ const getDefaultPreferences = (): UserPreferences => {
       enabled: true,
       sidebarWeb: false,
       minimumFaces: 3,
+      videoAppearanceGapSeconds: null,
     },
     sharedLinks: {
       enabled: true,

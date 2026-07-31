@@ -92,7 +92,12 @@
   // face objects themselves for the edit actions), not the pre-grouped occurrences endpoint --
   // hence the gap being published on the server config.
   const getAppearances = (personFaces: AssetFaceResponseDto[]) => {
-    const gapMs = serverConfigManager.value.videoAppearanceGapSeconds * 1000;
+    // Same precedence the server applies on the person page -- the user's own value if they've set
+    // one, otherwise the admin's -- so the two views never disagree about what counts as one
+    // appearance.
+    const gapSeconds =
+      authManager.preferences.people?.videoAppearanceGapSeconds ?? serverConfigManager.value.videoAppearanceGapSeconds;
+    const gapMs = gapSeconds * 1000;
     const appearances: AssetFaceResponseDto[] = [];
     let lastTimestampMs: number | undefined;
 

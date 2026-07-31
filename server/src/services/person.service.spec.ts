@@ -10,6 +10,7 @@ import {
   JobStatus,
   SourceType,
   SystemMetadataKey,
+  UserMetadataKey,
   VideoFaceScanMode,
 } from 'src/enum';
 import { FaceSearchResult } from 'src/repositories/search.repository';
@@ -1917,6 +1918,11 @@ describe(PersonService.name, () => {
   });
 
   describe('getVideoOccurrences', () => {
+    // No stored preferences, so grouping follows the admin default (5s) unless a test says otherwise.
+    beforeEach(() => {
+      mocks.user.getMetadata.mockResolvedValue([]);
+    });
+
     it('should require person read access', async () => {
       const auth = AuthFactory.create();
       await expect(sut.getVideoOccurrences(auth, 'person-1')).rejects.toBeInstanceOf(BadRequestException);
@@ -1972,6 +1978,53 @@ describe(PersonService.name, () => {
           appearances: [
             { startMs: 1000, endMs: 3000, detections: 2 },
             { startMs: 40_000, endMs: 40_000, detections: 1 },
+          ],
+        },
+      ]);
+    });
+
+    it("should prefer the user's own gap over the admin default", async () => {
+      const auth = AuthFactory.create();
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      mocks.user.getMetadata.mockResolvedValue([
+        { key: UserMetadataKey.Preferences, value: { people: { videoAppearanceGapSeconds: 60 } } },
+      ] as never);
+      // 40s apart: two appearances under the 5s admin default, one under this user's 60s.
+      mocks.person.getVideoOccurrences.mockResolvedValue([
+        { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 41_000] },
+      ]);
+
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
+        {
+          assetId: 'asset-1',
+          originalFileName: 'video-1.mp4',
+          durationMs: 60_000,
+          timestampsMs: [1000],
+          appearances: [{ startMs: 1000, endMs: 41_000, detections: 2 }],
+        },
+      ]);
+    });
+
+    it('should treat a gap of 0 as "show every detection" rather than as unset', async () => {
+      const auth = AuthFactory.create();
+      mocks.access.person.checkOwnerAccess.mockResolvedValue(new Set(['person-1']));
+      mocks.user.getMetadata.mockResolvedValue([
+        { key: UserMetadataKey.Preferences, value: { people: { videoAppearanceGapSeconds: 0 } } },
+      ] as never);
+      // Would be a single appearance at the 5s default; 0 must not fall back to it.
+      mocks.person.getVideoOccurrences.mockResolvedValue([
+        { assetId: 'asset-1', originalFileName: 'video-1.mp4', durationMs: 60_000, timestampsMs: [1000, 2000] },
+      ]);
+
+      await expect(sut.getVideoOccurrences(auth, 'person-1')).resolves.toEqual([
+        {
+          assetId: 'asset-1',
+          originalFileName: 'video-1.mp4',
+          durationMs: 60_000,
+          timestampsMs: [1000, 2000],
+          appearances: [
+            { startMs: 1000, endMs: 1000, detections: 1 },
+            { startMs: 2000, endMs: 2000, detections: 1 },
           ],
         },
       ]);

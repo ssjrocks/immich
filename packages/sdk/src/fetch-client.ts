@@ -331,6 +331,8 @@ export type PeopleResponse = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb: boolean;
+    /** Seconds undetected before a video detection counts as a new appearance */
+    videoAppearanceGapSeconds: number | null;
 };
 export type PurchaseResponse = {
     /** Date until which to hide buy button */
@@ -415,6 +417,8 @@ export type PeopleUpdate = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb?: boolean;
+    /** Seconds undetected before a video detection counts as a new appearance; null uses the server default */
+    videoAppearanceGapSeconds?: number | null;
 };
 export type PurchaseUpdate = {
     /** Date until which to hide buy button */

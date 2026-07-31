@@ -71,6 +71,17 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
   correctly rather than inheriting whatever grouping was frozen in at scan time.
   `0` lists every detection individually. Also published on `ServerConfigDto` as
   `videoAppearanceGapSeconds`, since the asset viewer groups client-side.
+- **Per-user override** (`preferences.people.videoAppearanceGapSeconds`, in
+  Account Settings → Features → People): the admin value is only a default, and
+  a user who sets their own overrides it. Follows the shape upstream uses for
+  `minimumFaces`, with one deliberate difference — it defaults to `null` rather
+  than a number, so "unset" genuinely means "follow the admin", and changing the
+  server setting still moves every user who hasn't chosen their own. (Upstream's
+  `minimumFaces` hard-defaults to `3`, which makes the web's
+  `?? serverConfig.minFaces` fallback unreachable.) `null` and not `undefined`
+  because `getKeysDeep` skips undefined values, which would drop the key in
+  `getPreferencesPartial` and silently discard whatever the user picked; `0`
+  survives too, since it is a meaningful value rather than "empty".
   **Tuning note**: the useful value tracks how densely a person is _detected_,
   not the sampling interval. Faces are routinely missed in individual frames
   (turned away, motion blur, too small), so consecutive detections sit seconds
@@ -114,6 +125,9 @@ AssetVideoClusterFaces` chain (its own `VideoFaceDetection` queue, separate
 - Person page appearances show each run as a span (`1:04 – 3:22`) with the number
   of detections it groups, rather than one tile per detection. A lone detection
   still shows as a bare timestamp instead of a zero-length range.
+- Account Settings → Features → People: a "Seconds between separate appearances"
+  field beside the existing minimum-faces one, seeded from the server default and
+  cleared back to it by emptying the box.
 - Person page: "Appears in videos" rebuilt as a two-pane, file-explorer-style
   master/detail view — a scrollable video list on the left (thumbnail,
   appearance count, sorted by count descending) and a pane on the right showing
