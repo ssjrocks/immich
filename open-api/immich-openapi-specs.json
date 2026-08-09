@@ -9571,6 +9571,66 @@
         "x-immich-state": "Stable"
       }
     },
+    "/people/{id}/unassign-from-asset": {
+      "put": {
+        "description": "Detach a person from every face they're tagged in within a single asset, without deleting those faces. Intended for videos, where frame sampling can tag one person across many appearances at once.",
+        "operationId": "unassignPersonFromAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonUnassignFromAssetDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Unassign a person from an asset",
+        "tags": [
+          "People"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "person.reassign",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/people/{id}/video-occurrences": {
       "get": {
         "description": "Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.",
@@ -21419,6 +21479,20 @@
         },
         "required": [
           "assets"
+        ],
+        "type": "object"
+      },
+      "PersonUnassignFromAssetDto": {
+        "properties": {
+          "assetId": {
+            "description": "Asset to detach the person from",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId"
         ],
         "type": "object"
       },

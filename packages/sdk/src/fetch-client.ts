@@ -1535,6 +1535,10 @@ export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
 };
+export type PersonUnassignFromAssetDto = {
+    /** Asset to detach the person from */
+    assetId: string;
+};
 export type PersonVideoAppearanceDto = {
     /** How many individual detections this appearance groups together */
     detections: number;
@@ -5591,6 +5595,19 @@ export function getPersonThumbnail({ id }: {
     }>(`/people/${encodeURIComponent(id)}/thumbnail`, {
         ...opts
     }));
+}
+/**
+ * Unassign a person from an asset
+ */
+export function unassignPersonFromAsset({ id, personUnassignFromAssetDto }: {
+    id: string;
+    personUnassignFromAssetDto: PersonUnassignFromAssetDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/people/${encodeURIComponent(id)}/unassign-from-asset`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: personUnassignFromAssetDto
+    })));
 }
 /**
  * Get video occurrences for a person

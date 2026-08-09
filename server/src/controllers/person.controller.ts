@@ -27,6 +27,7 @@ import {
   PersonResponseDto,
   PersonSearchDto,
   PersonStatisticsResponseDto,
+  PersonUnassignFromAssetDto,
   PersonUpdateDto,
   PersonVideoOccurrenceResponseDto,
 } from 'src/dtos/person.dto';
@@ -200,6 +201,23 @@ export class PersonController {
     @Body() dto: AssetFaceUpdateDto,
   ): Promise<PersonResponseDto[]> {
     return this.service.reassignFaces(auth, id, dto);
+  }
+
+  @Put(':id/unassign-from-asset')
+  @Authenticated({ permission: Permission.PersonReassign })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Endpoint({
+    summary: 'Unassign a person from an asset',
+    description:
+      "Detach a person from every face they're tagged in within a single asset, without deleting those faces. Intended for videos, where frame sampling can tag one person across many appearances at once.",
+    history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
+  })
+  unassignPersonFromAsset(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Body() dto: PersonUnassignFromAssetDto,
+  ): Promise<void> {
+    return this.service.unassignPersonFromAsset(auth, id, dto);
   }
 
   @Post(':id/merge')

@@ -158,6 +158,12 @@ const AssetFaceDeleteSchema = z
   })
   .meta({ id: 'AssetFaceDeleteDto' });
 
+const PersonUnassignFromAssetSchema = z
+  .object({
+    assetId: z.uuidv4().describe('Asset to detach the person from'),
+  })
+  .meta({ id: 'PersonUnassignFromAssetDto' });
+
 const PersonStatisticsResponseSchema = z
   .object({
     assets: z.int().describe('Number of assets'),
@@ -168,6 +174,7 @@ export class AssetFaceUpdateDto extends createZodDto(AssetFaceUpdateSchema) {}
 export class FaceDto extends createZodDto(FaceSchema) {}
 export class AssetFaceCreateDto extends createZodDto(AssetFaceCreateSchema) {}
 export class AssetFaceDeleteDto extends createZodDto(AssetFaceDeleteSchema) {}
+export class PersonUnassignFromAssetDto extends createZodDto(PersonUnassignFromAssetSchema) {}
 export class PersonStatisticsResponseDto extends createZodDto(PersonStatisticsResponseSchema) {}
 
 const PeopleResponseSchema = z

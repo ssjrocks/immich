@@ -20,6 +20,7 @@ import {
   PersonResponseDto,
   PersonSearchDto,
   PersonStatisticsResponseDto,
+  PersonUnassignFromAssetDto,
   PersonUpdateDto,
   PersonVideoOccurrenceResponseDto,
 } from 'src/dtos/person.dto';
@@ -151,6 +152,25 @@ export class PersonService extends BaseService {
     await this.personRepository.reassignFace(id, null);
     if (face.person && face.person.faceAssetId === face.id) {
       await this.createNewFeaturePhoto([face.person.id]);
+    }
+  }
+
+  // Bulk sibling of unassignFace, for "this person is not in this video at all". Video
+  // face detection samples frames throughout a video, so a single bad cluster can tag one
+  // person across dozens of appearances -- detaching them individually isn't practical.
+  // Faces are unassigned rather than deleted, matching unassignFace: if they really are
+  // someone else, recognition gets to re-cluster them instead of the detections being lost.
+  async unassignPersonFromAsset(auth: AuthDto, personId: string, dto: PersonUnassignFromAssetDto): Promise<void> {
+    await this.requireAccess({ auth, permission: Permission.PersonUpdate, ids: [personId] });
+    await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [dto.assetId] });
+
+    const person = await this.findOrFail(personId);
+    const unassignedFaceIds = await this.personRepository.unassignPersonFromAsset(personId, dto.assetId);
+
+    // The person's feature photo may have been one of the faces we just detached, which
+    // would otherwise leave them showing a thumbnail they're no longer tagged in.
+    if (person.faceAssetId && unassignedFaceIds.includes(person.faceAssetId)) {
+      await this.createNewFeaturePhoto([personId]);
     }
   }
 

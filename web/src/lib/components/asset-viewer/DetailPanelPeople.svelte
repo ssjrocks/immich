@@ -21,6 +21,7 @@
     mergePerson,
     reassignFacesById,
     unassignFace,
+    unassignPersonFromAsset,
     VideoFaceScanMode,
     type AssetFaceResponseDto,
     type AssetResponseDto,
@@ -28,6 +29,7 @@
   } from '@immich/sdk';
   import { IconButton, modalManager, Text, toastManager } from '@immich/ui';
   import {
+    mdiAccountCancel,
     mdiAccountOff,
     mdiAccountRemove,
     mdiEye,
@@ -304,6 +306,31 @@
     }
   };
 
+  // Bulk sibling of unassignFaceFromPerson, for videos: frame sampling can tag one person
+  // across dozens of appearances, and detaching them one at a time means re-picking an
+  // appearance for every single one. Deliberately skips resolveFaceForAction -- this acts on
+  // every face of theirs in the asset, so there's nothing to disambiguate.
+  const removePersonFromAsset = async (person: PersonResponseDto, event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const isConfirmed = await modalManager.showDialog({
+      prompt: $t('confirm_person_not_in_video', { values: { name: person.name || $t('face_unassigned') } }),
+    });
+    if (!isConfirmed) {
+      return;
+    }
+    try {
+      await unassignPersonFromAsset({ id: person.id, personUnassignFromAssetDto: { assetId: asset.id } });
+      selectedFaceForEdit = undefined;
+      assetViewerManager.clearConfirmedFaceBox();
+      await refreshFaces();
+      // Every trace of them in this asset is gone, so their timeline shouldn't list it.
+      eventManager.emit('PersonAssetDelete', { id: person.id, assetId: asset.id });
+    } catch (error) {
+      handleError(error, $t('error_person_not_in_video'));
+    }
+  };
+
   const openMergeIntoExisting = async (person: PersonResponseDto, event: Event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -531,6 +558,19 @@
                 variant="filled"
                 onclick={(event: Event) => handlePromiseError(unassignFaceFromPerson(person, personFaces, event))}
               />
+              <!-- Videos only: on a still there's exactly one face per person, which the
+                   plain "remove from person" button above already covers. -->
+              {#if isVideo}
+                <IconButton
+                  aria-label={$t('person_not_in_video')}
+                  icon={mdiAccountCancel}
+                  size="small"
+                  shape="round"
+                  color="warning"
+                  variant="filled"
+                  onclick={(event: Event) => handlePromiseError(removePersonFromAsset(person, event))}
+                />
+              {/if}
               <IconButton
                 aria-label={$t('delete_face')}
                 icon={mdiAccountOff}

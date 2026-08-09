@@ -117,6 +117,25 @@ export class PersonRepository {
       .execute();
   }
 
+  // Detaches a person from every face they're tagged in within a single asset -- for
+  // "this person is not in this video at all". Video face detection samples many frames,
+  // so one bad cluster can tag the same person across dozens of appearances; unassigning
+  // them one at a time is impractical. Returns the affected face ids so the caller can
+  // tell whether the person's feature photo needs regenerating.
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
+  async unassignPersonFromAsset(personId: string, assetId: string): Promise<string[]> {
+    const faces = await this.db
+      .updateTable('asset_face')
+      .set({ personId: null })
+      .where('asset_face.personId', '=', personId)
+      .where('asset_face.assetId', '=', assetId)
+      .where('asset_face.deletedAt', 'is', null)
+      .returning('asset_face.id')
+      .execute();
+
+    return faces.map(({ id }) => id);
+  }
+
   @GenerateSql({ params: [[DummyValue.UUID]] })
   @Chunked()
   async delete(ids: string[]): Promise<void> {
