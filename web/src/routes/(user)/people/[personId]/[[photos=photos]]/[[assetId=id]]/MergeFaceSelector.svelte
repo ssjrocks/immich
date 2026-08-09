@@ -229,7 +229,9 @@
           </div>
         </div>
 
-        <div class="max-h-70 immich-scrollbar overflow-y-auto rounded-3xl bg-gray-200 p-6 dark:bg-immich-dark-gray">
+        <!-- Capped to roughly a single row: this list is a one-off pick, so it shouldn't
+             eat the vertical space the unnamed list below actually needs. Scrolls for more. -->
+        <div class="max-h-60 immich-scrollbar overflow-y-auto rounded-3xl bg-gray-200 p-6 dark:bg-immich-dark-gray">
           {#if namedCandidates.length === 0}
             <p class="text-center text-sm text-gray-600 dark:text-gray-300">{$t('no_results')}</p>
           {:else}
@@ -247,8 +249,11 @@
     <div class="flex min-h-0 flex-1 flex-col">
       <h2 class="mb-3 text-sm uppercase dark:text-white">{$t('merge_unnamed_people')}</h2>
 
+      <!-- This is the list the user actually works through, so it takes all remaining
+           height and keeps a generous floor rather than collapsing to the height of
+           however few candidates came back — a one-row-tall box reads as broken. -->
       <div
-        class="min-h-40 flex-1 immich-scrollbar overflow-y-auto rounded-3xl bg-gray-200 p-6 dark:bg-immich-dark-gray"
+        class="min-h-100 flex-1 immich-scrollbar overflow-y-auto rounded-3xl bg-gray-200 p-6 dark:bg-immich-dark-gray"
       >
         {#if unnamedCandidates.length === 0}
           <p class="text-center text-sm text-gray-600 dark:text-gray-300">{$t('no_results')}</p>
