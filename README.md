@@ -155,128 +155,101 @@ I run in front of the same library, and it's genuinely great work — go star it
 
 ---
 
-<p align="center">
-<img src="design/immich-logo-stacked-light.svg" width="300" title="Login With Custom URL">
-</p>
-<h3 align="center">High performance self-hosted photo and video management solution</h3>
-<br/>
-<a href="https://immich.app">
-<img src="design/immich-screenshots.png" title="Main Screenshot">
-</a>
-<br/>
+## ⚠️ Disclaimer: this is not the official Immich
 
-<p align="center">
-  <a href="readme_i18n/README_ca_ES.md">Català</a>
-  <a href="readme_i18n/README_es_ES.md">Español</a>
-  <a href="readme_i18n/README_fr_FR.md">Français</a>
-  <a href="readme_i18n/README_it_IT.md">Italiano</a>
-  <a href="readme_i18n/README_ja_JP.md">日本語</a>
-  <a href="readme_i18n/README_ko_KR.md">한국어</a>
-  <a href="readme_i18n/README_de_DE.md">Deutsch</a>
-  <a href="readme_i18n/README_nl_NL.md">Nederlands</a>
-  <a href="readme_i18n/README_tr_TR.md">Türkçe</a>
-  <a href="readme_i18n/README_zh_CN.md">简体中文</a>
-  <a href="readme_i18n/README_zh_TW.md">正體中文</a>
-  <a href="readme_i18n/README_uk_UA.md">Українська</a>
-  <a href="readme_i18n/README_ru_RU.md">Русский</a>
-  <a href="readme_i18n/README_bg_BG.md">Български</a>
-  <a href="readme_i18n/README_pt_BR.md">Português Brasileiro</a>
-  <a href="readme_i18n/README_sv_SE.md">Svenska</a>
-  <a href="readme_i18n/README_ar_JO.md">العربية</a>
-  <a href="readme_i18n/README_vi_VN.md">Tiếng Việt</a>
-  <a href="readme_i18n/README_th_TH.md">ภาษาไทย</a>
-  <a href="readme_i18n/README_ml_IN.md">മലയാളം</a>
-</p>
+This is an **unofficial, customised version** of [Immich](https://github.com/immich-app/immich), made and
+maintained by one person. It is **not** the official Immich app, and it is not affiliated with or endorsed
+by the Immich team.
 
+- **Please don't ask the Immich team for help with it.** Report problems with this version
+  [here](https://github.com/ssjrocks/immich/issues) instead.
+- **If you want something stable and supported, use the official Immich:** <https://immich.app>
+- The official Immich phone apps work with this server, but they don't show this version's extra features.
+- Like Immich itself, it's licensed under the [AGPL-3.0](LICENSE).
 
-> [!WARNING]
-> ⚠️ Always follow [3-2-1](https://www.backblaze.com/blog/the-3-2-1-backup-strategy/) backup plan for your precious photos and videos!
-> 
- 
+## Installing
 
-> [!NOTE]
-> You can find the main documentation, including installation guides, at https://immich.app/.
+This version is installed by building it from this repository with Docker. It doesn't use the official
+Immich downloads, because those don't include its changes.
 
-## Links
+**You'll need:**
 
-- [Documentation](https://docs.immich.app/)
-- [About](https://docs.immich.app/overview/introduction)
-- [Installation](https://docs.immich.app/install/requirements)
-- [Roadmap](https://immich.app/roadmap)
-- [Demo](#demo)
-- [Features](#features)
-- [Translations](https://docs.immich.app/developer/translations)
-- [Contributing](https://docs.immich.app/overview/support-the-project)
+- A computer that stays on: Linux works best; Windows and macOS work with Docker Desktop
+- [Docker](https://docs.docker.com/get-docker/) with Docker Compose, and [Git](https://git-scm.com/downloads)
+- At least 6 GB of RAM (8 GB or more if you use video subtitles), and about 20 GB of free disk space for
+  the install, plus room for your photos and videos
+- An internet connection: the first build downloads a lot, and each machine-learning feature downloads its
+  model the first time it's used
 
-## Demo
+**Steps:**
 
-Access the demo [here](https://demo.immich.app). For the mobile app, you can use `https://demo.immich.app` for the `Server Endpoint URL`.
+1. Download this version:
 
-### Login credentials
+   ```bash
+   git clone https://github.com/ssjrocks/immich.git
+   ```
 
-| Email           | Password |
-| --------------- | -------- |
-| demo@immich.app | demo     |
+   ```bash
+   cd immich/docker
+   ```
 
-## Features
+2. Create your settings file:
 
-| Features                                     | Mobile | Web |
-| :------------------------------------------- | ------ | --- |
-| Upload and view videos and photos            | Yes    | Yes |
-| Auto backup when the app is opened           | Yes    | N/A |
-| Prevent duplication of assets                | Yes    | Yes |
-| Selective album(s) for backup                | Yes    | N/A |
-| Download photos and videos to local device   | Yes    | Yes |
-| Multi-user support                           | Yes    | Yes |
-| Album and Shared albums                      | Yes    | Yes |
-| Scrubbable/draggable scrollbar               | Yes    | Yes |
-| Support raw formats                          | Yes    | Yes |
-| Metadata view (EXIF, map)                    | Yes    | Yes |
-| Search by metadata, objects, faces, and CLIP | Yes    | Yes |
-| Administrative functions (user management)   | No     | Yes |
-| Background backup                            | Yes    | N/A |
-| Virtual scroll                               | Yes    | Yes |
-| OAuth support                                | Yes    | Yes |
-| API Keys                                     | N/A    | Yes |
-| LivePhoto/MotionPhoto backup and playback    | Yes    | Yes |
-| Support 360 degree image display             | No     | Yes |
-| User-defined storage structure               | Yes    | Yes |
-| Public Sharing                               | Yes    | Yes |
-| Archive and Favorites                        | Yes    | Yes |
-| Global Map                                   | Yes    | Yes |
-| Partner Sharing                              | Yes    | Yes |
-| Facial recognition and clustering            | Yes    | Yes |
-| Memories (x years ago)                       | Yes    | Yes |
-| Offline support                              | Yes    | No  |
-| Read-only gallery                            | Yes    | Yes |
-| Stacked Photos                               | Yes    | Yes |
-| Tags                                         | No     | Yes |
-| Folder View                                  | Yes    | Yes |
+   ```bash
+   cp example.env .env
+   ```
 
-## Translations
+   Open `.env` in a text editor and set:
+   - `UPLOAD_LOCATION`: the folder where your photos and videos will be stored
+   - `DB_DATA_LOCATION`: the folder for the database (keep it on a local disk, not a network share)
+   - `DB_PASSWORD`: change it to a random password, letters and numbers only
 
-Read more about translations [here](https://docs.immich.app/developer/translations).
+3. Build and start it. The first build can take half an hour or more:
 
-<a href="https://hosted.weblate.org/engage/immich/">
-<img src="https://hosted.weblate.org/widget/immich/immich/multi-auto.svg" alt="Translation status" />
-</a>
+   ```bash
+   docker compose -f docker-compose.fork.yml up -d --build
+   ```
 
-## Repository activity
+4. Open `http://<this computer's address>:2283` in a browser (`http://localhost:2283` on the same computer)
+   and create your admin account.
 
-![Activities](https://repobeats.axiom.co/api/embed/9e86d9dc3ddd137161f2f6d2e758d7863b1789cb.svg "Repobeats analytics image")
+For everything else (backups, storage, phone apps), the official
+[Immich documentation](https://docs.immich.app/) applies.
 
-## Star history
+## Turning on this version's features
 
-<a href="https://star-history.com/#immich-app/immich&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=immich-app/immich&type=date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=immich-app/immich&type=date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=immich-app/immich&type=date" width="100%" />
- </picture>
-</a>
+The video features are **off by default**, because processing a whole library of video takes a lot of
+computer time.
 
-## Contributors
+| Feature | Where to turn it on | Then |
+| --- | --- | --- |
+| Faces throughout videos | Administration → Settings → Machine Learning → Facial Recognition → **Video face scanning** → _Scan entire video for faces_ | Administration → Job Queues → **Video face detection** → **All** |
+| Video subtitles | Administration → Settings → Machine Learning → **Video subtitles** → enable, and pick a model | Administration → Job Queues → **Video subtitles** → **Missing** |
+| Browse page | Always on | **Browse** in the sidebar, under Photos |
 
-<a href="https://github.com/immich-app/immich/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=immich-app/immich" width="100%"/>
-</a>
+New uploads are handled automatically once a feature is on.
+
+## Updating
+
+**Back up first** ([how to back up Immich](https://docs.immich.app/administration/backup-and-restore)).
+Updates can change the database, and those changes can't be undone.
+
+```bash
+cd immich/docker
+```
+
+```bash
+git pull
+```
+
+```bash
+docker compose -f docker-compose.fork.yml up -d --build
+```
+
+## Moving between this version and the official Immich
+
+- **Use this version for a new library.** Pointing it at a library created by the official Immich isn't
+  supported: this version adds its own database changes, and the server refuses to start when they don't
+  fit the history of an existing official database.
+- **Going back to the official Immich isn't supported either.** The official server refuses to start on a
+  database with this version's changes. Keep backups from before you started if you might want to go back.
