@@ -1,4 +1,4 @@
-import { SystemConfig } from 'src/config';
+import { SystemConfig } from 'src/dtos/config.dto';
 import { VideoFaceScanMode } from 'src/enum';
 import { DeepPartial } from 'src/types';
 

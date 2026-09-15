@@ -198,7 +198,7 @@ type PersonRow = MaybeDehydrated<Person> & { faceCount?: number; similarity?: nu
 
 export function mapPerson(person: PersonRow): PersonResponseDto {
   return {
-    id: person.id,
+    id: person.personGroupId,
     name: person.name,
     birthDate: asDateString(person.birthDate),
     thumbnailPath: person.thumbnailPath,
@@ -246,7 +246,7 @@ export function mapFaces(
 ): AssetFaceResponseDto {
   return {
     ...mapFacesWithoutPerson(face, edits, assetDimensions),
-    person: face.person?.ownerId === auth.user.id ? mapPerson(face.person) : null,
+    person: face.person ? mapPerson(face.person) : null,
   };
 }
 

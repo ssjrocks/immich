@@ -18,6 +18,7 @@
   // Memories
   let memoriesEnabled = $state(authManager.preferences.memories?.enabled ?? true);
   let memoriesDuration = $state(authManager.preferences.memories?.duration ?? 5);
+  let memoriesSidebar = $state(authManager.preferences.memories?.sidebarWeb ?? false);
 
   // People
   let peopleEnabled = $state(authManager.preferences.people?.enabled ?? false);
@@ -52,7 +53,7 @@
         userPreferencesUpdateDto: {
           albums: { defaultAssetOrder },
           folders: { enabled: foldersEnabled, sidebarWeb: foldersSidebar },
-          memories: { enabled: memoriesEnabled, duration: memoriesDuration },
+          memories: { enabled: memoriesEnabled, duration: memoriesDuration, sidebarWeb: memoriesSidebar },
           people: {
             enabled: peopleEnabled,
             sidebarWeb: peopleSidebar,
@@ -116,6 +117,12 @@
             <Field label={$t('enable')}>
               <Switch bind:checked={memoriesEnabled} />
             </Field>
+
+            {#if memoriesEnabled}
+              <Field label={$t('sidebar')} description={$t('sidebar_display_description')}>
+                <Switch bind:checked={memoriesSidebar} />
+              </Field>
+            {/if}
 
             <Field label={$t('duration')} description={$t('time_based_memories_duration')}>
               <NumberInput bind:value={memoriesDuration} />

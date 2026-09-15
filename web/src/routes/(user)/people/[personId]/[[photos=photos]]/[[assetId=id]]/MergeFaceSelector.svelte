@@ -3,7 +3,7 @@
   import ControlAppBar from '$lib/components/shared-components/ControlAppBar.svelte';
   import { Route } from '$lib/route';
   import { handleError } from '$lib/utils/handle-error';
-  import { getAllPeople, getPerson, mergePerson, type PersonResponseDto } from '@immich/sdk';
+  import { getAllPeople, getPerson, mergePeople, type PersonResponseDto } from '@immich/sdk';
   import { Button, Icon, modalManager, toastManager } from '@immich/ui';
   import { mdiAccountQuestionOutline, mdiCallMerge, mdiMerge } from '@mdi/js';
   import { onMount } from 'svelte';
@@ -93,9 +93,9 @@
     }
 
     try {
-      const results = await mergePerson({
-        id: destination.id,
-        mergePersonDto: { ids: sources.map(({ id }) => id) },
+      // The first id is the one everyone else merges into.
+      const results = await mergePeople({
+        mergePersonDto: { ids: [destination.id, ...sources.map(({ id }) => id)] },
       });
       const count = results.filter(({ success }) => success).length;
       toastManager.primary($t('merged_people_count', { values: { count } }));

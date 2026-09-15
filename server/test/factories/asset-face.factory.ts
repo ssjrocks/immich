@@ -27,7 +27,7 @@ export class AssetFaceFactory {
       imageHeight: 500,
       imageWidth: 400,
       isVisible: true,
-      personId: null,
+      personGroupId: null,
       sourceType: SourceType.MachineLearning,
       // Null is the photo/preview-frame case; pass a value for a face detected on a sampled
       // video frame.
@@ -40,7 +40,7 @@ export class AssetFaceFactory {
 
   person(dto: PersonLike = {}, builder?: FactoryBuilder<PersonFactory>) {
     this.#person = build(PersonFactory.from(dto), builder);
-    this.value.personId = this.#person.build().id;
+    this.value.personGroupId = this.#person.build().personGroupId;
     return this;
   }
 

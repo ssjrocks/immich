@@ -8,7 +8,7 @@ import {
 import { Readable } from 'node:stream';
 import sanitize from 'sanitize-filename';
 import { StorageCore } from 'src/cores/storage.core';
-import { AuthSharedLink } from 'src/database';
+import { Asset, AuthSharedLink } from 'src/database';
 import {
   AssetBulkUploadCheckResponseDto,
   AssetMediaResponseDto,
@@ -135,6 +135,7 @@ export class AssetMediaService extends BaseService {
     file: UploadFile,
     sidecarFile?: UploadFile,
   ): Promise<AssetMediaResponseDto> {
+    let asset: Asset | undefined;
     try {
       await this.requireAccess({
         auth,
@@ -152,7 +153,7 @@ export class AssetMediaService extends BaseService {
         );
       }
 
-      const asset = await this.assetRepository.create({
+      asset = await this.assetRepository.create({
         ownerId: auth.user.id,
         libraryId: null,
 
@@ -220,6 +221,11 @@ export class AssetMediaService extends BaseService {
 
         this.logger.debug(`Duplicate asset upload rejected: existing asset ${duplicateId}`);
         return { status: AssetMediaStatus.DUPLICATE, id: duplicateId };
+      }
+
+      // clean up the asset row if one was created
+      if (asset) {
+        await this.assetRepository.remove({ id: asset.id });
       }
 
       this.logger.error(`Error uploading file ${error}`, error?.stack);

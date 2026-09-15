@@ -89,6 +89,7 @@
 
   let videoPlayer: HTMLVideoElement | undefined = $state();
   let isLoading = $state(true);
+  let hasLoadedMetadata = $state(false);
 
   // Only processed videos have subtitles, so check before adding a track: media-chrome shows a captions
   // button for any <track>, even one whose file doesn't exist. A video with no speech has a header-only
@@ -312,6 +313,7 @@
 
   $effect(() => {
     // reactive on `assetFileUrl` changes
+    hasLoadedMetadata = false;
     if (videoPlayer && assetFileUrl) {
       hasFocused = false;
       hasAppliedInitialTime = false;
@@ -490,6 +492,7 @@
             {...useSwipe(onSwipe)}
             class="h-full object-contain"
             oncanplay={(e: Event) => handleCanPlay(e.currentTarget as HTMLVideoElement)}
+            onloadedmetadata={() => (hasLoadedMetadata = true)}
             onended={onVideoEnded}
             onseeking={onSeeking}
             onplaying={(e: Event) => {
@@ -519,6 +522,7 @@
             {...useSwipe(onSwipe)}
             class="h-full object-contain"
             oncanplay={(e) => handleCanPlay(e.currentTarget)}
+            onloadedmetadata={() => (hasLoadedMetadata = true)}
             onended={onVideoEnded}
             onseeking={onSeeking}
             onplaying={(e) => {
@@ -609,7 +613,7 @@
         </div>
       {/if}
 
-      {#if assetViewerManager.isFaceEditMode && videoPlayer}
+      {#if assetViewerManager.isFaceEditMode && videoPlayer && hasLoadedMetadata}
         <FaceEditor htmlElement={videoPlayer} {containerWidth} {containerHeight} {assetId} />
       {/if}
 

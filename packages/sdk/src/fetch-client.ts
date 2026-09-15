@@ -1,6 +1,6 @@
 /**
  * Immich
- * 3.1.0
+ * 3.2.1
  * DO NOT MODIFY - This file has been generated using oazapfts.
  * See https://www.npmjs.com/package/oazapfts
  */
@@ -53,6 +53,382 @@ export type ActivityStatisticsResponseDto = {
     comments: number;
     /** Number of likes */
     likes: number;
+};
+export type AdminConfigDatabaseBackupDto = {
+    /** Cron expression */
+    cronExpression: string;
+    /** Enabled */
+    enabled: boolean;
+    /** Keep last amount */
+    keepLastAmount: number;
+};
+export type AdminConfigBackupsDto = {
+    database: AdminConfigDatabaseBackupDto;
+};
+export type AdminConfigFFmpegRealtimeDto = {
+    /** Enable real-time HLS transcoding (alpha) */
+    enabled: boolean;
+    /** Resolutions to use for real-time HLS transcoding */
+    resolutions: HlsVideoResolution[];
+    /** Video codecs to use for real-time HLS transcoding */
+    videoCodecs: VideoCodec[];
+};
+export type AdminConfigFFmpegDto = {
+    accel: TranscodeHWAccel;
+    /** Accelerated decode */
+    accelDecode: boolean;
+    /** Accepted audio codecs */
+    acceptedAudioCodecs: AudioCodec[];
+    /** Accepted containers */
+    acceptedContainers: VideoContainer[];
+    /** Accepted video codecs */
+    acceptedVideoCodecs: VideoCodec[];
+    /** B-frames */
+    bframes: number;
+    cqMode: CQMode;
+    /** CRF */
+    crf: number;
+    /** GOP size */
+    gopSize: number;
+    /** Max bitrate */
+    maxBitrate: string;
+    /** Preferred hardware device */
+    preferredHwDevice: string;
+    /** Preset */
+    preset: string;
+    realtime: AdminConfigFFmpegRealtimeDto;
+    /** References */
+    refs: number;
+    targetAudioCodec: AudioCodec;
+    /** Target resolution */
+    targetResolution: string;
+    targetVideoCodec: VideoCodec;
+    /** Temporal AQ */
+    temporalAQ: boolean;
+    /** Threads */
+    threads: number;
+    tonemap: ToneMapping;
+    transcode: TranscodePolicy;
+    /** Two pass */
+    twoPass: boolean;
+};
+export type AdminConfigGeneratedFullsizeImageDto = {
+    /** Enabled */
+    enabled: boolean;
+    format: ImageFormat;
+    /** Progressive */
+    progressive?: boolean;
+    /** Quality */
+    quality: number;
+};
+export type AdminConfigGeneratedImageDto = {
+    format: ImageFormat;
+    /** Progressive */
+    progressive?: boolean;
+    /** Quality */
+    quality: number;
+    /** Size */
+    size: number;
+};
+export type AdminConfigImageDto = {
+    colorspace: Colorspace;
+    /** Extract embedded */
+    extractEmbedded: boolean;
+    fullsize: AdminConfigGeneratedFullsizeImageDto;
+    preview: AdminConfigGeneratedImageDto;
+    thumbnail: AdminConfigGeneratedImageDto;
+};
+export type AdminConfigIntegrityChecksumJobDto = {
+    /** Cron expression for when the integrity check should run */
+    cronExpression: string;
+    /** Enabled */
+    enabled: boolean;
+    /** Percentage limit of the integrity checksum job */
+    percentageLimit: number;
+    /** How long the integrity checksum job may run for */
+    timeLimit: number;
+};
+export type AdminConfigIntegrityJobDto = {
+    /** Cron expression for when the integrity check should run */
+    cronExpression: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigIntegrityChecksDto = {
+    checksumFiles: AdminConfigIntegrityChecksumJobDto;
+    missingFiles: AdminConfigIntegrityJobDto;
+    untrackedFiles: AdminConfigIntegrityJobDto;
+};
+export type AdminConfigJobSettingsDto = {
+    /** Concurrency */
+    concurrency: number;
+};
+export type AdminConfigJobDto = {
+    backgroundTask: AdminConfigJobSettingsDto;
+    editor: AdminConfigJobSettingsDto;
+    faceDetection: AdminConfigJobSettingsDto;
+    integrityCheck: AdminConfigJobSettingsDto;
+    library: AdminConfigJobSettingsDto;
+    metadataExtraction: AdminConfigJobSettingsDto;
+    migration: AdminConfigJobSettingsDto;
+    notifications: AdminConfigJobSettingsDto;
+    ocr: AdminConfigJobSettingsDto;
+    search: AdminConfigJobSettingsDto;
+    sidecar: AdminConfigJobSettingsDto;
+    smartSearch: AdminConfigJobSettingsDto;
+    thumbnailGeneration: AdminConfigJobSettingsDto;
+    videoConversion: AdminConfigJobSettingsDto;
+    workflow: AdminConfigJobSettingsDto;
+};
+export type AdminConfigLibraryScanDto = {
+    /** Cron expression */
+    cronExpression: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigLibraryWatchDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigLibraryDto = {
+    scan: AdminConfigLibraryScanDto;
+    watch: AdminConfigLibraryWatchDto;
+};
+export type AdminConfigLoggingDto = {
+    /** Enabled */
+    enabled: boolean;
+    level: LogLevel;
+};
+export type AdminConfigMachineLearningAvailabilityChecksDto = {
+    /** Enabled */
+    enabled: boolean;
+    interval: number;
+    timeout: number;
+};
+export type AdminConfigClipDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Name of the model to use */
+    modelName: string;
+};
+export type AdminConfigDuplicateDetectionDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Maximum distance threshold for duplicate detection */
+    maxDistance: number;
+};
+export type AdminConfigFacialRecognitionDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Maximum distance threshold for face recognition */
+    maxDistance: number;
+    /** Minimum number of faces required for recognition */
+    minFaces: number;
+    /** Minimum confidence score for face detection */
+    minScore: number;
+    /** Name of the model to use */
+    modelName: string;
+};
+export type AdminConfigOcrDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Maximum resolution for OCR processing */
+    maxResolution: number;
+    /** Minimum confidence score for text detection */
+    minDetectionScore: number;
+    /** Minimum confidence score for text recognition */
+    minRecognitionScore: number;
+    /** Name of the model to use */
+    modelName: string;
+};
+export type AdminConfigMachineLearningDto = {
+    availabilityChecks: AdminConfigMachineLearningAvailabilityChecksDto;
+    clip: AdminConfigClipDto;
+    duplicateDetection: AdminConfigDuplicateDetectionDto;
+    /** Enabled */
+    enabled: boolean;
+    facialRecognition: AdminConfigFacialRecognitionDto;
+    ocr: AdminConfigOcrDto;
+    /** ML service URLs */
+    urls: string[];
+};
+export type AdminConfigMapDto = {
+    /** Dark map style URL */
+    darkStyle: string;
+    /** Enabled */
+    enabled: boolean;
+    /** Light map style URL */
+    lightStyle: string;
+};
+export type AdminConfigFacesDto = {
+    /** Import */
+    "import": boolean;
+};
+export type AdminConfigMetadataDto = {
+    faces: AdminConfigFacesDto;
+};
+export type AdminConfigNewVersionCheckDto = {
+    channel: ReleaseChannel;
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigNightlyTasksDto = {
+    /** Cluster new faces */
+    clusterNewFaces: boolean;
+    /** Database cleanup */
+    databaseCleanup: boolean;
+    /** Generate memories */
+    generateMemories: boolean;
+    /** Missing thumbnails */
+    missingThumbnails: boolean;
+    /** Start time (HH:MM) */
+    startTime: string;
+    /** Sync quota usage */
+    syncQuotaUsage: boolean;
+};
+export type AdminConfigSmtpTransportDto = {
+    /** SMTP server hostname */
+    host: string;
+    /** Whether to ignore SSL certificate errors */
+    ignoreCert: boolean;
+    /** SMTP password */
+    password: string;
+    /** SMTP server port */
+    port: number;
+    /** Whether to use secure connection (TLS/SSL) */
+    secure: boolean;
+    /** SMTP username */
+    username: string;
+};
+export type AdminConfigSmtpDto = {
+    /** Whether SMTP email notifications are enabled */
+    enabled: boolean;
+    /** Email address to send from */
+    "from": string;
+    /** Email address for replies */
+    replyTo: string;
+    transport: AdminConfigSmtpTransportDto;
+};
+export type AdminConfigNotificationsDto = {
+    smtp: AdminConfigSmtpDto;
+};
+export type AdminConfigOAuthDto = {
+    /** Account management URL */
+    accountManagementUrl?: string;
+    /** Allow insecure requests */
+    allowInsecureRequests: boolean;
+    /** Auto launch */
+    autoLaunch: boolean;
+    /** Auto register */
+    autoRegister: boolean;
+    /** Button text */
+    buttonText: string;
+    /** Client ID */
+    clientId: string;
+    /** Client secret */
+    clientSecret: string;
+    /** Default storage quota */
+    defaultStorageQuota: number | null;
+    /** Enabled */
+    enabled: boolean;
+    /** End session endpoint */
+    endSessionEndpoint: string;
+    /** Issuer URL */
+    issuerUrl: string;
+    /** Mobile override enabled */
+    mobileOverrideEnabled: boolean;
+    /** Mobile redirect URI (set to empty string to disable) */
+    mobileRedirectUri: string;
+    /** Profile signing algorithm */
+    profileSigningAlgorithm: string;
+    /** OAuth prompt parameter (e.g. select_account, login, consent) */
+    prompt: string;
+    /** Role claim */
+    roleClaim: string;
+    /** Scope */
+    scope: string;
+    /** Signing algorithm */
+    signingAlgorithm: string;
+    /** Storage label claim */
+    storageLabelClaim: string;
+    /** Storage quota claim */
+    storageQuotaClaim: string;
+    /** Timeout */
+    timeout: number;
+    tokenEndpointAuthMethod: OAuthTokenEndpointAuthMethod;
+};
+export type AdminConfigPasswordLoginDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigReverseGeocodingDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigServerDto = {
+    /** External domain */
+    externalDomain: string;
+    /** Login page message */
+    loginPageMessage: string;
+    /** Public users */
+    publicUsers: boolean;
+};
+export type AdminConfigStorageTemplateDto = {
+    /** Enabled */
+    enabled: boolean;
+    /** Hash verification enabled */
+    hashVerificationEnabled: boolean;
+    /** Template */
+    template: string;
+};
+export type AdminConfigTemplateEmailsDto = {
+    /** Album invite template */
+    albumInviteTemplate: string;
+    /** Album update template */
+    albumUpdateTemplate: string;
+    /** Welcome template */
+    welcomeTemplate: string;
+};
+export type AdminConfigTemplatesDto = {
+    email: AdminConfigTemplateEmailsDto;
+};
+export type AdminConfigThemeDto = {
+    /** Custom CSS for theming */
+    customCss: string;
+};
+export type AdminConfigTrashDto = {
+    /** Days */
+    days: number;
+    /** Enabled */
+    enabled: boolean;
+};
+export type AdminConfigUserDto = {
+    /** Delete delay */
+    deleteDelay: number;
+};
+export type AdminConfigDto = {
+    backup: AdminConfigBackupsDto;
+    ffmpeg: AdminConfigFFmpegDto;
+    image: AdminConfigImageDto;
+    integrityChecks: AdminConfigIntegrityChecksDto;
+    job: AdminConfigJobDto;
+    library: AdminConfigLibraryDto;
+    logging: AdminConfigLoggingDto;
+    machineLearning: AdminConfigMachineLearningDto;
+    map: AdminConfigMapDto;
+    metadata: AdminConfigMetadataDto;
+    newVersionCheck: AdminConfigNewVersionCheckDto;
+    nightlyTasks: AdminConfigNightlyTasksDto;
+    notifications: AdminConfigNotificationsDto;
+    oauth: AdminConfigOAuthDto;
+    passwordLogin: AdminConfigPasswordLoginDto;
+    reverseGeocoding: AdminConfigReverseGeocodingDto;
+    server: AdminConfigServerDto;
+    storageTemplate: AdminConfigStorageTemplateDto;
+    templates: AdminConfigTemplatesDto;
+    theme: AdminConfigThemeDto;
+    trash: AdminConfigTrashDto;
+    user: AdminConfigUserDto;
 };
 export type DatabaseBackupDeleteDto = {
     /** Backup filenames to delete */
@@ -165,29 +541,6 @@ export type TemplateResponseDto = {
     /** Template name */
     name: string;
 };
-export type SystemConfigSmtpTransportDto = {
-    /** SMTP server hostname */
-    host: string;
-    /** Whether to ignore SSL certificate errors */
-    ignoreCert: boolean;
-    /** SMTP password */
-    password: string;
-    /** SMTP server port */
-    port: number;
-    /** Whether to use secure connection (TLS/SSL) */
-    secure: boolean;
-    /** SMTP username */
-    username: string;
-};
-export type SystemConfigSmtpDto = {
-    /** Whether SMTP email notifications are enabled */
-    enabled: boolean;
-    /** Email address to send from */
-    "from": string;
-    /** Email address for replies */
-    replyTo: string;
-    transport: SystemConfigSmtpTransportDto;
-};
 export type TestEmailResponseDto = {
     /** Email message ID */
     messageId: string;
@@ -202,6 +555,8 @@ export type UserLicense = {
 };
 export type UserAdminResponseDto = {
     avatarColor: UserAvatarColor;
+    /** Cluster group the user is a member of */
+    clusterGroupId: string;
     /** Creation date */
     createdAt: string;
     /** Deletion date */
@@ -323,6 +678,8 @@ export type MemoriesResponse = {
     duration: number;
     /** Whether memories are enabled */
     enabled: boolean;
+    /** Whether memories appear in web sidebar */
+    sidebarWeb: boolean;
 };
 export type PeopleResponse = {
     /** Whether people are enabled */
@@ -331,8 +688,6 @@ export type PeopleResponse = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb: boolean;
-    /** Seconds undetected before a video detection counts as a new appearance */
-    videoAppearanceGapSeconds: number | null;
 };
 export type PurchaseResponse = {
     /** Date until which to hide buy button */
@@ -409,6 +764,8 @@ export type MemoriesUpdate = {
     duration?: number;
     /** Whether memories are enabled */
     enabled?: boolean;
+    /** Whether memories appear in web sidebar */
+    sidebarWeb?: boolean;
 };
 export type PeopleUpdate = {
     /** Whether people are enabled */
@@ -417,8 +774,6 @@ export type PeopleUpdate = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb?: boolean;
-    /** Seconds undetected before a video detection counts as a new appearance; null uses the server default */
-    videoAppearanceGapSeconds?: number | null;
 };
 export type PurchaseUpdate = {
     /** Date until which to hide buy button */
@@ -513,7 +868,7 @@ export type AlbumResponseDto = {
     createdAt: string;
     /** Album description */
     description: string;
-    /** End date (latest asset) */
+    /** UTC representation of (local) end date (latest asset) */
     endDate?: string;
     /** Has shared link */
     hasSharedLink: boolean;
@@ -526,7 +881,7 @@ export type AlbumResponseDto = {
     order?: AssetOrder;
     /** Is shared album */
     shared: boolean;
-    /** Start date (earliest asset) */
+    /** UTC representation of (local) start date (earliest asset) */
     startDate?: string;
     /** Last update date */
     updatedAt: string;
@@ -544,7 +899,7 @@ export type CreateAlbumDto = {
     /** Initial asset IDs */
     assetIds?: string[];
     /** Album description */
-    description?: string;
+    description?: string | null;
 };
 export type AlbumsAddAssetsDto = {
     /** Album IDs */
@@ -571,7 +926,7 @@ export type UpdateAlbumDto = {
     /** Album thumbnail asset ID */
     albumThumbnailAssetId?: string;
     /** Album description */
-    description?: string;
+    description?: string | null;
     /** Enable activity feed */
     isActivityEnabled?: boolean;
     order?: AssetOrder;
@@ -635,14 +990,41 @@ export type ApiKeyCreateDto = {
 };
 export type ApiKeyCreateResponseDto = {
     apiKey: ApiKeyResponseDto;
+    /** Creation date */
+    createdAt: string;
+    /** API key ID */
+    id: string;
+    /** API key name */
+    name: string;
+    /** List of permissions */
+    permissions: Permission[];
     /** API key secret (only shown once) */
     secret: string;
+    /** Last update date */
+    updatedAt: string;
 };
 export type ApiKeyUpdateDto = {
     /** API key name */
     name?: string;
     /** List of permissions */
     permissions?: Permission[];
+};
+export type AssetFileResponseDto = {
+    /** Creation date */
+    createdAt: string;
+    /** Asset file ID */
+    id: string;
+    /** The file was generated from an edit */
+    isEdited: boolean;
+    /** The file is a progressively encoded JPEG */
+    isProgressive: boolean;
+    /** The file is transparent */
+    isTransparent: boolean;
+    /** File path */
+    path: string;
+    "type": AssetFileType;
+    /** Update date */
+    updatedAt: string;
 };
 export type AssetBulkDeleteDto = {
     /** Force delete even if in use */
@@ -839,8 +1221,6 @@ export type PersonResponseDto = {
     birthDate: string | null;
     /** Person color (hex) */
     color?: string;
-    /** Number of visible faces assigned to this person */
-    faceCount?: number;
     /** Person ID */
     id: string;
     /** Is favorite */
@@ -849,8 +1229,6 @@ export type PersonResponseDto = {
     isHidden: boolean;
     /** Person name */
     name: string;
-    /** Cosine similarity (0-1) of this person to the reference face, when one was requested */
-    similarity?: number;
     /** Thumbnail path */
     thumbnailPath: string;
     /** Last update date */
@@ -1121,7 +1499,132 @@ export type ValidateAccessTokenResponseDto = {
     /** Authentication status */
     authStatus: boolean;
 };
+export type ClusterGroupRequestResponseDto = {
+    /** Cluster group the user is invited to join */
+    clusterGroupId: string;
+    /** Creation date */
+    createdAt: string;
+    /** Request ID */
+    id: string;
+    /** User the request was created for */
+    userId: string;
+};
+export type ClusterGroupRequestCreateDto = {
+    /** User to invite into the cluster group */
+    userId: string;
+};
+export type UserConfigFFmpegRealtimeDto = {
+    /** Enable real-time HLS transcoding (alpha) */
+    enabled: boolean;
+    /** Resolutions to use for real-time HLS transcoding */
+    resolutions: HlsVideoResolution[];
+    /** Video codecs to use for real-time HLS transcoding */
+    videoCodecs: VideoCodec[];
+};
+export type UserConfigFFmpegDto = {
+    realtime: UserConfigFFmpegRealtimeDto;
+};
+export type UserConfigGeneratedFullsizeImageDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigGeneratedImageDto = {
+    /** Size */
+    size: number;
+};
+export type UserConfigImageDto = {
+    fullsize: UserConfigGeneratedFullsizeImageDto;
+    preview: UserConfigGeneratedImageDto;
+    thumbnail: UserConfigGeneratedImageDto;
+};
+export type UserConfigClipDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+};
+export type UserConfigDuplicateDetectionDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+};
+export type UserConfigFacialRecognitionDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Minimum number of faces required for recognition */
+    minFaces: number;
+};
+export type UserConfigOcrDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+};
+export type UserConfigMachineLearningDto = {
+    clip: UserConfigClipDto;
+    duplicateDetection: UserConfigDuplicateDetectionDto;
+    /** Enabled */
+    enabled: boolean;
+    facialRecognition: UserConfigFacialRecognitionDto;
+    ocr: UserConfigOcrDto;
+};
+export type UserConfigMapDto = {
+    /** Dark map style URL */
+    darkStyle: string;
+    /** Enabled */
+    enabled: boolean;
+    /** Light map style URL */
+    lightStyle: string;
+};
+export type UserConfigOAuthDto = {
+    /** Auto launch */
+    autoLaunch: boolean;
+    /** Button text */
+    buttonText: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigPasswordLoginDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigReverseGeocodingDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigServerDto = {
+    /** External domain */
+    externalDomain: string;
+    /** Login page message */
+    loginPageMessage: string;
+    /** Public users */
+    publicUsers: boolean;
+};
+export type UserConfigThemeDto = {
+    /** Custom CSS for theming */
+    customCss: string;
+};
+export type UserConfigTrashDto = {
+    /** Days */
+    days: number;
+    /** Enabled */
+    enabled: boolean;
+};
+export type UserConfigUserDto = {
+    /** Delete delay */
+    deleteDelay: number;
+};
+export type UserConfigDto = {
+    ffmpeg: UserConfigFFmpegDto;
+    image: UserConfigImageDto;
+    machineLearning: UserConfigMachineLearningDto;
+    map: UserConfigMapDto;
+    oauth: UserConfigOAuthDto;
+    passwordLogin: UserConfigPasswordLoginDto;
+    reverseGeocoding: UserConfigReverseGeocodingDto;
+    server: UserConfigServerDto;
+    theme: UserConfigThemeDto;
+    trash: UserConfigTrashDto;
+    user: UserConfigUserDto;
+};
 export type DownloadArchiveDto = {
+    /** The name of the archive to download, without extension */
+    archiveName?: string;
     /** Asset IDs */
     assetIds: string[];
     /** Download edited asset if available */
@@ -1185,8 +1688,6 @@ export type AssetFaceResponseDto = {
     imageWidth: number;
     person: (PersonResponseDto) | null;
     sourceType?: SourceType;
-    /** Milliseconds from video start; absent for photos */
-    timestampMs?: number;
 };
 export type AssetFaceCreateDto = {
     /** Asset ID */
@@ -1199,8 +1700,6 @@ export type AssetFaceCreateDto = {
     imageWidth: number;
     /** Person ID */
     personId: string;
-    /** For a face tagged on a video frame, the timestamp (in ms) of that frame */
-    timestampMs?: number;
     /** Face bounding box width */
     width: number;
     /** Face bounding box X coordinate */
@@ -1257,10 +1756,8 @@ export type QueuesResponseLegacyDto = {
     sidecar: QueueResponseLegacyDto;
     smartSearch: QueueResponseLegacyDto;
     storageTemplateMigration: QueueResponseLegacyDto;
-    subtitles: QueueResponseLegacyDto;
     thumbnailGeneration: QueueResponseLegacyDto;
     videoConversion: QueueResponseLegacyDto;
-    videoFaceDetection: QueueResponseLegacyDto;
     workflow: QueueResponseLegacyDto;
 };
 export type JobCreateDto = {
@@ -1504,6 +2001,10 @@ export type PeopleUpdateDto = {
     /** People to update */
     people: PeopleUpdateItem[];
 };
+export type MergePersonDto = {
+    /** Person IDs to merge */
+    ids: string[];
+};
 export type PersonUpdateDto = {
     /** Person date of birth */
     birthDate?: string | null;
@@ -1518,10 +2019,6 @@ export type PersonUpdateDto = {
     /** Person name */
     name?: string;
 };
-export type MergePersonDto = {
-    /** Person IDs to merge */
-    ids: string[];
-};
 export type AssetFaceUpdateItem = {
     /** Asset ID */
     assetId: string;
@@ -1535,30 +2032,6 @@ export type AssetFaceUpdateDto = {
 export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
-};
-export type PersonUnassignFromAssetDto = {
-    /** Asset to detach the person from */
-    assetId: string;
-};
-export type PersonVideoAppearanceDto = {
-    /** How many individual detections this appearance groups together */
-    detections: number;
-    /** Last detection in this appearance (ms from video start) */
-    endMs: number;
-    /** First detection in this appearance (ms from video start) */
-    startMs: number;
-};
-export type PersonVideoOccurrenceResponseDto = {
-    /** Runs of consecutive detections, grouped by the configured appearance gap */
-    appearances: PersonVideoAppearanceDto[];
-    /** Asset ID of the video */
-    assetId: string;
-    /** Duration of the video in milliseconds */
-    durationMs: number | null;
-    /** Original filename of the video */
-    originalFileName: string;
-    /** Start timestamp (ms from video start) of each appearance -- one per entry in `appearances` */
-    timestampsMs: number[];
 };
 export type PluginMethodResponseDto = {
     /** Description */
@@ -1620,6 +2093,32 @@ export type PluginTemplateResponseDto = {
     /** Ui hints, for example "smart-album" */
     uiHints: string[];
 };
+export type PublicConfigOAuthDto = {
+    /** Auto launch */
+    autoLaunch: boolean;
+    /** Button text */
+    buttonText: string;
+    /** Enabled */
+    enabled: boolean;
+};
+export type PublicConfigPasswordLoginDto = {
+    /** Enabled */
+    enabled: boolean;
+};
+export type PublicConfigServerDto = {
+    /** Login page message */
+    loginPageMessage: string;
+};
+export type PublicConfigThemeDto = {
+    /** Custom CSS for theming */
+    customCss: string;
+};
+export type PublicConfigDto = {
+    oauth: PublicConfigOAuthDto;
+    passwordLogin: PublicConfigPasswordLoginDto;
+    server: PublicConfigServerDto;
+    theme: PublicConfigThemeDto;
+};
 export type QueueResponseDto = {
     /** Whether the queue is paused */
     isPaused: boolean;
@@ -1645,54 +2144,6 @@ export type QueueJobResponseDto = {
     /** Job creation timestamp */
     timestamp: number;
 };
-export type SearchOrder = {
-    direction?: AssetOrder;
-    field?: SearchOrderField;
-};
-export type BrowseSearchDto = {
-    order?: SearchOrder;
-    /** Page number */
-    page?: number;
-    /** Number of results to return */
-    size?: number;
-    /** Restrict to one asset type; omit for images and videos together */
-    "type"?: AssetTypeEnum;
-    /** Include EXIF data in response */
-    withExif?: boolean;
-};
-export type SearchFacetCountResponseDto = {
-    /** Number of assets with this facet value */
-    count: number;
-    /** Facet value */
-    value: string;
-};
-export type SearchFacetResponseDto = {
-    counts: SearchFacetCountResponseDto[];
-    /** Facet field name */
-    fieldName: string;
-};
-export type SearchAlbumResponseDto = {
-    /** Number of albums in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AlbumResponseDto[];
-    /** Total number of matching albums */
-    total: number;
-};
-export type SearchAssetResponseDto = {
-    /** Number of assets in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AssetResponseDto[];
-    /** Next page token */
-    nextPage: string | null;
-    /** Total number of matching assets */
-    total: number;
-};
-export type SearchResponseDto = {
-    albums: SearchAlbumResponseDto;
-    assets: SearchAssetResponseDto;
-};
 export type SearchExploreItem = {
     data: AssetResponseDto;
     /** Explore value */
@@ -1702,6 +2153,168 @@ export type SearchExploreResponseDto = {
     /** Explore field name */
     fieldName: string;
     items: SearchExploreItem[];
+};
+export type IdsFilter = {
+    all?: string[];
+    "any"?: string[];
+    none?: string[];
+};
+export type StringFilter = {
+    eq?: string;
+    "in"?: string[];
+    ne?: string;
+    notIn?: string[];
+};
+export type StringFilterNullable = {
+    eq?: string | null;
+    "in"?: string[];
+    ne?: string | null;
+    notIn?: string[];
+};
+export type DateFilter = {
+    eq?: string;
+    gt?: string;
+    gte?: string;
+    lt?: string;
+    lte?: string;
+    ne?: string;
+};
+export type StringPatternFilter = {
+    endsWith?: string;
+    eq?: string | null;
+    "in"?: string[];
+    like?: string;
+    ne?: string | null;
+    notIn?: string[];
+    notLike?: string;
+    startsWith?: string;
+};
+export type NumberFilter = {
+    eq?: number;
+    gt?: number;
+    gte?: number;
+    "in"?: number[];
+    lt?: number;
+    lte?: number;
+    ne?: number;
+    notIn?: number[];
+};
+export type BoolFilter = {
+    eq: boolean;
+};
+export type IdFilter = {
+    eq?: string;
+    ne?: string;
+};
+export type IdFilterNullable = {
+    eq?: string | null;
+    ne?: string | null;
+};
+export type StringSimilarityFilter = {
+    matches: string;
+};
+export type NumberFilterNullable = {
+    eq?: number | null;
+    gt?: number;
+    gte?: number;
+    "in"?: number[];
+    lt?: number;
+    lte?: number;
+    ne?: number | null;
+    notIn?: number[];
+};
+export type DateFilterNullable = {
+    eq?: string | null;
+    gt?: string;
+    gte?: string;
+    lt?: string;
+    lte?: string;
+    ne?: string | null;
+};
+export type EnumFilterAssetType = {
+    eq?: AssetTypeEnum;
+    "in"?: AssetTypeEnum[];
+    ne?: AssetTypeEnum;
+    notIn?: AssetTypeEnum[];
+};
+export type EnumFilterAssetVisibility = {
+    eq?: AssetVisibility;
+    "in"?: AssetVisibility[];
+    ne?: AssetVisibility;
+    notIn?: AssetVisibility[];
+};
+export type SearchFilterBranch = {
+    albumIds?: IdsFilter;
+    checksum?: StringFilter;
+    city?: StringFilterNullable;
+    country?: StringFilterNullable;
+    createdAt?: DateFilter;
+    description?: StringPatternFilter;
+    encodedVideoPath?: StringFilter;
+    fileSizeInBytes?: NumberFilter;
+    hasAlbums?: BoolFilter;
+    hasPeople?: BoolFilter;
+    hasTags?: BoolFilter;
+    id?: IdFilter;
+    isEncoded?: BoolFilter;
+    isFavorite?: BoolFilter;
+    isMotion?: BoolFilter;
+    isOffline?: BoolFilter;
+    lensModel?: StringFilterNullable;
+    libraryId?: IdFilterNullable;
+    make?: StringFilterNullable;
+    model?: StringFilterNullable;
+    ocr?: StringSimilarityFilter;
+    originalFileName?: StringPatternFilter;
+    originalPath?: StringPatternFilter;
+    personIds?: IdsFilter;
+    rating?: NumberFilterNullable;
+    state?: StringFilterNullable;
+    tagIds?: IdsFilter;
+    takenAt?: DateFilter;
+    trashedAt?: DateFilterNullable;
+    "type"?: EnumFilterAssetType;
+    updatedAt?: DateFilter;
+    visibility?: EnumFilterAssetVisibility;
+};
+export type SearchFilter = {
+    albumIds?: IdsFilter;
+    checksum?: StringFilter;
+    city?: StringFilterNullable;
+    country?: StringFilterNullable;
+    createdAt?: DateFilter;
+    description?: StringPatternFilter;
+    encodedVideoPath?: StringFilter;
+    fileSizeInBytes?: NumberFilter;
+    hasAlbums?: BoolFilter;
+    hasPeople?: BoolFilter;
+    hasTags?: BoolFilter;
+    id?: IdFilter;
+    isEncoded?: BoolFilter;
+    isFavorite?: BoolFilter;
+    isMotion?: BoolFilter;
+    isOffline?: BoolFilter;
+    lensModel?: StringFilterNullable;
+    libraryId?: IdFilterNullable;
+    make?: StringFilterNullable;
+    model?: StringFilterNullable;
+    ocr?: StringSimilarityFilter;
+    or?: SearchFilterBranch[];
+    originalFileName?: StringPatternFilter;
+    originalPath?: StringPatternFilter;
+    personIds?: IdsFilter;
+    rating?: NumberFilterNullable;
+    state?: StringFilterNullable;
+    tagIds?: IdsFilter;
+    takenAt?: DateFilter;
+    trashedAt?: DateFilterNullable;
+    "type"?: EnumFilterAssetType;
+    updatedAt?: DateFilter;
+    visibility?: EnumFilterAssetVisibility;
+};
+export type SearchOrder = {
+    direction?: AssetOrder;
+    field?: SearchOrderField;
 };
 export type MetadataSearchDto = {
     /** Filter by album IDs */
@@ -1716,10 +2329,13 @@ export type MetadataSearchDto = {
     createdAfter?: string;
     /** Filter by creation date (before) */
     createdBefore?: string;
+    /** Cursor for the next page of results */
+    cursor?: string;
     /** Filter by description text */
     description?: string;
     /** Filter by encoded video file path */
     encodedVideoPath?: string;
+    filter?: SearchFilter;
     /** Filter by asset ID */
     id?: string;
     /** Filter by encoded status */
@@ -1744,6 +2360,7 @@ export type MetadataSearchDto = {
     ocr?: string;
     /** Sort order */
     order?: AssetOrder;
+    orderBy?: SearchOrder;
     /** Filter by original file name */
     originalFileName?: string;
     /** Filter by original file path */
@@ -1787,6 +2404,41 @@ export type MetadataSearchDto = {
     /** Include stacked assets */
     withStacked?: boolean;
 };
+export type SearchFacetCountResponseDto = {
+    /** Number of assets with this facet value */
+    count: number;
+    /** Facet value */
+    value: string;
+};
+export type SearchFacetResponseDto = {
+    counts: SearchFacetCountResponseDto[];
+    /** Facet field name */
+    fieldName: string;
+};
+export type SearchAlbumResponseDto = {
+    /** Number of albums in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AlbumResponseDto[];
+    /** Total number of matching albums */
+    total: number;
+};
+export type SearchAssetResponseDto = {
+    /** Number of assets in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AssetResponseDto[];
+    /** Cursor for the next page of results */
+    nextCursor: string | null;
+    /** Next page token */
+    nextPage: string | null;
+    /** Total number of matching assets */
+    total: number;
+};
+export type SearchResponseDto = {
+    albums: SearchAlbumResponseDto;
+    assets: SearchAssetResponseDto;
+};
 export type PlacesResponseDto = {
     /** Administrative level 1 name (state/province) */
     admin1name?: string;
@@ -1810,6 +2462,7 @@ export type RandomSearchDto = {
     createdAfter?: string;
     /** Filter by creation date (before) */
     createdBefore?: string;
+    filter?: SearchFilter;
     /** Filter by encoded status */
     isEncoded?: boolean;
     /** Filter by favorite status */
@@ -1874,6 +2527,7 @@ export type SmartSearchDto = {
     createdAfter?: string;
     /** Filter by creation date (before) */
     createdBefore?: string;
+    filter?: SearchFilter;
     /** Filter by encoded status */
     isEncoded?: boolean;
     /** Filter by favorite status */
@@ -1944,6 +2598,7 @@ export type StatisticsSearchDto = {
     createdBefore?: string;
     /** Filter by description text */
     description?: string;
+    filter?: SearchFilter;
     /** Filter by encoded status */
     isEncoded?: boolean;
     /** Filter by favorite status */
@@ -2062,6 +2717,8 @@ export type ServerConfigDto = {
     mapLightStyleUrl: string;
     /** People min faces server default */
     minFaces: number;
+    /** OAuth account management URL */
+    oauthAccountManagementUrl?: string;
     /** OAuth button text */
     oauthButtonText: string;
     /** Whether public user registration is enabled */
@@ -2070,8 +2727,6 @@ export type ServerConfigDto = {
     trashDays: number;
     /** Delay in days before deleted users are permanently removed */
     userDeleteDelay: number;
-    /** Seconds a person must go undetected before their next detection is a new appearance */
-    videoAppearanceGapSeconds: number;
 };
 export type ServerFeaturesDto = {
     /** Whether config file is available */
@@ -2343,377 +2998,6 @@ export type SyncStreamDto = {
     /** Sync request types */
     types: SyncRequestType[];
 };
-export type DatabaseBackupConfig = {
-    /** Cron expression */
-    cronExpression: string;
-    /** Enabled */
-    enabled: boolean;
-    /** Keep last amount */
-    keepLastAmount: number;
-};
-export type SystemConfigBackupsDto = {
-    database: DatabaseBackupConfig;
-};
-export type SystemConfigFFmpegRealtimeDto = {
-    /** Enable real-time HLS transcoding (alpha) */
-    enabled: boolean;
-    /** Resolutions to use for real-time HLS transcoding */
-    resolutions: HlsVideoResolution[];
-    /** Video codecs to use for real-time HLS transcoding */
-    videoCodecs: VideoCodec[];
-};
-export type SystemConfigFFmpegDto = {
-    accel: TranscodeHWAccel;
-    /** Accelerated decode */
-    accelDecode: boolean;
-    /** Accepted audio codecs */
-    acceptedAudioCodecs: AudioCodec[];
-    /** Accepted containers */
-    acceptedContainers: VideoContainer[];
-    /** Accepted video codecs */
-    acceptedVideoCodecs: VideoCodec[];
-    /** B-frames */
-    bframes: number;
-    cqMode: CQMode;
-    /** CRF */
-    crf: number;
-    /** GOP size */
-    gopSize: number;
-    /** Max bitrate */
-    maxBitrate: string;
-    /** Preferred hardware device */
-    preferredHwDevice: string;
-    /** Preset */
-    preset: string;
-    realtime: SystemConfigFFmpegRealtimeDto;
-    /** References */
-    refs: number;
-    targetAudioCodec: AudioCodec;
-    /** Target resolution */
-    targetResolution: string;
-    targetVideoCodec: VideoCodec;
-    /** Temporal AQ */
-    temporalAQ: boolean;
-    /** Threads */
-    threads: number;
-    tonemap: ToneMapping;
-    transcode: TranscodePolicy;
-    /** Two pass */
-    twoPass: boolean;
-};
-export type SystemConfigGeneratedFullsizeImageDto = {
-    /** Enabled */
-    enabled: boolean;
-    format: ImageFormat;
-    /** Progressive */
-    progressive?: boolean;
-    /** Quality */
-    quality: number;
-};
-export type SystemConfigGeneratedImageDto = {
-    format: ImageFormat;
-    /** Progressive */
-    progressive?: boolean;
-    /** Quality */
-    quality: number;
-    /** Size */
-    size: number;
-};
-export type SystemConfigImageDto = {
-    colorspace: Colorspace;
-    /** Extract embedded */
-    extractEmbedded: boolean;
-    fullsize: SystemConfigGeneratedFullsizeImageDto;
-    preview: SystemConfigGeneratedImageDto;
-    thumbnail: SystemConfigGeneratedImageDto;
-};
-export type SystemConfigIntegrityChecksumJob = {
-    /** Cron expression for when the integrity check should run */
-    cronExpression: string;
-    /** Enabled */
-    enabled: boolean;
-    /** Percentage limit of the integrity checksum job */
-    percentageLimit: number;
-    /** How long the integrity checksum job may run for */
-    timeLimit: number;
-};
-export type SystemConfigIntegrityJob = {
-    /** Cron expression for when the integrity check should run */
-    cronExpression: string;
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigIntegrityChecks = {
-    checksumFiles: SystemConfigIntegrityChecksumJob;
-    missingFiles: SystemConfigIntegrityJob;
-    untrackedFiles: SystemConfigIntegrityJob;
-};
-export type JobSettingsDto = {
-    /** Concurrency */
-    concurrency: number;
-};
-export type SystemConfigJobDto = {
-    backgroundTask: JobSettingsDto;
-    editor: JobSettingsDto;
-    faceDetection: JobSettingsDto;
-    integrityCheck: JobSettingsDto;
-    library: JobSettingsDto;
-    metadataExtraction: JobSettingsDto;
-    migration: JobSettingsDto;
-    notifications: JobSettingsDto;
-    ocr: JobSettingsDto;
-    search: JobSettingsDto;
-    sidecar: JobSettingsDto;
-    smartSearch: JobSettingsDto;
-    subtitles: JobSettingsDto;
-    thumbnailGeneration: JobSettingsDto;
-    videoConversion: JobSettingsDto;
-    videoFaceDetection: JobSettingsDto;
-    workflow: JobSettingsDto;
-};
-export type SystemConfigLibraryScanDto = {
-    /** Cron expression */
-    cronExpression: string;
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigLibraryWatchDto = {
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigLibraryDto = {
-    scan: SystemConfigLibraryScanDto;
-    watch: SystemConfigLibraryWatchDto;
-};
-export type SystemConfigLoggingDto = {
-    /** Enabled */
-    enabled: boolean;
-    level: LogLevel;
-};
-export type MachineLearningAvailabilityChecksDto = {
-    /** Enabled */
-    enabled: boolean;
-    interval: number;
-    timeout: number;
-};
-export type ClipConfig = {
-    /** Whether the task is enabled */
-    enabled: boolean;
-    /** Name of the model to use */
-    modelName: string;
-};
-export type DuplicateDetectionConfig = {
-    /** Whether the task is enabled */
-    enabled: boolean;
-    /** Maximum distance threshold for duplicate detection */
-    maxDistance: number;
-};
-export type VideoFacialRecognitionConfig = {
-    /** How long a person must go undetected before their next detection counts as a separate appearance. Purely a display grouping: every detection is still stored, so changing this re-groups existing scans immediately and nothing is lost. 0 lists every detection individually. */
-    appearanceGapSeconds: number;
-    /** Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision. */
-    intervalSeconds: number;
-    /** Maximum number of frames to sample per video. Used directly as the frame count in "frameCount" mode, or as a hard safety cap in "interval" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails. */
-    maxFrames: number;
-    samplingMethod: VideoFaceSamplingMethod;
-    scanMode: VideoFaceScanMode;
-};
-export type FacialRecognitionConfig = {
-    /** Whether the task is enabled */
-    enabled: boolean;
-    /** Maximum distance threshold for face recognition */
-    maxDistance: number;
-    /** Minimum number of faces required for recognition */
-    minFaces: number;
-    /** Minimum confidence score for face detection */
-    minScore: number;
-    /** Name of the model to use */
-    modelName: string;
-    video: VideoFacialRecognitionConfig;
-};
-export type OcrConfig = {
-    /** Whether the task is enabled */
-    enabled: boolean;
-    /** Maximum resolution for OCR processing */
-    maxResolution: number;
-    /** Minimum confidence score for text detection */
-    minDetectionScore: number;
-    /** Minimum confidence score for text recognition */
-    minRecognitionScore: number;
-    /** Name of the model to use */
-    modelName: string;
-};
-export type SubtitlesConfig = {
-    /** Whether the task is enabled */
-    enabled: boolean;
-    /** Name of the model to use */
-    modelName: string;
-};
-export type SystemConfigMachineLearningDto = {
-    availabilityChecks: MachineLearningAvailabilityChecksDto;
-    clip: ClipConfig;
-    duplicateDetection: DuplicateDetectionConfig;
-    /** Enabled */
-    enabled: boolean;
-    facialRecognition: FacialRecognitionConfig;
-    ocr: OcrConfig;
-    subtitles: SubtitlesConfig;
-    /** ML service URLs */
-    urls: string[];
-};
-export type SystemConfigMapDto = {
-    /** Dark map style URL */
-    darkStyle: string;
-    /** Enabled */
-    enabled: boolean;
-    /** Light map style URL */
-    lightStyle: string;
-};
-export type SystemConfigFacesDto = {
-    /** Import */
-    "import": boolean;
-};
-export type SystemConfigMetadataDto = {
-    faces: SystemConfigFacesDto;
-};
-export type SystemConfigNewVersionCheckDto = {
-    channel: ReleaseChannel;
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigNightlyTasksDto = {
-    /** Cluster new faces */
-    clusterNewFaces: boolean;
-    /** Database cleanup */
-    databaseCleanup: boolean;
-    /** Generate memories */
-    generateMemories: boolean;
-    /** Missing thumbnails */
-    missingThumbnails: boolean;
-    /** Start time (HH:MM) */
-    startTime: string;
-    /** Sync quota usage */
-    syncQuotaUsage: boolean;
-};
-export type SystemConfigNotificationsDto = {
-    smtp: SystemConfigSmtpDto;
-};
-export type SystemConfigOAuthDto = {
-    /** Allow insecure requests */
-    allowInsecureRequests: boolean;
-    /** Auto launch */
-    autoLaunch: boolean;
-    /** Auto register */
-    autoRegister: boolean;
-    /** Button text */
-    buttonText: string;
-    /** Client ID */
-    clientId: string;
-    /** Client secret */
-    clientSecret: string;
-    /** Default storage quota */
-    defaultStorageQuota: number | null;
-    /** Enabled */
-    enabled: boolean;
-    /** End session endpoint */
-    endSessionEndpoint: string;
-    /** Issuer URL */
-    issuerUrl: string;
-    /** Mobile override enabled */
-    mobileOverrideEnabled: boolean;
-    /** Mobile redirect URI (set to empty string to disable) */
-    mobileRedirectUri: string;
-    /** Profile signing algorithm */
-    profileSigningAlgorithm: string;
-    /** OAuth prompt parameter (e.g. select_account, login, consent) */
-    prompt: string;
-    /** Role claim */
-    roleClaim: string;
-    /** Scope */
-    scope: string;
-    /** Signing algorithm */
-    signingAlgorithm: string;
-    /** Storage label claim */
-    storageLabelClaim: string;
-    /** Storage quota claim */
-    storageQuotaClaim: string;
-    /** Timeout */
-    timeout: number;
-    tokenEndpointAuthMethod: OAuthTokenEndpointAuthMethod;
-};
-export type SystemConfigPasswordLoginDto = {
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigReverseGeocodingDto = {
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigServerDto = {
-    /** External domain */
-    externalDomain: string;
-    /** Login page message */
-    loginPageMessage: string;
-    /** Public users */
-    publicUsers: boolean;
-};
-export type SystemConfigStorageTemplateDto = {
-    /** Enabled */
-    enabled: boolean;
-    /** Hash verification enabled */
-    hashVerificationEnabled: boolean;
-    /** Template */
-    template: string;
-};
-export type SystemConfigTemplateEmailsDto = {
-    /** Album invite template */
-    albumInviteTemplate: string;
-    /** Album update template */
-    albumUpdateTemplate: string;
-    /** Welcome template */
-    welcomeTemplate: string;
-};
-export type SystemConfigTemplatesDto = {
-    email: SystemConfigTemplateEmailsDto;
-};
-export type SystemConfigThemeDto = {
-    /** Custom CSS for theming */
-    customCss: string;
-};
-export type SystemConfigTrashDto = {
-    /** Days */
-    days: number;
-    /** Enabled */
-    enabled: boolean;
-};
-export type SystemConfigUserDto = {
-    /** Delete delay */
-    deleteDelay: number;
-};
-export type SystemConfigDto = {
-    backup: SystemConfigBackupsDto;
-    ffmpeg: SystemConfigFFmpegDto;
-    image: SystemConfigImageDto;
-    integrityChecks: SystemConfigIntegrityChecks;
-    job: SystemConfigJobDto;
-    library: SystemConfigLibraryDto;
-    logging: SystemConfigLoggingDto;
-    machineLearning: SystemConfigMachineLearningDto;
-    map: SystemConfigMapDto;
-    metadata: SystemConfigMetadataDto;
-    newVersionCheck: SystemConfigNewVersionCheckDto;
-    nightlyTasks: SystemConfigNightlyTasksDto;
-    notifications: SystemConfigNotificationsDto;
-    oauth: SystemConfigOAuthDto;
-    passwordLogin: SystemConfigPasswordLoginDto;
-    reverseGeocoding: SystemConfigReverseGeocodingDto;
-    server: SystemConfigServerDto;
-    storageTemplate: SystemConfigStorageTemplateDto;
-    templates: SystemConfigTemplatesDto;
-    theme: SystemConfigThemeDto;
-    trash: SystemConfigTrashDto;
-    user: SystemConfigUserDto;
-};
 export type SystemConfigTemplateStorageOptionDto = {
     /** Available day format options for storage template */
     dayOptions: string[];
@@ -2767,6 +3051,8 @@ export type TagBulkAssetsResponseDto = {
 export type TagUpdateDto = {
     /** Tag color (hex) */
     color?: string | null;
+    /** Tag name */
+    name?: string;
 };
 export type TimeBucketAssetResponseDto = {
     /** Array of city names extracted from EXIF GPS data */
@@ -2866,6 +3152,8 @@ export type WorkflowResponseDto = {
     enabled: boolean;
     /** Workflow ID */
     id: string;
+    /** Workflow logs run results */
+    logging: boolean;
     /** Workflow name */
     name: string | null;
     /** Workflow steps */
@@ -2880,6 +3168,8 @@ export type WorkflowCreateDto = {
     description?: string | null;
     /** Workflow enabled */
     enabled?: boolean;
+    /** Workflow logs run results */
+    logging?: boolean;
     /** Workflow name */
     name?: string | null;
     steps?: WorkflowStepDto[];
@@ -2897,11 +3187,29 @@ export type WorkflowUpdateDto = {
     description?: string | null;
     /** Workflow enabled */
     enabled?: boolean;
+    /** Workflow logs run results */
+    logging?: boolean;
     /** Workflow name */
     name?: string | null;
     steps?: WorkflowStepDto[];
     /** Workflow trigger type */
     trigger?: WorkflowTrigger;
+};
+export type WorkflowLogEntryDto = {
+    /** Workflow run date/time */
+    at: string;
+    /** Workflow log entry ID */
+    id: string;
+    /** Last step ran, if the workflow ended early */
+    lastStep?: {
+        /** Index of the step in the workflow */
+        index: number;
+        /** Method of the step */
+        method: string;
+    };
+    result: WorkflowResult;
+    /** Workflow trigger data ID */
+    triggerDataId?: string;
 };
 export type WorkflowShareStepDto = {
     /** Step configuration */
@@ -3496,6 +3804,43 @@ export function unlinkAllOAuthAccountsAdmin(opts?: Oazapfts.RequestOpts) {
     }));
 }
 /**
+ * Get the admin configuration
+ */
+export function getAdminConfig(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AdminConfigDto;
+    }>("/admin/config", {
+        ...opts
+    }));
+}
+/**
+ * Update the system configuration
+ */
+export function updateAdminConfig({ adminConfigDto }: {
+    adminConfigDto: AdminConfigDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AdminConfigDto;
+    }>("/admin/config", oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: adminConfigDto
+    })));
+}
+/**
+ * Get the system configuration defaults
+ */
+export function getAdminConfigDefaults(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AdminConfigDto;
+    }>("/admin/config/defaults", {
+        ...opts
+    }));
+}
+/**
  * Delete database backup
  */
 export function deleteDatabaseBackup({ databaseBackupDeleteDto }: {
@@ -3702,8 +4047,8 @@ export function getNotificationTemplateAdmin({ name, templateDto }: {
 /**
  * Send test email
  */
-export function sendTestEmailAdmin({ systemConfigSmtpDto }: {
-    systemConfigSmtpDto: SystemConfigSmtpDto;
+export function sendTestEmailAdmin({ adminConfigSmtpDto }: {
+    adminConfigSmtpDto: AdminConfigSmtpDto;
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
@@ -3711,7 +4056,7 @@ export function sendTestEmailAdmin({ systemConfigSmtpDto }: {
     }>("/admin/notifications/test-email", oazapfts.json({
         ...opts,
         method: "POST",
-        body: systemConfigSmtpDto
+        body: adminConfigSmtpDto
     })));
 }
 /**
@@ -4166,6 +4511,80 @@ export function updateApiKey({ id, apiKeyUpdateDto }: {
     })));
 }
 /**
+ * Rotate an API key
+ */
+export function rotateApiKey({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 201;
+        data: ApiKeyCreateResponseDto;
+    }>(`/api-keys/${encodeURIComponent(id)}/rotate`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Search asset files
+ */
+export function searchAssetFiles({ assetId, isEdited, isProgressive, isTransparent, $type }: {
+    assetId: string;
+    isEdited?: boolean;
+    isProgressive?: boolean;
+    isTransparent?: boolean;
+    $type?: AssetFileType;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetFileResponseDto[];
+    }>(`/asset-files${QS.query(QS.explode({
+        assetId,
+        isEdited,
+        isProgressive,
+        isTransparent,
+        "type": $type
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Delete an asset file
+ */
+export function deleteAssetFile({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/asset-files/${encodeURIComponent(id)}`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Retrieve an asset file
+ */
+export function getAssetFile({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetFileResponseDto;
+    }>(`/asset-files/${encodeURIComponent(id)}`, {
+        ...opts
+    }));
+}
+/**
+ * Download an asset file
+ */
+export function downloadAssetFile({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/asset-files/${encodeURIComponent(id)}/download`, {
+        ...opts
+    }));
+}
+/**
  * Delete assets
  */
 export function deleteAssets({ assetBulkDeleteDto }: {
@@ -4464,24 +4883,6 @@ export function downloadAsset({ edited, id, key, slug }: {
     }));
 }
 /**
- * Get video subtitles
- */
-export function getAssetSubtitles({ id, key, slug }: {
-    id: string;
-    key?: string;
-    slug?: string;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchBlob<{
-        status: 200;
-        data: Blob;
-    }>(`/assets/${encodeURIComponent(id)}/subtitles${QS.query(QS.explode({
-        key,
-        slug
-    }))}`, {
-        ...opts
-    }));
-}
-/**
  * View asset thumbnail
  */
 export function viewAsset({ edited, id, key, size, slug }: {
@@ -4499,26 +4900,6 @@ export function viewAsset({ edited, id, key, size, slug }: {
         key,
         size,
         slug
-    }))}`, {
-        ...opts
-    }));
-}
-/**
- * Get a video frame at a timestamp
- */
-export function getVideoFrame({ id, key, slug, timestampMs }: {
-    id: string;
-    key?: string;
-    slug?: string;
-    timestampMs: number;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchBlob<{
-        status: 200;
-        data: Blob;
-    }>(`/assets/${encodeURIComponent(id)}/video/frame${QS.query(QS.explode({
-        key,
-        slug,
-        timestampMs
     }))}`, {
         ...opts
     }));
@@ -4763,6 +5144,125 @@ export function validateAccessToken(opts?: Oazapfts.RequestOpts) {
     }));
 }
 /**
+ * Retrieve cluster group requests
+ */
+export function getClusterGroupRequests(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: ClusterGroupRequestResponseDto[];
+    }>("/cluster-groups/requests", {
+        ...opts
+    }));
+}
+/**
+ * Decline a cluster group request
+ */
+export function deleteClusterGroupRequest({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/cluster-groups/requests/${encodeURIComponent(id)}`, {
+        ...opts,
+        method: "DELETE"
+    }));
+}
+/**
+ * Accept a cluster group request
+ */
+export function acceptClusterGroupRequest({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/cluster-groups/requests/${encodeURIComponent(id)}/accept`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Leave a cluster group
+ */
+export function leaveClusterGroup({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/cluster-groups/${encodeURIComponent(id)}/leave`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Regenerate people of users in cluster group
+ */
+export function clusterGroupRegeneratePeople({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/cluster-groups/${encodeURIComponent(id)}/regenerate-people`, {
+        ...opts,
+        method: "POST"
+    }));
+}
+/**
+ * Retrieve the requests sent by a cluster group
+ */
+export function getClusterGroupRequestsForGroup({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: ClusterGroupRequestResponseDto[];
+    }>(`/cluster-groups/${encodeURIComponent(id)}/requests`, {
+        ...opts
+    }));
+}
+/**
+ * Create a cluster group request
+ */
+export function createClusterGroupRequest({ id, clusterGroupRequestCreateDto }: {
+    id: string;
+    clusterGroupRequestCreateDto: ClusterGroupRequestCreateDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: ClusterGroupRequestResponseDto;
+    }>(`/cluster-groups/${encodeURIComponent(id)}/requests`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: clusterGroupRequestCreateDto
+    })));
+}
+/**
+ * Retrieve the users of a cluster group
+ */
+export function getClusterGroupUsers({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: UserResponseDto[];
+    }>(`/cluster-groups/${encodeURIComponent(id)}/users`, {
+        ...opts
+    }));
+}
+/**
+ * Get the configuration with user visibility
+ */
+export function getUserConfig(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: UserConfigDto;
+    }>("/config", {
+        ...opts
+    }));
+}
+/**
+ * Get the default configuration with user visibility
+ */
+export function getUserConfigDefaults(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: UserConfigDto;
+    }>("/config/defaults", {
+        ...opts
+    }));
+}
+/**
  * Download asset archive
  */
 export function downloadArchive({ key, slug, downloadArchiveDto }: {
@@ -4906,17 +5406,6 @@ export function reassignFacesById({ id, faceDto }: {
         method: "PUT",
         body: faceDto
     })));
-}
-/**
- * Unassign a face
- */
-export function unassignFace({ id }: {
-    id: string;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchText(`/faces/${encodeURIComponent(id)}/unassign`, {
-        ...opts,
-        method: "PUT"
-    }));
 }
 /**
  * Retrieve queue counts and status
@@ -5108,11 +5597,14 @@ export function reverseGeocode({ lat, lon }: {
 /**
  * Retrieve memories
  */
-export function searchMemories({ $for, isSaved, isTrashed, order, size, $type }: {
+export function searchMemories({ $for, id, isSaved, isTrashed, isUpcoming, order, page, size, $type }: {
     $for?: string;
+    id?: string;
     isSaved?: boolean;
     isTrashed?: boolean;
+    isUpcoming?: boolean;
     order?: MemorySearchOrder;
+    page?: number;
     size?: number;
     $type?: MemoryType;
 }, opts?: Oazapfts.RequestOpts) {
@@ -5121,9 +5613,12 @@ export function searchMemories({ $for, isSaved, isTrashed, order, size, $type }:
         data: MemoryResponseDto[];
     }>(`/memories${QS.query(QS.explode({
         "for": $for,
+        id,
         isSaved,
         isTrashed,
+        isUpcoming,
         order,
+        page,
         size,
         "type": $type
     }))}`, {
@@ -5148,11 +5643,14 @@ export function createMemory({ memoryCreateDto }: {
 /**
  * Retrieve memories statistics
  */
-export function memoriesStatistics({ $for, isSaved, isTrashed, order, size, $type }: {
+export function memoriesStatistics({ $for, id, isSaved, isTrashed, isUpcoming, order, page, size, $type }: {
     $for?: string;
+    id?: string;
     isSaved?: boolean;
     isTrashed?: boolean;
+    isUpcoming?: boolean;
     order?: MemorySearchOrder;
+    page?: number;
     size?: number;
     $type?: MemoryType;
 }, opts?: Oazapfts.RequestOpts) {
@@ -5161,9 +5659,12 @@ export function memoriesStatistics({ $for, isSaved, isTrashed, order, size, $typ
         data: MemoryStatisticsResponseDto;
     }>(`/memories/statistics${QS.query(QS.explode({
         "for": $for,
+        id,
         isSaved,
         isTrashed,
+        isUpcoming,
         order,
+        page,
         size,
         "type": $type
     }))}`, {
@@ -5541,6 +6042,21 @@ export function updatePeople({ peopleUpdateDto }: {
     })));
 }
 /**
+ * Merge people
+ */
+export function mergePeople({ mergePersonDto }: {
+    mergePersonDto: MergePersonDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: BulkIdResponseDto[];
+    }>("/people/merge", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: mergePersonDto
+    })));
+}
+/**
  * Delete person
  */
 export function deletePerson({ id }: {
@@ -5583,7 +6099,7 @@ export function updatePerson({ id, personUpdateDto }: {
 /**
  * Merge people
  */
-export function mergePerson({ id, mergePersonDto }: {
+export function mergePersonLegacy({ id, mergePersonDto }: {
     id: string;
     mergePersonDto: MergePersonDto;
 }, opts?: Oazapfts.RequestOpts) {
@@ -5635,32 +6151,6 @@ export function getPersonThumbnail({ id }: {
         status: 200;
         data: Blob;
     }>(`/people/${encodeURIComponent(id)}/thumbnail`, {
-        ...opts
-    }));
-}
-/**
- * Unassign a person from an asset
- */
-export function unassignPersonFromAsset({ id, personUnassignFromAssetDto }: {
-    id: string;
-    personUnassignFromAssetDto: PersonUnassignFromAssetDto;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchText(`/people/${encodeURIComponent(id)}/unassign-from-asset`, oazapfts.json({
-        ...opts,
-        method: "PUT",
-        body: personUnassignFromAssetDto
-    })));
-}
-/**
- * Get video occurrences for a person
- */
-export function getPersonVideoOccurrences({ id }: {
-    id: string;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchJson<{
-        status: 200;
-        data: PersonVideoOccurrenceResponseDto[];
-    }>(`/people/${encodeURIComponent(id)}/video-occurrences`, {
         ...opts
     }));
 }
@@ -5745,6 +6235,28 @@ export function getPlugin({ id }: {
     }));
 }
 /**
+ * Get the public configuration
+ */
+export function getPublicConfig(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PublicConfigDto;
+    }>("/public/config", {
+        ...opts
+    }));
+}
+/**
+ * Get the public configuration defaults
+ */
+export function getPublicConfigDefaults(opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PublicConfigDto;
+    }>("/public/config/defaults", {
+        ...opts
+    }));
+}
+/**
  * List all queues
  */
 export function getQueues(opts?: Oazapfts.RequestOpts) {
@@ -5812,21 +6324,6 @@ export function getQueueJobs({ name, status }: {
     }))}`, {
         ...opts
     }));
-}
-/**
- * Browse assets
- */
-export function browseAssets({ browseSearchDto }: {
-    browseSearchDto: BrowseSearchDto;
-}, opts?: Oazapfts.RequestOpts) {
-    return oazapfts.ok(oazapfts.fetchJson<{
-        status: 200;
-        data: SearchResponseDto;
-    }>("/search/browse", oazapfts.json({
-        ...opts,
-        method: "POST",
-        body: browseSearchDto
-    })));
 }
 /**
  * Retrieve assets by city
@@ -6569,7 +7066,7 @@ export function getSyncStream({ syncStreamDto }: {
 export function getConfig(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: SystemConfigDto;
+        data: AdminConfigDto;
     }>("/system-config", {
         ...opts
     }));
@@ -6577,16 +7074,16 @@ export function getConfig(opts?: Oazapfts.RequestOpts) {
 /**
  * Update system configuration
  */
-export function updateConfig({ systemConfigDto }: {
-    systemConfigDto: SystemConfigDto;
+export function updateConfig({ adminConfigDto }: {
+    adminConfigDto: AdminConfigDto;
 }, opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: SystemConfigDto;
+        data: AdminConfigDto;
     }>("/system-config", oazapfts.json({
         ...opts,
         method: "PUT",
-        body: systemConfigDto
+        body: adminConfigDto
     })));
 }
 /**
@@ -6595,7 +7092,7 @@ export function updateConfig({ systemConfigDto }: {
 export function getConfigDefaults(opts?: Oazapfts.RequestOpts) {
     return oazapfts.ok(oazapfts.fetchJson<{
         status: 200;
-        data: SystemConfigDto;
+        data: AdminConfigDto;
     }>("/system-config/defaults", {
         ...opts
     }));
@@ -7142,10 +7639,11 @@ export function getUniqueOriginalPaths(opts?: Oazapfts.RequestOpts) {
 /**
  * List all workflows
  */
-export function searchWorkflows({ description, enabled, id, name, trigger }: {
+export function searchWorkflows({ description, enabled, id, logging, name, trigger }: {
     description?: string;
     enabled?: boolean;
     id?: string;
+    logging?: boolean;
     name?: string;
     trigger?: WorkflowTrigger;
 }, opts?: Oazapfts.RequestOpts) {
@@ -7156,6 +7654,7 @@ export function searchWorkflows({ description, enabled, id, name, trigger }: {
         description,
         enabled,
         id,
+        logging,
         name,
         trigger
     }))}`, {
@@ -7229,6 +7728,26 @@ export function updateWorkflow({ id, workflowUpdateDto }: {
     })));
 }
 /**
+ * Retrieve workflow logs
+ */
+export function getWorkflowLogs({ before, id, limit, result }: {
+    before?: string;
+    id: string;
+    limit?: number;
+    result?: WorkflowResult;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: WorkflowLogEntryDto[];
+    }>(`/workflows/${encodeURIComponent(id)}/logs${QS.query(QS.explode({
+        before,
+        limit,
+        result
+    }))}`, {
+        ...opts
+    }));
+}
+/**
  * Retrieve a workflow
  */
 export function getWorkflowForShare({ id }: {
@@ -7261,6 +7780,80 @@ export enum UserAvatarColor {
     Gray = "gray",
     Amber = "amber"
 }
+export enum TranscodeHWAccel {
+    Nvenc = "nvenc",
+    Qsv = "qsv",
+    Vaapi = "vaapi",
+    Rkmpp = "rkmpp",
+    Disabled = "disabled"
+}
+export enum AudioCodec {
+    Mp3 = "mp3",
+    Aac = "aac",
+    Opus = "opus",
+    PcmS16Le = "pcm_s16le"
+}
+export enum VideoContainer {
+    Mov = "mov",
+    Mp4 = "mp4",
+    Ogg = "ogg",
+    Webm = "webm"
+}
+export enum VideoCodec {
+    H264 = "h264",
+    Hevc = "hevc",
+    Vp9 = "vp9",
+    Av1 = "av1"
+}
+export enum CQMode {
+    Auto = "auto",
+    Cqp = "cqp",
+    Icq = "icq"
+}
+export enum HlsVideoResolution {
+    $480 = 480,
+    $720 = 720,
+    $1080 = 1080,
+    $1440 = 1440,
+    $2160 = 2160
+}
+export enum ToneMapping {
+    Hable = "hable",
+    Mobius = "mobius",
+    Reinhard = "reinhard",
+    Disabled = "disabled"
+}
+export enum TranscodePolicy {
+    All = "all",
+    Optimal = "optimal",
+    Bitrate = "bitrate",
+    Required = "required",
+    Disabled = "disabled"
+}
+export enum Colorspace {
+    Srgb = "srgb",
+    P3 = "p3"
+}
+export enum ImageFormat {
+    Jpeg = "jpeg",
+    Webp = "webp"
+}
+export enum LogLevel {
+    Verbose = "verbose",
+    Debug = "debug",
+    Log = "log",
+    Warn = "warn",
+    Error = "error",
+    Fatal = "fatal"
+}
+export enum ReleaseChannel {
+    Stable = "stable",
+    ReleaseCandidate = "releaseCandidate"
+}
+export enum OAuthTokenEndpointAuthMethod {
+    ClientSecretPost = "client_secret_post",
+    ClientSecretBasic = "client_secret_basic"
+}
 export enum IntegrityReport {
     UntrackedFile = "untracked_file",
     MissingFile = "missing_file",
@@ -7292,6 +7885,7 @@ export enum NotificationType {
     SystemMessage = "SystemMessage",
     AlbumInvite = "AlbumInvite",
     AlbumUpdate = "AlbumUpdate",
+    ClusterGroupRequest = "ClusterGroupRequest",
     Custom = "Custom"
 }
 export enum UserStatus {
@@ -7336,6 +7930,7 @@ export enum Permission {
     ApiKeyRead = "apiKey.read",
     ApiKeyUpdate = "apiKey.update",
     ApiKeyDelete = "apiKey.delete",
+    ApiKeyRotate = "apiKey.rotate",
     AssetRead = "asset.read",
     AssetUpdate = "asset.update",
     AssetDelete = "asset.delete",
@@ -7346,6 +7941,9 @@ export enum Permission {
     AssetUpload = "asset.upload",
     AssetCopy = "asset.copy",
     AssetDerive = "asset.derive",
+    AssetFileRead = "assetFile.read",
+    AssetFileDelete = "assetFile.delete",
+    AssetFileDownload = "assetFile.download",
     AssetEditGet = "asset.edit.get",
     AssetEditCreate = "asset.edit.create",
     AssetEditDelete = "asset.edit.delete",
@@ -7368,6 +7966,14 @@ export enum Permission {
     BackupDownload = "backup.download",
     BackupUpload = "backup.upload",
     BackupDelete = "backup.delete",
+    ClusterGroupRead = "clusterGroup.read",
+    ClusterGroupLeave = "clusterGroup.leave",
+    ClusterGroupRequestCreate = "clusterGroupRequest.create",
+    ClusterGroupRequestRead = "clusterGroupRequest.read",
+    ClusterGroupRequestDelete = "clusterGroupRequest.delete",
+    AdminConfigRead = "adminConfig.read",
+    AdminConfigUpdate = "adminConfig.update",
+    UserConfigRead = "userConfig.read",
     DuplicateRead = "duplicate.read",
     DuplicateDelete = "duplicate.delete",
     FaceCreate = "face.create",
@@ -7475,12 +8081,20 @@ export enum Permission {
     WorkflowRead = "workflow.read",
     WorkflowUpdate = "workflow.update",
     WorkflowDelete = "workflow.delete",
+    WorkflowLogs = "workflow.logs",
     AdminUserCreate = "adminUser.create",
     AdminUserRead = "adminUser.read",
     AdminUserUpdate = "adminUser.update",
     AdminUserDelete = "adminUser.delete",
     AdminSessionRead = "adminSession.read",
     AdminAuthUnlinkAll = "adminAuth.unlinkAll"
+}
+export enum AssetFileType {
+    Fullsize = "fullsize",
+    Preview = "preview",
+    Thumbnail = "thumbnail",
+    Sidecar = "sidecar",
+    EncodedVideo = "encoded_video"
 }
 export enum AssetMediaStatus {
     Created = "created",
@@ -7498,9 +8112,7 @@ export enum AssetJobName {
     RefreshFaces = "refresh-faces",
     RefreshMetadata = "refresh-metadata",
     RegenerateThumbnail = "regenerate-thumbnail",
-    TranscodeVideo = "transcode-video",
-    ScanVideoFaces = "scan-video-faces",
-    GenerateSubtitles = "generate-subtitles"
+    TranscodeVideo = "transcode-video"
 }
 export enum AssetTypeEnum {
     Image = "IMAGE",
@@ -7550,7 +8162,6 @@ export enum QueueName {
     MetadataExtraction = "metadataExtraction",
     VideoConversion = "videoConversion",
     FaceDetection = "faceDetection",
-    VideoFaceDetection = "videoFaceDetection",
     FacialRecognition = "facialRecognition",
     SmartSearch = "smartSearch",
     DuplicateDetection = "duplicateDetection",
@@ -7563,7 +8174,6 @@ export enum QueueName {
     Notifications = "notifications",
     BackupDatabase = "backupDatabase",
     Ocr = "ocr",
-    Subtitles = "subtitles",
     Workflow = "workflow",
     IntegrityCheck = "integrityCheck",
     Editor = "editor"
@@ -7592,7 +8202,8 @@ export enum WorkflowType {
 }
 export enum WorkflowTrigger {
     AssetCreate = "AssetCreate",
-    AssetMetadataExtraction = "AssetMetadataExtraction"
+    AssetMetadataExtraction = "AssetMetadataExtraction",
+    AssetTagged = "AssetTagged"
 }
 export enum QueueJobStatus {
     Active = "active",
@@ -7607,9 +8218,6 @@ export enum JobName {
     AssetDeleteCheck = "AssetDeleteCheck",
     AssetDetectFacesQueueAll = "AssetDetectFacesQueueAll",
     AssetDetectFaces = "AssetDetectFaces",
-    AssetVideoDetectFacesQueueAll = "AssetVideoDetectFacesQueueAll",
-    AssetVideoDetectFaces = "AssetVideoDetectFaces",
-    AssetVideoClusterFaces = "AssetVideoClusterFaces",
     AssetDetectDuplicatesQueueAll = "AssetDetectDuplicatesQueueAll",
     AssetDetectDuplicates = "AssetDetectDuplicates",
     AssetEditThumbnailGeneration = "AssetEditThumbnailGeneration",
@@ -7661,8 +8269,6 @@ export enum JobName {
     VersionCheck = "VersionCheck",
     OcrQueueAll = "OcrQueueAll",
     Ocr = "Ocr",
-    AssetGenerateSubtitlesQueueAll = "AssetGenerateSubtitlesQueueAll",
-    AssetGenerateSubtitles = "AssetGenerateSubtitles",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",
@@ -7679,10 +8285,7 @@ export enum SearchOrderField {
     FileCreatedAt = "fileCreatedAt",
     LocalDateTime = "localDateTime",
     FileSizeInBytes = "fileSizeInBytes",
-    Rating = "rating",
-    Resolution = "resolution",
-    Duration = "duration",
-    OriginalFileName = "originalFileName"
+    Rating = "rating"
 }
 export enum SearchSuggestionType {
     Country = "country",
@@ -7791,92 +8394,14 @@ export enum SyncRequestType {
     AssetFacesV2 = "AssetFacesV2",
     UserMetadataV1 = "UserMetadataV1"
 }
-export enum TranscodeHWAccel {
-    Nvenc = "nvenc",
-    Qsv = "qsv",
-    Vaapi = "vaapi",
-    Rkmpp = "rkmpp",
-    Disabled = "disabled"
-}
-export enum AudioCodec {
-    Mp3 = "mp3",
-    Aac = "aac",
-    Opus = "opus",
-    PcmS16Le = "pcm_s16le"
-}
-export enum VideoContainer {
-    Mov = "mov",
-    Mp4 = "mp4",
-    Ogg = "ogg",
-    Webm = "webm"
-}
-export enum VideoCodec {
-    H264 = "h264",
-    Hevc = "hevc",
-    Vp9 = "vp9",
-    Av1 = "av1"
-}
-export enum CQMode {
-    Auto = "auto",
-    Cqp = "cqp",
-    Icq = "icq"
-}
-export enum HlsVideoResolution {
-    $480 = 480,
-    $720 = 720,
-    $1080 = 1080,
-    $1440 = 1440,
-    $2160 = 2160
-}
-export enum ToneMapping {
-    Hable = "hable",
-    Mobius = "mobius",
-    Reinhard = "reinhard",
-    Disabled = "disabled"
-}
-export enum TranscodePolicy {
-    All = "all",
-    Optimal = "optimal",
-    Bitrate = "bitrate",
-    Required = "required",
-    Disabled = "disabled"
-}
-export enum Colorspace {
-    Srgb = "srgb",
-    P3 = "p3"
-}
-export enum ImageFormat {
-    Jpeg = "jpeg",
-    Webp = "webp"
-}
-export enum LogLevel {
-    Verbose = "verbose",
-    Debug = "debug",
-    Log = "log",
-    Warn = "warn",
-    Error = "error",
-    Fatal = "fatal"
-}
-export enum VideoFaceSamplingMethod {
-    FrameCount = "frameCount",
-    Interval = "interval"
-}
-export enum VideoFaceScanMode {
-    ThumbnailOnly = "thumbnailOnly",
-    Disabled = "disabled",
-    FullScan = "fullScan"
-}
-export enum ReleaseChannel {
-    Stable = "stable",
-    ReleaseCandidate = "releaseCandidate"
-}
-export enum OAuthTokenEndpointAuthMethod {
-    ClientSecretPost = "client_secret_post",
-    ClientSecretBasic = "client_secret_basic"
-}
 export enum AssetOrderBy {
     TakenAt = "takenAt",
     CreatedAt = "createdAt"
+}
+export enum WorkflowResult {
+    Completed = "completed",
+    Halted = "halted",
+    Error = "error"
 }
 export enum ReleaseType {
     Major = "major",
