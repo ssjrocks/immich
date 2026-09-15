@@ -1927,7 +1927,7 @@ describe(PersonService.name, () => {
           appearances: [{ startMs: 2000, endMs: 2000, detections: 1 }],
         },
       ]);
-      expect(mocks.person.getVideoOccurrences).toHaveBeenCalledWith('person-1');
+      expect(mocks.person.getVideoOccurrences).toHaveBeenCalledWith('person-1', auth.user.id);
     });
 
     it('should split detections separated by more than the appearance gap', async () => {
