@@ -1,3 +1,4 @@
+import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Insertable, Selectable, Updateable } from 'kysely';
 import _ from 'lodash';
@@ -163,10 +164,10 @@ export class PersonService extends BaseService {
   // run for reclustering, same as any newly detected face.
   async unassignFace(auth: AuthDto, id: string): Promise<void> {
     await this.requireAccess({ auth, permission: Permission.FaceDelete, ids: [id] });
-    const face = await this.personRepository.getFaceById(id);
+    const face = await this.personRepository.getFaceById(id, { viewingUserId: auth.user.id });
     await this.personRepository.reassignFace(id, null);
     if (face.person && face.person.faceAssetId === face.id) {
-      await this.createNewFeaturePhoto([face.person.id]);
+      await this.createNewFeaturePhoto([face.person]);
     }
   }
 
@@ -175,17 +176,21 @@ export class PersonService extends BaseService {
   // person across dozens of appearances -- detaching them individually isn't practical.
   // Faces are unassigned rather than deleted, matching unassignFace: if they really are
   // someone else, recognition gets to re-cluster them instead of the detections being lost.
-  async unassignPersonFromAsset(auth: AuthDto, personId: string, dto: PersonUnassignFromAssetDto): Promise<void> {
-    await this.requireAccess({ auth, permission: Permission.PersonUpdate, ids: [personId] });
+  async unassignPersonFromAsset(
+    auth: AuthDto,
+    personGroupId: string,
+    dto: PersonUnassignFromAssetDto,
+  ): Promise<void> {
+    await this.requireAccess({ auth, permission: Permission.PersonUpdate, ids: [personGroupId] });
     await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [dto.assetId] });
 
-    const person = await this.findOrFail(personId);
-    const unassignedFaceIds = await this.personRepository.unassignPersonFromAsset(personId, dto.assetId);
+    const person = await this.findOrFail(auth, personGroupId);
+    const unassignedFaceIds = await this.personRepository.unassignPersonFromAsset(personGroupId, dto.assetId);
 
     // The person's feature photo may have been one of the faces we just detached, which
     // would otherwise leave them showing a thumbnail they're no longer tagged in.
     if (person.faceAssetId && unassignedFaceIds.includes(person.faceAssetId)) {
-      await this.createNewFeaturePhoto([personId]);
+      await this.createNewFeaturePhoto([person]);
     }
   }
 
@@ -229,7 +234,7 @@ export class PersonService extends BaseService {
   async getVideoOccurrences(auth: AuthDto, id: string): Promise<PersonVideoOccurrenceResponseDto[]> {
     await this.requireAccess({ auth, permission: Permission.PersonRead, ids: [id] });
     const [rows, { machineLearning }, metadata] = await Promise.all([
-      this.personRepository.getVideoOccurrences(id),
+      this.personRepository.getVideoOccurrences(id, auth.user.id),
       this.getConfig({ withCache: true }),
       this.userRepository.getMetadata(auth.user.id),
     ]);
@@ -684,10 +689,9 @@ export class PersonService extends BaseService {
     if (faceIdsToRemove.length > 0) {
       // A removed face may be the representative photo (faceAssetId) for its person -- unlike a
       // plain duplicate, deleting that one leaves the person with no thumbnail source at all
-      // (the FK sets faceAssetId to null on delete, and nothing else would ever repair it).
-      const changeFeaturePhoto = ranked
-        .filter((face) => faceIdsToRemove.includes(face.id) && face.person?.faceAssetId === face.id)
-        .map((face) => face.person!.id);
+      // (the FK sets faceAssetId to null on delete, and nothing else would ever repair it). Looked
+      // up before deleting, for that same reason.
+      const changeFeaturePhoto = await this.personRepository.getByFaceAssetIds(faceIdsToRemove);
 
       await this.personRepository.refreshFaces([], faceIdsToRemove, []);
       this.logger.log(
@@ -695,7 +699,7 @@ export class PersonService extends BaseService {
       );
 
       if (changeFeaturePhoto.length > 0) {
-        await this.createNewFeaturePhoto([...new Set(changeFeaturePhoto)]);
+        await this.createNewFeaturePhoto(changeFeaturePhoto);
       }
     }
 

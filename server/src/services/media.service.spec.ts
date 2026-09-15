@@ -1665,7 +1665,9 @@ describe(MediaService.name, () => {
       const info = { width: 1000, height: 1000 } as OutputInfo;
       mocks.media.decodeImage.mockResolvedValue({ data, info });
 
-      await expect(sut.handleGeneratePersonThumbnail({ id: person.id })).resolves.toBe(JobStatus.Success);
+      await expect(
+        sut.handleGeneratePersonThumbnail({ ownerId: person.ownerId, personGroupId: person.personGroupId }),
+      ).resolves.toBe(JobStatus.Success);
 
       expect(mocks.media.extractVideoFrameAt).toHaveBeenCalledWith(
         personThumbnailStub.videoThumbnailMidVideo.originalPath,

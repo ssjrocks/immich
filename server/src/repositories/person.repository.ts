@@ -165,11 +165,11 @@ export class PersonRepository {
   // them one at a time is impractical. Returns the affected face ids so the caller can
   // tell whether the person's feature photo needs regenerating.
   @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
-  async unassignPersonFromAsset(personId: string, assetId: string): Promise<string[]> {
+  async unassignPersonFromAsset(personGroupId: string, assetId: string): Promise<string[]> {
     const faces = await this.db
       .updateTable('asset_face')
-      .set({ personId: null })
-      .where('asset_face.personId', '=', personId)
+      .set({ personGroupId: null })
+      .where('asset_face.personGroupId', '=', personGroupId)
       .where('asset_face.assetId', '=', assetId)
       .where('asset_face.deletedAt', 'is', null)
       .returning('asset_face.id')
@@ -266,7 +266,6 @@ export class PersonRepository {
         'asset_face.boundingBoxY2',
         'asset_face.timestampMs',
         'face_search.embedding',
-        withPerson,
       ])
       .where('asset_face.assetId', '=', assetId)
       .$if(!options.includeUntimedFace, (qb) => qb.where('asset_face.timestampMs', 'is not', null))
@@ -275,11 +274,17 @@ export class PersonRepository {
       .execute();
   }
 
-  @GenerateSql({ params: [DummyValue.UUID] })
-  getVideoOccurrences(personId: string) {
+  // A person group can be shared across a cluster group's users, so only list videos this user can see --
+  // the same rule getStatistics uses: their own assets, or ones in albums shared with them.
+  @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID] })
+  getVideoOccurrences(personGroupId: string, userId: string) {
     return this.db
       .selectFrom('asset_face')
-      .innerJoin('asset', 'asset.id', 'asset_face.assetId')
+      .innerJoin('asset', (join) =>
+        join
+          .onRef('asset.id', '=', 'asset_face.assetId')
+          .on((eb) => eb.or([eb('asset.ownerId', '=', asUuid(userId)), inSharedAlbum(eb, userId)])),
+      )
       .select([
         'asset_face.assetId',
         'asset.originalFileName',
@@ -289,11 +294,25 @@ export class PersonRepository {
             'timestampsMs',
           ),
       ])
-      .where('asset_face.personId', '=', personId)
+      .where('asset_face.personGroupId', '=', personGroupId)
       .where('asset_face.timestampMs', 'is not', null)
       .where('asset_face.deletedAt', 'is', null)
       .groupBy(['asset_face.assetId', 'asset.originalFileName', 'asset.duration'])
       .orderBy((eb) => eb.fn.min('asset_face.timestampMs'), 'asc')
+      .execute();
+  }
+
+  // Every person (of any owner) whose feature photo is one of these faces. In a cluster group several users'
+  // copies of a person can share a representative face, so each of them needs repairing when it goes away.
+  @GenerateSql({ params: [[DummyValue.UUID]] })
+  getByFaceAssetIds(faceAssetIds: string[]) {
+    if (faceAssetIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.db
+      .selectFrom('person')
+      .select(['person.ownerId', 'person.personGroupId'])
+      .where('person.faceAssetId', 'in', faceAssetIds)
       .execute();
   }
 

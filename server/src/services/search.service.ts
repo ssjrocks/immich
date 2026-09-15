@@ -124,7 +124,6 @@ export class SearchService extends BaseService {
     const { hasNextPage, items } = await this.searchRepository.browseAssets(
       { page, size },
       {
-        userIds,
         withExif: dto.withExif,
         order: dto.order,
         filter: {
@@ -135,9 +134,10 @@ export class SearchService extends BaseService {
           type: dto.type ? { eq: dto.type } : { in: [AssetType.Image, AssetType.Video] },
         },
       },
+      { userIds, lockedOwnerId: auth.user.id, viewingUserId: auth.user.id },
     );
 
-    return this.mapResponse(items, hasNextPage ? (page + 1).toString() : null, { auth });
+    return this.mapResponse(items, { auth }, { nextPage: hasNextPage ? (page + 1).toString() : null });
   }
 
   async searchStatistics(auth: AuthDto, dto: StatisticsSearchDto): Promise<SearchStatisticsResponseDto> {
