@@ -36,11 +36,17 @@ Face detection sends the generated preview image to the machine learning service
 
 ### Video face detection
 
-For video assets, Immich goes a step further: after first-frame face detection it samples frames throughout the full video at a configurable frame rate (default: 0.5 fps, i.e. one frame every 2 seconds, capped at 50 frames per video). Each detected face is stored with a `timestampMs` value recording where in the video it appeared.
+When **Video face scanning** is set to _Scan entire video for faces_, Immich goes a step further for video assets: it samples frames throughout the full video, either a fixed number spread evenly across it or one frame every few seconds, and runs face detection on each. Every detected face is stored with a `timestampMs` value recording where in the video it appeared.
 
-Because many of these frames will show the same person from slightly different angles, a deduplication step runs before facial recognition. Faces from the same video are clustered by embedding similarity (cosine distance); only the highest-quality representative from each cluster — chosen by largest normalised bounding-box area, a reliable proxy for face frontality — is kept. The duplicates are discarded, and only the survivors are forwarded to the facial recognition pipeline.
+Many of these frames show the same person from slightly different angles, so a video's detections are then grouped into the people they show, and every detection is kept. Detections a few seconds apart are linked when they're within the _Maximum recognition distance_ of each other, so a group follows one person through gradual changes of angle and expression; groups are merged when their clearest faces match, which rejoins someone who reappears after a cut. The video's first-frame face is included, so a person it was already recognised as carries over.
 
-This means that a person who appears throughout a long video contributes exactly one face record to the recognition stage, rather than dozens of near-identical records that could skew clustering results. You can trigger video face detection manually from Administration → Jobs, or via **Administration → Create Job → Video face detection**.
+Each group is recognised once. It joins the person already on one of its faces, otherwise the closest matching person elsewhere in the library, otherwise it becomes one new person, but only when the group has at least _Minimum recognized faces_ detections, the same rule facial recognition uses for photos. Video grouping waits for queued facial recognition to finish first, so a video joins the people found in your photos rather than creating duplicates of them.
+
+You can scan videos from **Administration → Job Queues → Video face detection**, or scan a single video with **Scan video for faces** next to its People section.
+
+:::note Upgrading from an older build of this fork
+Builds from before 2026-09-15 deleted near-duplicate video faces instead of grouping them, which could split one person into dozens of one-face people that don't appear on the People page. Run **Video face detection → All** once to regroup existing videos.
+:::
 
 ## How Facial Recognition Works
 
@@ -101,12 +107,29 @@ The core point threshold described in How Facial Recognition Works. This setting
 
 Increasing this setting is a good idea if you increase the recognition distance or reduce the minimum detection score. Setting it to 1 effectively disables the concept of core points, but can be an option if you prefer a more hands-on approach.
 
-### Video face detection frame rate
+### Video face scanning
 
-How many frames per second are sampled when scanning a video for faces. The default is 0.5 (one frame every 2 seconds). Raising this value increases the chance of catching every appearance of a person, at the cost of processing time and storage for intermediate face records — set it to 1 for one frame every second, or higher for very thorough scans. The allowed range is 0.1–60 fps.
+How videos are treated by facial recognition (`machineLearning.facialRecognition.video.scanMode`). Photos are unaffected either way.
 
-After changing this setting you can re-run **Video Face Detection** from the Jobs page (or via the manual job trigger) to reprocess existing videos.
+- **Classic (video thumbnail default)** (`thumbnailOnly`, the default): only the video's first-frame thumbnail is scanned, as in stock Immich.
+- **Scan entire video for faces** (`fullScan`): frames are sampled throughout the video, as described in [Video face detection](#video-face-detection).
+- **Off (no video face scanning)** (`disabled`): videos are skipped by facial recognition.
+
+Scanning whole videos writes sampled frames to temporary disk storage while each video is processed; they're freed once it finishes.
+
+### Scan type
+
+How frames are sampled when scanning whole videos (`samplingMethod`):
+
+- **Frame count** (`frameCount`, the default): a fixed number of frames, spread evenly across the video. The number is **Video face detection max frames**.
+- **Interval** (`interval`): one frame every **Seconds between frame capture per video** (`intervalSeconds`, default 2, down to 0.1). Smaller values catch briefer appearances but produce more frames.
 
 ### Video face detection max frames
 
-The maximum number of frames sampled per video, regardless of video length or the configured frame rate. The default is 50. Raise this for long videos scanned at a high frame rate so the scan isn't cut short. The allowed range is 1–10000 frames.
+`maxFrames`, default 50, up to 10000. In _Frame count_ mode it is the number of frames captured; in _Interval_ mode it is a safety cap, so one long video can't produce an unbounded number of frames (for example, one frame per second covers a video up to 2h47m at the maximum).
+
+After changing the scan settings, run **Video face detection → All** on the Job Queues page to rescan existing videos.
+
+### Seconds between separate appearances
+
+`appearanceGapSeconds`, default 5, 0–900. How long a person must go undetected in a video before their next detection is listed as a separate appearance. Someone on screen continuously is detected in every sampled frame; without grouping, each of those would be listed separately. This only changes how appearances are displayed: every detection is still stored, so changing it takes effect immediately without a rescan, and 0 lists every detection individually. Each user can override it under **Account Settings → Features → People**.

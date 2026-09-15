@@ -131,8 +131,11 @@ Editable settings:
 - **Min Detection Score**
 - **Max Recognition Distance**
 - **Min Recognized Faces**
-- **Video face detection frame rate** — frames per second sampled when scanning a video for faces (0.1–60, default 0.5)
-- **Video face detection max frames** — maximum frames sampled per video regardless of length (1–10000, default 50)
+- **Video face scanning** — Classic (first-frame thumbnail only, the default), Scan entire video for faces, or Off
+- **Scan type** — Frame count (a fixed number of frames spread across the video) or Interval (one frame every N seconds)
+- **Video face detection max frames** — frames captured per video in Frame count mode, or a safety cap in Interval mode (1–10000, default 50)
+- **Seconds between frame capture per video** — Interval mode only (from 0.1, default 2)
+- **Seconds between separate appearances** — how appearances are grouped for display (0–900, default 5)
 
 You can learn more about these options on the [Facial Recognition page](/features/facial-recognition#how-face-detection-works)
 
@@ -141,7 +144,18 @@ When changing the values in Min Detection Score, Max Recognition Distance, and M
 You will have to restart **only** the job FACIAL RECOGNITION - ALL.
 
 If you replace the Facial Recognition Model, you will have to run the job FACE DETECTION - ALL.
+
+After changing the video scanning settings, run VIDEO FACE DETECTION - ALL to rescan existing videos.
 :::
+
+### Video Subtitles
+
+Generate English subtitles for videos, whatever language is spoken, using Whisper. Off by default, because transcribing a library's worth of video is heavy CPU work.
+
+- **Enable subtitle generation** — if disabled, new videos won't be transcribed. Existing subtitles are kept.
+- **Subtitle model** — Whisper Medium (the default) or Whisper Large-v3. Large-v3 is more accurate, especially on harder languages and noisy audio, but roughly 2-3x slower.
+
+To process existing videos, run VIDEO SUBTITLES - MISSING from the Job Queues page. **All** regenerates subtitles for every video.
 
 :::tip identical twins
 If you have twins, you might want to lower the Max Recognition Distance value, decreasing this a **bit** can make it distinguish between them.

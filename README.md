@@ -11,8 +11,13 @@
 # 🍴 This fork
 
 This is a personal fork of [immich-app/immich](https://github.com/immich-app/immich), kept in sync with
-upstream `main`, with two extra capabilities layered on top of a stock install. See
-[FORK_CHANGES.md](FORK_CHANGES.md) for the full technical changelog (schema, config, API).
+upstream (currently **v3.2.1**), with a few extra capabilities layered on top of a stock install:
+
+- [Facial recognition throughout videos](#facial-recognition-throughout-videos)
+- [A Browse page](#browse-page) with one-click filtering and sorting
+- [Video subtitles](#video-subtitles): English subtitles for videos in any spoken language
+
+See [FORK_CHANGES.md](FORK_CHANGES.md) for the full technical changelog (schema, config, API).
 
 ****************************************************************************************************************************************************************************************
 Warning, probably buggy and unstable, changes made with claude code and should not be trusted with any library your not comfortable restoring from scratch if this fork breaks something
@@ -25,8 +30,12 @@ Warning, probably buggy and unstable, changes made with claude code and should n
 Stock Immich only runs face detection on a video's first-frame thumbnail — if someone isn't in that
 exact frame, they're never recognized anywhere in that video. This fork adds a second, **opt-in**
 pass that samples frames throughout the full video at a configurable rate, runs each through
-Immich's existing face-detection model, dedupes repeated detections of the same appearance, and
-surfaces every distinct moment a person shows up.
+Immich's existing face-detection model, groups the video's detections into the people they show,
+and surfaces every distinct moment a person shows up.
+
+Every detection is kept. Faces are linked frame to frame, so one person stays one person as they
+turn their head, and they're rejoined after a cut; each group is then recognised once against the
+rest of your library.
 
 The detection/clustering approach here is adapted closely from
 [Tom Holland](https://github.com/0thomasholland)'s
@@ -55,6 +64,8 @@ caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the 
   a "Merge people" picker, and a dedicated "Wrong person" action that opens a picker of candidate
   people ranked by face-embedding similarity, so you reassign just the one misidentified face
   without merging the two people's other photos and videos together.
+- **"This person is not in this video"**: one click detaches a wrongly recognised person from every
+  face they're tagged in within that video, instead of removing appearances one at a time.
 - **Person page menu**: "Delete person and reset faces" for people that turned into a mess of
   misgrouped faces after repeated scans — unassigns (doesn't delete) their faces so the next
   Facial Recognition run reconsiders them from scratch.
@@ -67,6 +78,10 @@ caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the 
 > **Admin → Job Queues** page with its own **All**/**Missing** buttons — use **All** once to backfill
 > your existing library, or use the per-video "Scan video for faces" button to backfill one file at
 > a time.
+>
+> **Already scanned videos with a build from before 2026-09-15?** Those builds deleted near-duplicate
+> faces, which could split one person into dozens of one-face "people" that never show on the People
+> page. Run **Video face detection → All** once to regroup them.
 
 <p align="center">
   <img src="design/fork/video-face-detection-person-page.gif" width="700" alt="Appears in videos: two-pane master/detail view with per-timestamp frame thumbnails and hover clip preview"><br/>
@@ -93,6 +108,35 @@ caught by [IAfanasov](https://github.com/IAfanasov)'s independent review on the 
   <img src="design/fork/video-face-detection-scan-interval.png" width="500" alt="Interval sampling settings for full video scanning"><br/>
   <sub>Full-scan sampling options: an evenly-spread frame count, or a seconds-between-frames interval.</sub>
 </p>
+
+## Browse page
+
+The timeline always shows your library newest first. **Browse** (in the sidebar, under Photos) is a
+flat grid for everything else:
+
+- **All / Photos / Videos** with one click
+- **Sort by** date taken, file size, resolution, duration or filename, ascending or descending, again
+  with one click
+- Your choices are remembered, and selection and the usual bulk actions work as on the timeline
+
+It shows exactly what the timeline does: nothing archived, locked or in the trash, and partners' photos
+when they're shared into your timeline.
+
+## Video subtitles
+
+Videos can get **English subtitles, whatever language is spoken**, generated in the background by
+[Whisper](https://github.com/SYSTRAN/faster-whisper) like face detection. Speech that's already English is
+simply transcribed.
+
+- **Off by default** — it's heavy CPU work. Turn it on under **Admin → Machine Learning → Video
+  subtitles** and pick a model: **Medium** (faster, the default) or **Large-v3** (roughly 2–3x slower,
+  better on harder languages and noisy audio).
+- Process existing videos from **Admin → Job Queues → Video subtitles** (**Missing** or **All**); new
+  uploads are handled automatically. A single video can be (re)done from its menu → **Generate subtitles**.
+- In the player, a captions button appears once a video has subtitles. Lines are timed from the spoken
+  words, so they end when the speaker stops, and they're split into readable chunks.
+- Only multilingual Whisper models are offered, because the "turbo" variants silently skip the
+  translation and output the original language.
 
 ## AI-generated photo descriptions via Immich Analyze
 

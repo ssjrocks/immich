@@ -517,7 +517,7 @@
     "video_conversion_job": "Transcode videos",
     "video_conversion_job_description": "Transcode videos for wider compatibility with browsers and devices",
     "video_face_detection_job": "Video face detection",
-    "video_face_detection_job_description": "Sample frames throughout each video at the configured frame rate and detect faces in each, deduplicating repeated detections of the same appearance, so people who only appear partway through a video are still found. \"All\" (re-)processes every video, replacing any previously detected video faces. \"Missing\" queues videos that haven't been scanned yet. Detected faces will be queued for Facial Recognition once clustered."
+    "video_face_detection_job_description": "Sample frames throughout each video and detect faces in each, so people who only appear partway through a video are still found. Each video's detections are then grouped into the people they show and recognised. \"All\" (re-)processes every video, replacing any previously detected video faces. \"Missing\" queues videos that haven't been scanned yet."
   },
   "admin_email": "Admin Email",
   "admin_password": "Admin Password",

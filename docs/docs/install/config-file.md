@@ -101,10 +101,16 @@ The default configuration looks like this:
     "smartSearch": {
       "concurrency": 2
     },
+    "subtitles": {
+      "concurrency": 1
+    },
     "thumbnailGeneration": {
       "concurrency": 3
     },
     "videoConversion": {
+      "concurrency": 1
+    },
+    "videoFaceDetection": {
       "concurrency": 1
     }
   },
@@ -142,8 +148,13 @@ The default configuration looks like this:
       "minFaces": 3,
       "minScore": 0.7,
       "modelName": "buffalo_l",
-      "videoFrameRate": 0.5,
-      "videoMaxFrames": 50
+      "video": {
+        "appearanceGapSeconds": 5,
+        "intervalSeconds": 2,
+        "maxFrames": 50,
+        "samplingMethod": "frameCount",
+        "scanMode": "thumbnailOnly"
+      }
     },
     "ocr": {
       "enabled": true,
@@ -151,6 +162,10 @@ The default configuration looks like this:
       "minDetectionScore": 0.5,
       "minRecognitionScore": 0.8,
       "modelName": "PP-OCRv5_mobile"
+    },
+    "subtitles": {
+      "enabled": false,
+      "modelName": "faster-whisper-medium"
     },
     "urls": ["http://immich-machine-learning:3003"]
   },
