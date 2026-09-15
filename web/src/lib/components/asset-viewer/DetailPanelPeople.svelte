@@ -18,7 +18,7 @@
     AssetJobName,
     AssetTypeEnum,
     deleteFace,
-    mergePerson,
+    mergePeople,
     reassignFacesById,
     unassignFace,
     unassignPersonFromAsset,
@@ -205,7 +205,8 @@
 
   const mergeInto = async (survivor: PersonResponseDto, absorbed: PersonResponseDto) => {
     try {
-      await mergePerson({ id: survivor.id, mergePersonDto: { ids: [absorbed.id] } });
+      // The first id is the one that survives the merge.
+      await mergePeople({ mergePersonDto: { ids: [survivor.id, absorbed.id] } });
       toastManager.primary($t('merged_people_count', { values: { count: 1 } }));
       await refreshFaces();
     } catch (error) {
