@@ -86,6 +86,7 @@ export const PersonResponseSchema = z
     faceCount: z.int().min(0).optional().describe('Number of visible faces assigned to this person'),
     similarity: z
       .number()
+      .meta({ format: 'double' })
       .min(0)
       .max(1)
       .optional()
