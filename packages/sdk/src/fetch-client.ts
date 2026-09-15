@@ -176,8 +176,10 @@ export type AdminConfigJobDto = {
     search: AdminConfigJobSettingsDto;
     sidecar: AdminConfigJobSettingsDto;
     smartSearch: AdminConfigJobSettingsDto;
+    subtitles: AdminConfigJobSettingsDto;
     thumbnailGeneration: AdminConfigJobSettingsDto;
     videoConversion: AdminConfigJobSettingsDto;
+    videoFaceDetection: AdminConfigJobSettingsDto;
     workflow: AdminConfigJobSettingsDto;
 };
 export type AdminConfigLibraryScanDto = {
@@ -217,6 +219,16 @@ export type AdminConfigDuplicateDetectionDto = {
     /** Maximum distance threshold for duplicate detection */
     maxDistance: number;
 };
+export type AdminConfigVideoFacialRecognitionDto = {
+    /** How long a person must go undetected before their next detection counts as a separate appearance. Purely a display grouping: every detection is still stored, so changing this re-groups existing scans immediately and nothing is lost. 0 lists every detection individually. */
+    appearanceGapSeconds: number;
+    /** Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision. */
+    intervalSeconds: number;
+    /** Maximum number of frames to sample per video. Used directly as the frame count in "frameCount" mode, or as a hard safety cap in "interval" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails. */
+    maxFrames: number;
+    samplingMethod: VideoFaceSamplingMethod;
+    scanMode: VideoFaceScanMode;
+};
 export type AdminConfigFacialRecognitionDto = {
     /** Whether the task is enabled */
     enabled: boolean;
@@ -228,6 +240,7 @@ export type AdminConfigFacialRecognitionDto = {
     minScore: number;
     /** Name of the model to use */
     modelName: string;
+    video: AdminConfigVideoFacialRecognitionDto;
 };
 export type AdminConfigOcrDto = {
     /** Whether the task is enabled */
@@ -241,6 +254,12 @@ export type AdminConfigOcrDto = {
     /** Name of the model to use */
     modelName: string;
 };
+export type AdminConfigSubtitlesDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Name of the model to use */
+    modelName: string;
+};
 export type AdminConfigMachineLearningDto = {
     availabilityChecks: AdminConfigMachineLearningAvailabilityChecksDto;
     clip: AdminConfigClipDto;
@@ -249,6 +268,7 @@ export type AdminConfigMachineLearningDto = {
     enabled: boolean;
     facialRecognition: AdminConfigFacialRecognitionDto;
     ocr: AdminConfigOcrDto;
+    subtitles: AdminConfigSubtitlesDto;
     /** ML service URLs */
     urls: string[];
 };
@@ -688,6 +708,8 @@ export type PeopleResponse = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb: boolean;
+    /** Seconds undetected before a video detection counts as a new appearance */
+    videoAppearanceGapSeconds: number | null;
 };
 export type PurchaseResponse = {
     /** Date until which to hide buy button */
@@ -774,6 +796,8 @@ export type PeopleUpdate = {
     minimumFaces?: number;
     /** Whether people appear in web sidebar */
     sidebarWeb?: boolean;
+    /** Seconds undetected before a video detection counts as a new appearance; null uses the server default */
+    videoAppearanceGapSeconds?: number | null;
 };
 export type PurchaseUpdate = {
     /** Date until which to hide buy button */
@@ -1221,6 +1245,8 @@ export type PersonResponseDto = {
     birthDate: string | null;
     /** Person color (hex) */
     color?: string;
+    /** Number of visible faces assigned to this person */
+    faceCount?: number;
     /** Person ID */
     id: string;
     /** Is favorite */
@@ -1229,6 +1255,8 @@ export type PersonResponseDto = {
     isHidden: boolean;
     /** Person name */
     name: string;
+    /** Cosine similarity (0-1) of this person to the reference face, when one was requested */
+    similarity?: number;
     /** Thumbnail path */
     thumbnailPath: string;
     /** Last update date */
@@ -1555,6 +1583,10 @@ export type UserConfigOcrDto = {
     /** Whether the task is enabled */
     enabled: boolean;
 };
+export type UserConfigSubtitlesDto = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+};
 export type UserConfigMachineLearningDto = {
     clip: UserConfigClipDto;
     duplicateDetection: UserConfigDuplicateDetectionDto;
@@ -1562,6 +1594,7 @@ export type UserConfigMachineLearningDto = {
     enabled: boolean;
     facialRecognition: UserConfigFacialRecognitionDto;
     ocr: UserConfigOcrDto;
+    subtitles: UserConfigSubtitlesDto;
 };
 export type UserConfigMapDto = {
     /** Dark map style URL */
@@ -1688,6 +1721,8 @@ export type AssetFaceResponseDto = {
     imageWidth: number;
     person: (PersonResponseDto) | null;
     sourceType?: SourceType;
+    /** Milliseconds from video start; absent for photos */
+    timestampMs?: number;
 };
 export type AssetFaceCreateDto = {
     /** Asset ID */
@@ -1700,6 +1735,8 @@ export type AssetFaceCreateDto = {
     imageWidth: number;
     /** Person ID */
     personId: string;
+    /** For a face tagged on a video frame, the timestamp (in ms) of that frame */
+    timestampMs?: number;
     /** Face bounding box width */
     width: number;
     /** Face bounding box X coordinate */
@@ -1756,8 +1793,10 @@ export type QueuesResponseLegacyDto = {
     sidecar: QueueResponseLegacyDto;
     smartSearch: QueueResponseLegacyDto;
     storageTemplateMigration: QueueResponseLegacyDto;
+    subtitles: QueueResponseLegacyDto;
     thumbnailGeneration: QueueResponseLegacyDto;
     videoConversion: QueueResponseLegacyDto;
+    videoFaceDetection: QueueResponseLegacyDto;
     workflow: QueueResponseLegacyDto;
 };
 export type JobCreateDto = {
@@ -2033,6 +2072,30 @@ export type PersonStatisticsResponseDto = {
     /** Number of assets */
     assets: number;
 };
+export type PersonUnassignFromAssetDto = {
+    /** Asset to detach the person from */
+    assetId: string;
+};
+export type PersonVideoAppearanceDto = {
+    /** How many individual detections this appearance groups together */
+    detections: number;
+    /** Last detection in this appearance (ms from video start) */
+    endMs: number;
+    /** First detection in this appearance (ms from video start) */
+    startMs: number;
+};
+export type PersonVideoOccurrenceResponseDto = {
+    /** Runs of consecutive detections, grouped by the configured appearance gap */
+    appearances: PersonVideoAppearanceDto[];
+    /** Asset ID of the video */
+    assetId: string;
+    /** Duration of the video in milliseconds */
+    durationMs: number | null;
+    /** Original filename of the video */
+    originalFileName: string;
+    /** Start timestamp (ms from video start) of each appearance -- one per entry in `appearances` */
+    timestampsMs: number[];
+};
 export type PluginMethodResponseDto = {
     /** Description */
     description: string;
@@ -2143,6 +2206,56 @@ export type QueueJobResponseDto = {
     name: JobName;
     /** Job creation timestamp */
     timestamp: number;
+};
+export type SearchOrder = {
+    direction?: AssetOrder;
+    field?: SearchOrderField;
+};
+export type BrowseSearchDto = {
+    order?: SearchOrder;
+    /** Page number */
+    page?: number;
+    /** Number of results to return */
+    size?: number;
+    /** Restrict to one asset type; omit for images and videos together */
+    "type"?: AssetTypeEnum;
+    /** Include EXIF data in response */
+    withExif?: boolean;
+};
+export type SearchFacetCountResponseDto = {
+    /** Number of assets with this facet value */
+    count: number;
+    /** Facet value */
+    value: string;
+};
+export type SearchFacetResponseDto = {
+    counts: SearchFacetCountResponseDto[];
+    /** Facet field name */
+    fieldName: string;
+};
+export type SearchAlbumResponseDto = {
+    /** Number of albums in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AlbumResponseDto[];
+    /** Total number of matching albums */
+    total: number;
+};
+export type SearchAssetResponseDto = {
+    /** Number of assets in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AssetResponseDto[];
+    /** Cursor for the next page of results */
+    nextCursor: string | null;
+    /** Next page token */
+    nextPage: string | null;
+    /** Total number of matching assets */
+    total: number;
+};
+export type SearchResponseDto = {
+    albums: SearchAlbumResponseDto;
+    assets: SearchAssetResponseDto;
 };
 export type SearchExploreItem = {
     data: AssetResponseDto;
@@ -2312,10 +2425,6 @@ export type SearchFilter = {
     updatedAt?: DateFilter;
     visibility?: EnumFilterAssetVisibility;
 };
-export type SearchOrder = {
-    direction?: AssetOrder;
-    field?: SearchOrderField;
-};
 export type MetadataSearchDto = {
     /** Filter by album IDs */
     albumIds?: string[];
@@ -2403,41 +2512,6 @@ export type MetadataSearchDto = {
     withPeople?: boolean;
     /** Include stacked assets */
     withStacked?: boolean;
-};
-export type SearchFacetCountResponseDto = {
-    /** Number of assets with this facet value */
-    count: number;
-    /** Facet value */
-    value: string;
-};
-export type SearchFacetResponseDto = {
-    counts: SearchFacetCountResponseDto[];
-    /** Facet field name */
-    fieldName: string;
-};
-export type SearchAlbumResponseDto = {
-    /** Number of albums in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AlbumResponseDto[];
-    /** Total number of matching albums */
-    total: number;
-};
-export type SearchAssetResponseDto = {
-    /** Number of assets in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AssetResponseDto[];
-    /** Cursor for the next page of results */
-    nextCursor: string | null;
-    /** Next page token */
-    nextPage: string | null;
-    /** Total number of matching assets */
-    total: number;
-};
-export type SearchResponseDto = {
-    albums: SearchAlbumResponseDto;
-    assets: SearchAssetResponseDto;
 };
 export type PlacesResponseDto = {
     /** Administrative level 1 name (state/province) */
@@ -2727,6 +2801,8 @@ export type ServerConfigDto = {
     trashDays: number;
     /** Delay in days before deleted users are permanently removed */
     userDeleteDelay: number;
+    /** Seconds a person must go undetected before their next detection is a new appearance */
+    videoAppearanceGapSeconds: number;
 };
 export type ServerFeaturesDto = {
     /** Whether config file is available */
@@ -4883,6 +4959,24 @@ export function downloadAsset({ edited, id, key, slug }: {
     }));
 }
 /**
+ * Get video subtitles
+ */
+export function getAssetSubtitles({ id, key, slug }: {
+    id: string;
+    key?: string;
+    slug?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/subtitles${QS.query(QS.explode({
+        key,
+        slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
  * View asset thumbnail
  */
 export function viewAsset({ edited, id, key, size, slug }: {
@@ -4900,6 +4994,26 @@ export function viewAsset({ edited, id, key, size, slug }: {
         key,
         size,
         slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
+ * Get a video frame at a timestamp
+ */
+export function getVideoFrame({ id, key, slug, timestampMs }: {
+    id: string;
+    key?: string;
+    slug?: string;
+    timestampMs: number;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/video/frame${QS.query(QS.explode({
+        key,
+        slug,
+        timestampMs
     }))}`, {
         ...opts
     }));
@@ -5406,6 +5520,17 @@ export function reassignFacesById({ id, faceDto }: {
         method: "PUT",
         body: faceDto
     })));
+}
+/**
+ * Unassign a face
+ */
+export function unassignFace({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/faces/${encodeURIComponent(id)}/unassign`, {
+        ...opts,
+        method: "PUT"
+    }));
 }
 /**
  * Retrieve queue counts and status
@@ -6155,6 +6280,32 @@ export function getPersonThumbnail({ id }: {
     }));
 }
 /**
+ * Unassign a person from an asset
+ */
+export function unassignPersonFromAsset({ id, personUnassignFromAssetDto }: {
+    id: string;
+    personUnassignFromAssetDto: PersonUnassignFromAssetDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchText(`/people/${encodeURIComponent(id)}/unassign-from-asset`, oazapfts.json({
+        ...opts,
+        method: "PUT",
+        body: personUnassignFromAssetDto
+    })));
+}
+/**
+ * Get video occurrences for a person
+ */
+export function getPersonVideoOccurrences({ id }: {
+    id: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: PersonVideoOccurrenceResponseDto[];
+    }>(`/people/${encodeURIComponent(id)}/video-occurrences`, {
+        ...opts
+    }));
+}
+/**
  * List all plugins
  */
 export function searchPlugins({ description, enabled, id, name, title, version }: {
@@ -6324,6 +6475,21 @@ export function getQueueJobs({ name, status }: {
     }))}`, {
         ...opts
     }));
+}
+/**
+ * Browse assets
+ */
+export function browseAssets({ browseSearchDto }: {
+    browseSearchDto: BrowseSearchDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: SearchResponseDto;
+    }>("/search/browse", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: browseSearchDto
+    })));
 }
 /**
  * Retrieve assets by city
@@ -7846,6 +8012,15 @@ export enum LogLevel {
     Error = "error",
     Fatal = "fatal"
 }
+export enum VideoFaceSamplingMethod {
+    FrameCount = "frameCount",
+    Interval = "interval"
+}
+export enum VideoFaceScanMode {
+    ThumbnailOnly = "thumbnailOnly",
+    Disabled = "disabled",
+    FullScan = "fullScan"
+}
 export enum ReleaseChannel {
     Stable = "stable",
     ReleaseCandidate = "releaseCandidate"
@@ -8094,7 +8269,8 @@ export enum AssetFileType {
     Preview = "preview",
     Thumbnail = "thumbnail",
     Sidecar = "sidecar",
-    EncodedVideo = "encoded_video"
+    EncodedVideo = "encoded_video",
+    Subtitle = "subtitle"
 }
 export enum AssetMediaStatus {
     Created = "created",
@@ -8112,7 +8288,9 @@ export enum AssetJobName {
     RefreshFaces = "refresh-faces",
     RefreshMetadata = "refresh-metadata",
     RegenerateThumbnail = "regenerate-thumbnail",
-    TranscodeVideo = "transcode-video"
+    TranscodeVideo = "transcode-video",
+    ScanVideoFaces = "scan-video-faces",
+    GenerateSubtitles = "generate-subtitles"
 }
 export enum AssetTypeEnum {
     Image = "IMAGE",
@@ -8162,6 +8340,7 @@ export enum QueueName {
     MetadataExtraction = "metadataExtraction",
     VideoConversion = "videoConversion",
     FaceDetection = "faceDetection",
+    VideoFaceDetection = "videoFaceDetection",
     FacialRecognition = "facialRecognition",
     SmartSearch = "smartSearch",
     DuplicateDetection = "duplicateDetection",
@@ -8174,6 +8353,7 @@ export enum QueueName {
     Notifications = "notifications",
     BackupDatabase = "backupDatabase",
     Ocr = "ocr",
+    Subtitles = "subtitles",
     Workflow = "workflow",
     IntegrityCheck = "integrityCheck",
     Editor = "editor"
@@ -8218,6 +8398,9 @@ export enum JobName {
     AssetDeleteCheck = "AssetDeleteCheck",
     AssetDetectFacesQueueAll = "AssetDetectFacesQueueAll",
     AssetDetectFaces = "AssetDetectFaces",
+    AssetVideoDetectFacesQueueAll = "AssetVideoDetectFacesQueueAll",
+    AssetVideoDetectFaces = "AssetVideoDetectFaces",
+    AssetVideoClusterFaces = "AssetVideoClusterFaces",
     AssetDetectDuplicatesQueueAll = "AssetDetectDuplicatesQueueAll",
     AssetDetectDuplicates = "AssetDetectDuplicates",
     AssetEditThumbnailGeneration = "AssetEditThumbnailGeneration",
@@ -8269,6 +8452,8 @@ export enum JobName {
     VersionCheck = "VersionCheck",
     OcrQueueAll = "OcrQueueAll",
     Ocr = "Ocr",
+    AssetGenerateSubtitlesQueueAll = "AssetGenerateSubtitlesQueueAll",
+    AssetGenerateSubtitles = "AssetGenerateSubtitles",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",
@@ -8285,7 +8470,10 @@ export enum SearchOrderField {
     FileCreatedAt = "fileCreatedAt",
     LocalDateTime = "localDateTime",
     FileSizeInBytes = "fileSizeInBytes",
-    Rating = "rating"
+    Rating = "rating",
+    Resolution = "resolution",
+    Duration = "duration",
+    OriginalFileName = "originalFileName"
 }
 export enum SearchSuggestionType {
     Country = "country",

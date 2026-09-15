@@ -5023,6 +5023,80 @@
         "x-immich-state": "Stable"
       }
     },
+    "/assets/{id}/subtitles": {
+      "get": {
+        "description": "Retrieve the WebVTT subtitles generated for a video. Subtitles are always translated to English.",
+        "operationId": "getAssetSubtitles",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get video subtitles",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.view",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/assets/{id}/thumbnail": {
       "get": {
         "description": "Retrieve the thumbnail image for the specified asset. Viewing the fullsize thumbnail might redirect to downloadAsset, which requires a different permission.",
@@ -5123,6 +5197,91 @@
         ],
         "x-immich-permission": "asset.view",
         "x-immich-state": "Stable"
+      }
+    },
+    "/assets/{id}/video/frame": {
+      "get": {
+        "description": "Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.",
+        "operationId": "getVideoFrame",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timestampMs",
+            "required": true,
+            "in": "query",
+            "description": "Timestamp in milliseconds to extract a frame at",
+            "schema": {
+              "minimum": 0,
+              "maximum": 9007199254740991,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get a video frame at a timestamp",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3",
+            "state": "Added"
+          },
+          {
+            "version": "v3",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.view",
+        "x-immich-state": "Alpha"
       }
     },
     "/assets/{id}/video/playback": {
@@ -7224,6 +7383,56 @@
         ],
         "x-immich-permission": "face.update",
         "x-immich-state": "Stable"
+      }
+    },
+    "/faces/{id}/unassign": {
+      "put": {
+        "description": "Detach a face from its currently assigned person without deleting it, leaving it unassigned so facial recognition can reconsider it.",
+        "operationId": "unassignFace",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Unassign a face",
+        "tags": [
+          "Faces"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "face.update",
+        "x-immich-state": "Alpha"
       }
     },
     "/jobs": {
@@ -10510,6 +10719,126 @@
         "x-immich-state": "Stable"
       }
     },
+    "/people/{id}/unassign-from-asset": {
+      "put": {
+        "description": "Detach a person from every face they're tagged in within a single asset, without deleting those faces. Intended for videos, where frame sampling can tag one person across many appearances at once.",
+        "operationId": "unassignPersonFromAsset",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PersonUnassignFromAssetDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Unassign a person from an asset",
+        "tags": [
+          "People"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "person.reassign",
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/people/{id}/video-occurrences": {
+      "get": {
+        "description": "Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.",
+        "operationId": "getPersonVideoOccurrences",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonVideoOccurrenceResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get video occurrences for a person",
+        "tags": [
+          "People"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "person.read",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/plugins": {
       "get": {
         "description": "Retrieve a list of plugins available to the authenticated user.",
@@ -11191,6 +11520,62 @@
           }
         ],
         "x-immich-permission": "queueJob.read",
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/search/browse": {
+      "post": {
+        "description": "Page through timeline assets as a flat list, optionally restricted to images or videos, sorted by date, file size, resolution, duration or file name.",
+        "operationId": "browseAssets",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowseSearchDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Browse assets",
+        "tags": [
+          "Search"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.read",
         "x-immich-state": "Alpha"
       }
     },
@@ -18638,6 +19023,9 @@
           "modelName": {
             "description": "Name of the model to use",
             "type": "string"
+          },
+          "video": {
+            "$ref": "#/components/schemas/AdminConfigVideoFacialRecognitionDto"
           }
         },
         "required": [
@@ -18645,7 +19033,8 @@
           "maxDistance",
           "minFaces",
           "minScore",
-          "modelName"
+          "modelName",
+          "video"
         ],
         "type": "object"
       },
@@ -18842,10 +19231,16 @@
           "smartSearch": {
             "$ref": "#/components/schemas/AdminConfigJobSettingsDto"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/AdminConfigJobSettingsDto"
+          },
           "thumbnailGeneration": {
             "$ref": "#/components/schemas/AdminConfigJobSettingsDto"
           },
           "videoConversion": {
+            "$ref": "#/components/schemas/AdminConfigJobSettingsDto"
+          },
+          "videoFaceDetection": {
             "$ref": "#/components/schemas/AdminConfigJobSettingsDto"
           },
           "workflow": {
@@ -18865,8 +19260,10 @@
           "search",
           "sidecar",
           "smartSearch",
+          "subtitles",
           "thumbnailGeneration",
           "videoConversion",
+          "videoFaceDetection",
           "workflow"
         ],
         "type": "object"
@@ -18990,6 +19387,9 @@
           "ocr": {
             "$ref": "#/components/schemas/AdminConfigOcrDto"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/AdminConfigSubtitlesDto"
+          },
           "urls": {
             "description": "ML service URLs",
             "items": {
@@ -19006,6 +19406,7 @@
           "enabled",
           "facialRecognition",
           "ocr",
+          "subtitles",
           "urls"
         ],
         "type": "object"
@@ -19404,6 +19805,23 @@
         ],
         "type": "object"
       },
+      "AdminConfigSubtitlesDto": {
+        "properties": {
+          "enabled": {
+            "description": "Whether the task is enabled",
+            "type": "boolean"
+          },
+          "modelName": {
+            "description": "Name of the model to use",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "modelName"
+        ],
+        "type": "object"
+      },
       "AdminConfigTemplateEmailsDto": {
         "properties": {
           "albumInviteTemplate": {
@@ -19479,6 +19897,44 @@
         },
         "required": [
           "deleteDelay"
+        ],
+        "type": "object"
+      },
+      "AdminConfigVideoFacialRecognitionDto": {
+        "properties": {
+          "appearanceGapSeconds": {
+            "description": "How long a person must go undetected before their next detection counts as a separate appearance. Purely a display grouping: every detection is still stored, so changing this re-groups existing scans immediately and nothing is lost. 0 lists every detection individually.",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "type": "number"
+          },
+          "intervalSeconds": {
+            "description": "Seconds between captured frames when samplingMethod is \"interval\". Supports sub-second precision.",
+            "format": "double",
+            "maximum": 60,
+            "minimum": 0.1,
+            "type": "number"
+          },
+          "maxFrames": {
+            "description": "Maximum number of frames to sample per video. Used directly as the frame count in \"frameCount\" mode, or as a hard safety cap in \"interval\" mode. A hard ceiling to prevent a single long video from generating an unbounded number of face thumbnails.",
+            "maximum": 10000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "samplingMethod": {
+            "$ref": "#/components/schemas/VideoFaceSamplingMethod"
+          },
+          "scanMode": {
+            "$ref": "#/components/schemas/VideoFaceScanMode"
+          }
+        },
+        "required": [
+          "appearanceGapSeconds",
+          "intervalSeconds",
+          "maxFrames",
+          "samplingMethod",
+          "scanMode"
         ],
         "type": "object"
       },
@@ -20263,6 +20719,12 @@
             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
             "type": "string"
           },
+          "timestampMs": {
+            "description": "For a face tagged on a video frame, the timestamp (in ms) of that frame",
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
           "width": {
             "description": "Face bounding box width",
             "maximum": 9007199254740991,
@@ -20361,6 +20823,23 @@
           },
           "sourceType": {
             "$ref": "#/components/schemas/SourceType"
+          },
+          "timestampMs": {
+            "description": "Milliseconds from video start; absent for photos",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
+            "x-immich-history": [
+              {
+                "version": "v3.1.0",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              }
+            ],
+            "x-immich-state": "Stable"
           }
         },
         "required": [
@@ -20472,7 +20951,8 @@
           "preview",
           "thumbnail",
           "sidecar",
-          "encoded_video"
+          "encoded_video",
+          "subtitle"
         ],
         "type": "string"
       },
@@ -20530,7 +21010,9 @@
           "refresh-faces",
           "refresh-metadata",
           "regenerate-thumbnail",
-          "transcode-video"
+          "transcode-video",
+          "scan-video-faces",
+          "generate-subtitles"
         ],
         "type": "string"
       },
@@ -21290,6 +21772,34 @@
         "required": [
           "eq"
         ],
+        "type": "object"
+      },
+      "BrowseSearchDto": {
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/SearchOrder"
+          },
+          "page": {
+            "description": "Page number",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "size": {
+            "description": "Number of results to return",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AssetTypeEnum",
+            "description": "Restrict to one asset type; omit for images and videos together"
+          },
+          "withExif": {
+            "description": "Include EXIF data in response",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "BulkIdErrorReason": {
@@ -22516,6 +23026,9 @@
           "AssetDeleteCheck",
           "AssetDetectFacesQueueAll",
           "AssetDetectFaces",
+          "AssetVideoDetectFacesQueueAll",
+          "AssetVideoDetectFaces",
+          "AssetVideoClusterFaces",
           "AssetDetectDuplicatesQueueAll",
           "AssetDetectDuplicates",
           "AssetEditThumbnailGeneration",
@@ -22567,6 +23080,8 @@
           "VersionCheck",
           "OcrQueueAll",
           "Ocr",
+          "AssetGenerateSubtitlesQueueAll",
+          "AssetGenerateSubtitles",
           "WorkflowAssetTrigger",
           "IntegrityUntrackedFilesQueueAll",
           "IntegrityUntrackedFiles",
@@ -24654,11 +25169,20 @@
           "sidebarWeb": {
             "description": "Whether people appear in web sidebar",
             "type": "boolean"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds undetected before a video detection counts as a new appearance",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
           }
         },
         "required": [
           "enabled",
-          "sidebarWeb"
+          "sidebarWeb",
+          "videoAppearanceGapSeconds"
         ],
         "type": "object"
       },
@@ -24721,6 +25245,14 @@
           "sidebarWeb": {
             "description": "Whether people appear in web sidebar",
             "type": "boolean"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds undetected before a video detection counts as a new appearance; null uses the server default",
+            "format": "double",
+            "maximum": 900,
+            "minimum": 0,
+            "nullable": true,
+            "type": "number"
           }
         },
         "type": "object"
@@ -25010,6 +25542,12 @@
             ],
             "x-immich-state": "Stable"
           },
+          "faceCount": {
+            "description": "Number of visible faces assigned to this person",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
           "id": {
             "description": "Person ID",
             "format": "uuid",
@@ -25038,6 +25576,13 @@
           "name": {
             "description": "Person name",
             "type": "string"
+          },
+          "similarity": {
+            "description": "Cosine similarity (0-1) of this person to the reference face, when one was requested",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
           },
           "thumbnailPath": {
             "description": "Thumbnail path",
@@ -25083,6 +25628,20 @@
         ],
         "type": "object"
       },
+      "PersonUnassignFromAssetDto": {
+        "properties": {
+          "assetId": {
+            "description": "Asset to detach the person from",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "assetId"
+        ],
+        "type": "object"
+      },
       "PersonUpdateDto": {
         "properties": {
           "birthDate": {
@@ -25116,6 +25675,79 @@
             "type": "string"
           }
         },
+        "type": "object"
+      },
+      "PersonVideoAppearanceDto": {
+        "properties": {
+          "detections": {
+            "description": "How many individual detections this appearance groups together",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "endMs": {
+            "description": "Last detection in this appearance (ms from video start)",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "startMs": {
+            "description": "First detection in this appearance (ms from video start)",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "detections",
+          "endMs",
+          "startMs"
+        ],
+        "type": "object"
+      },
+      "PersonVideoOccurrenceResponseDto": {
+        "properties": {
+          "appearances": {
+            "description": "Runs of consecutive detections, grouped by the configured appearance gap",
+            "items": {
+              "$ref": "#/components/schemas/PersonVideoAppearanceDto"
+            },
+            "type": "array"
+          },
+          "assetId": {
+            "description": "Asset ID of the video",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+            "type": "string"
+          },
+          "durationMs": {
+            "description": "Duration of the video in milliseconds",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "originalFileName": {
+            "description": "Original filename of the video",
+            "type": "string"
+          },
+          "timestampsMs": {
+            "description": "Start timestamp (ms from video start) of each appearance -- one per entry in `appearances`",
+            "items": {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "appearances",
+          "assetId",
+          "durationMs",
+          "originalFileName",
+          "timestampsMs"
+        ],
         "type": "object"
       },
       "PinCodeChangeDto": {
@@ -25583,6 +26215,7 @@
           "metadataExtraction",
           "videoConversion",
           "faceDetection",
+          "videoFaceDetection",
           "facialRecognition",
           "smartSearch",
           "duplicateDetection",
@@ -25595,6 +26228,7 @@
           "notifications",
           "backupDatabase",
           "ocr",
+          "subtitles",
           "workflow",
           "integrityCheck",
           "editor"
@@ -25761,10 +26395,16 @@
           "storageTemplateMigration": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/QueueResponseLegacyDto"
+          },
           "thumbnailGeneration": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
           "videoConversion": {
+            "$ref": "#/components/schemas/QueueResponseLegacyDto"
+          },
+          "videoFaceDetection": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
           "workflow": {
@@ -25788,8 +26428,10 @@
           "sidecar",
           "smartSearch",
           "storageTemplateMigration",
+          "subtitles",
           "thumbnailGeneration",
           "videoConversion",
+          "videoFaceDetection",
           "workflow"
         ],
         "type": "object"
@@ -27002,7 +27644,10 @@
           "fileCreatedAt",
           "localDateTime",
           "fileSizeInBytes",
-          "rating"
+          "rating",
+          "resolution",
+          "duration",
+          "originalFileName"
         ],
         "type": "string"
       },
@@ -27228,6 +27873,11 @@
             "maximum": 9007199254740991,
             "minimum": -9007199254740991,
             "type": "integer"
+          },
+          "videoAppearanceGapSeconds": {
+            "description": "Seconds a person must go undetected before their next detection is a new appearance",
+            "format": "double",
+            "type": "number"
           }
         },
         "required": [
@@ -27242,7 +27892,8 @@
           "oauthButtonText",
           "publicUsers",
           "trashDays",
-          "userDeleteDelay"
+          "userDeleteDelay",
+          "videoAppearanceGapSeconds"
         ],
         "type": "object"
       },
@@ -32482,6 +33133,9 @@
           },
           "ocr": {
             "$ref": "#/components/schemas/UserConfigOcrDto"
+          },
+          "subtitles": {
+            "$ref": "#/components/schemas/UserConfigSubtitlesDto"
           }
         },
         "required": [
@@ -32489,7 +33143,8 @@
           "duplicateDetection",
           "enabled",
           "facialRecognition",
-          "ocr"
+          "ocr",
+          "subtitles"
         ],
         "type": "object"
       },
@@ -32594,6 +33249,18 @@
           "externalDomain",
           "loginPageMessage",
           "publicUsers"
+        ],
+        "type": "object"
+      },
+      "UserConfigSubtitlesDto": {
+        "properties": {
+          "enabled": {
+            "description": "Whether the task is enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
         ],
         "type": "object"
       },
@@ -32956,6 +33623,23 @@
           "mp4",
           "ogg",
           "webm"
+        ],
+        "type": "string"
+      },
+      "VideoFaceSamplingMethod": {
+        "description": "How frames are sampled from a video during a full scan",
+        "enum": [
+          "frameCount",
+          "interval"
+        ],
+        "type": "string"
+      },
+      "VideoFaceScanMode": {
+        "description": "How videos are treated by facial recognition",
+        "enum": [
+          "thumbnailOnly",
+          "disabled",
+          "fullScan"
         ],
         "type": "string"
       },
