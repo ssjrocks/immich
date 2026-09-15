@@ -316,6 +316,22 @@ export class AssetMediaService extends BaseService {
     });
   }
 
+  async getSubtitles(auth: AuthDto, id: string): Promise<ImmichFileResponse> {
+    await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
+
+    const asset = await this.assetJobRepository.getSubtitlePath(id);
+    if (!asset?.subtitlePath) {
+      throw new NotFoundException('Asset has no subtitles');
+    }
+
+    return new ImmichFileResponse({
+      path: asset.subtitlePath,
+      contentType: 'text/vtt',
+      // Regenerating writes to the same path, so a cached copy would keep showing the old subtitles.
+      cacheControl: CacheControl.PrivateWithoutCache,
+    });
+  }
+
   async getVideoFrame(auth: AuthDto, id: string, timestampMs: number): Promise<StreamableFile> {
     await this.requireAccess({ auth, permission: Permission.AssetView, ids: [id] });
 

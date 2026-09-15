@@ -529,6 +529,17 @@ export class SearchRepository {
       .execute();
   }
 
+  @GenerateSql({ params: [{ page: 1, size: 100 }, { userIds: [DummyValue.UUID] }] })
+  async browseAssets(pagination: SearchPaginationOptions, options: AssetSearchBuilderV3Options) {
+    const items = await withSearchOrder(searchAssetBuilder(this.db, options), options.order)
+      .select(columns.searchAsset)
+      .limit(pagination.size + 1)
+      .offset((pagination.page - 1) * pagination.size)
+      .execute();
+
+    return paginationHelper(items, pagination.size);
+  }
+
   @GenerateSql(...searchStatisticsV3Examples)
   searchStatisticsV3(options: AssetSearchBuilderV3Options) {
     return searchAssetBuilder(this.db, options)

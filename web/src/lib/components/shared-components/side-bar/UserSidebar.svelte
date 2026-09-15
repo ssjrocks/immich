@@ -32,6 +32,8 @@
     mdiTrashCan,
     mdiTrashCanOutline,
     mdiUploadOutline,
+    mdiViewGrid,
+    mdiViewGridOutline,
   } from '@mdi/js';
   import { t } from 'svelte-i18n';
   import { fly } from 'svelte/transition';
@@ -39,6 +41,8 @@
 
 <Sidebar ariaLabel={$t('primary')}>
   <NavbarItem title={$t('photos')} href={Route.photos()} icon={mdiImageMultipleOutline} activeIcon={mdiImageMultiple} />
+
+  <NavbarItem title={$t('browse')} href={Route.browse()} icon={mdiViewGridOutline} activeIcon={mdiViewGrid} />
 
   {#if featureFlagsManager.value.search}
     <NavbarItem title={$t('explore')} href={Route.explore()} icon={mdiMagnify} />

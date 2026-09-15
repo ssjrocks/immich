@@ -305,6 +305,18 @@ export const SearchFilterSchema = SearchFilterBranchSchema.extend({
   or: z.array(SearchFilterBranchSchema).min(1).optional(),
 }).meta({ id: 'SearchFilter' });
 
+// Deliberately narrow rather than exposing SearchFilter: the browse page only ever needs a
+// type toggle and a sort, and nothing else should be expressible through this endpoint.
+const BrowseSearchSchema = z
+  .object({
+    type: AssetTypeSchema.optional().describe('Restrict to one asset type; omit for images and videos together'),
+    order: SearchOrderSchema.optional(),
+    page: z.int().min(1).optional().describe('Page number'),
+    size: z.int().min(1).max(1000).optional().describe('Number of results to return'),
+    withExif: z.boolean().optional().describe('Include EXIF data in response'),
+  })
+  .meta({ id: 'BrowseSearchDto' });
+
 export type IdFilter = z.infer<typeof IdFilterSchema>;
 export type IdFilterNullable = z.infer<typeof IdFilterNullableSchema>;
 export type IdsFilter = z.infer<typeof IdsFilterSchema>;
@@ -324,6 +336,7 @@ export class LargeAssetSearchDto extends createZodDto(LargeAssetSearchSchema) {}
 export class MetadataSearchDto extends createZodDto(MetadataSearchSchema) {}
 export class StatisticsSearchDto extends createZodDto(StatisticsSearchSchema) {}
 export class SmartSearchDto extends createZodDto(SmartSearchSchema) {}
+export class BrowseSearchDto extends createZodDto(BrowseSearchSchema) {}
 export class SearchPlacesDto extends createZodDto(SearchPlacesSchema) {}
 export class SearchPeopleDto extends createZodDto(SearchPeopleSchema) {}
 export class PlacesResponseDto extends createZodDto(PlacesResponseSchema) {}

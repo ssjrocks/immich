@@ -4562,6 +4562,80 @@
         "x-immich-state": "Stable"
       }
     },
+    "/assets/{id}/subtitles": {
+      "get": {
+        "description": "Retrieve the WebVTT subtitles generated for a video. Subtitles are always translated to English.",
+        "operationId": "getAssetSubtitles",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Get video subtitles",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.view",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/assets/{id}/thumbnail": {
       "get": {
         "description": "Retrieve the thumbnail image for the specified asset. Viewing the fullsize thumbnail might redirect to downloadAsset, which requires a different permission.",
@@ -10304,6 +10378,62 @@
           }
         ],
         "x-immich-permission": "queueJob.read",
+        "x-immich-state": "Alpha"
+      }
+    },
+    "/search/browse": {
+      "post": {
+        "description": "Page through timeline assets as a flat list, optionally restricted to images or videos, sorted by date, file size, resolution, duration or file name.",
+        "operationId": "browseAssets",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrowseSearchDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponseDto"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Browse assets",
+        "tags": [
+          "Search"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.1.0",
+            "state": "Added"
+          },
+          {
+            "version": "v3.1.0",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.read",
         "x-immich-state": "Alpha"
       }
     },
@@ -17734,7 +17864,8 @@
           "refresh-metadata",
           "regenerate-thumbnail",
           "transcode-video",
-          "scan-video-faces"
+          "scan-video-faces",
+          "generate-subtitles"
         ],
         "type": "string"
       },
@@ -18481,6 +18612,34 @@
         "properties": {
           "color": {
             "$ref": "#/components/schemas/UserAvatarColor"
+          }
+        },
+        "type": "object"
+      },
+      "BrowseSearchDto": {
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/SearchOrder"
+          },
+          "page": {
+            "description": "Page number",
+            "maximum": 9007199254740991,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "size": {
+            "description": "Number of results to return",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AssetTypeEnum",
+            "description": "Restrict to one asset type; omit for images and videos together"
+          },
+          "withExif": {
+            "description": "Include EXIF data in response",
+            "type": "boolean"
           }
         },
         "type": "object"
@@ -19600,6 +19759,8 @@
           "VersionCheck",
           "OcrQueueAll",
           "Ocr",
+          "AssetGenerateSubtitlesQueueAll",
+          "AssetGenerateSubtitles",
           "WorkflowAssetTrigger",
           "IntegrityUntrackedFilesQueueAll",
           "IntegrityUntrackedFiles",
@@ -21998,6 +22159,7 @@
           "notifications",
           "backupDatabase",
           "ocr",
+          "subtitles",
           "workflow",
           "integrityCheck",
           "editor"
@@ -22164,6 +22326,9 @@
           "storageTemplateMigration": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/QueueResponseLegacyDto"
+          },
           "thumbnailGeneration": {
             "$ref": "#/components/schemas/QueueResponseLegacyDto"
           },
@@ -22194,6 +22359,7 @@
           "sidecar",
           "smartSearch",
           "storageTemplateMigration",
+          "subtitles",
           "thumbnailGeneration",
           "videoConversion",
           "videoFaceDetection",
@@ -22702,6 +22868,31 @@
           "fieldName"
         ],
         "type": "object"
+      },
+      "SearchOrder": {
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/AssetOrder",
+            "default": "desc"
+          },
+          "field": {
+            "$ref": "#/components/schemas/SearchOrderField",
+            "default": "fileCreatedAt"
+          }
+        },
+        "type": "object"
+      },
+      "SearchOrderField": {
+        "enum": [
+          "fileCreatedAt",
+          "localDateTime",
+          "fileSizeInBytes",
+          "rating",
+          "resolution",
+          "duration",
+          "originalFileName"
+        ],
+        "type": "string"
       },
       "SearchResponseDto": {
         "properties": {
@@ -24171,6 +24362,23 @@
           "backups"
         ],
         "type": "string"
+      },
+      "SubtitlesConfig": {
+        "properties": {
+          "enabled": {
+            "description": "Whether the task is enabled",
+            "type": "boolean"
+          },
+          "modelName": {
+            "description": "Name of the model to use",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "modelName"
+        ],
+        "type": "object"
       },
       "SyncAckDeleteDto": {
         "properties": {
@@ -26441,6 +26649,9 @@
           "smartSearch": {
             "$ref": "#/components/schemas/JobSettingsDto"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/JobSettingsDto"
+          },
           "thumbnailGeneration": {
             "$ref": "#/components/schemas/JobSettingsDto"
           },
@@ -26467,6 +26678,7 @@
           "search",
           "sidecar",
           "smartSearch",
+          "subtitles",
           "thumbnailGeneration",
           "videoConversion",
           "videoFaceDetection",
@@ -26555,6 +26767,9 @@
           "ocr": {
             "$ref": "#/components/schemas/OcrConfig"
           },
+          "subtitles": {
+            "$ref": "#/components/schemas/SubtitlesConfig"
+          },
           "urls": {
             "description": "ML service URLs",
             "items": {
@@ -26571,6 +26786,7 @@
           "enabled",
           "facialRecognition",
           "ocr",
+          "subtitles",
           "urls"
         ],
         "type": "object"

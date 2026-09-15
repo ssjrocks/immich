@@ -60,6 +60,8 @@ export enum AssetFileType {
   Thumbnail = 'thumbnail',
   Sidecar = 'sidecar',
   EncodedVideo = 'encoded_video',
+  /** WebVTT subtitles transcribed from a video's audio and translated to English */
+  Subtitle = 'subtitle',
 }
 
 export enum AlbumUserRole {
@@ -833,6 +835,7 @@ export enum QueueName {
   Notification = 'notifications',
   BackupDatabase = 'backupDatabase',
   Ocr = 'ocr',
+  Subtitles = 'subtitles',
   Workflow = 'workflow',
   IntegrityCheck = 'integrityCheck',
   Editor = 'editor',
@@ -930,6 +933,10 @@ export enum JobName {
   // OCR
   OcrQueueAll = 'OcrQueueAll',
   Ocr = 'Ocr',
+
+  // Subtitles
+  AssetGenerateSubtitlesQueueAll = 'AssetGenerateSubtitlesQueueAll',
+  AssetGenerateSubtitles = 'AssetGenerateSubtitles',
 
   // Workflow
   WorkflowAssetTrigger = 'WorkflowAssetTrigger',
@@ -1270,6 +1277,9 @@ export enum SearchOrderField {
   LocalDateTime = 'localDateTime',
   FileSizeInBytes = 'fileSizeInBytes',
   Rating = 'rating',
+  Resolution = 'resolution',
+  Duration = 'duration',
+  OriginalFileName = 'originalFileName',
 }
 
 export const SearchOrderFieldSchema = z.enum(SearchOrderField).meta({ id: 'SearchOrderField' });

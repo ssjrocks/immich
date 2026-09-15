@@ -69,6 +69,7 @@ export enum AssetJobName {
   REGENERATE_THUMBNAIL = 'regenerate-thumbnail',
   TRANSCODE_VIDEO = 'transcode-video',
   SCAN_VIDEO_FACES = 'scan-video-faces',
+  GENERATE_SUBTITLES = 'generate-subtitles',
 }
 
 const AssetJobNameSchema = z.enum(AssetJobName).describe('Job name').meta({ id: 'AssetJobName' });

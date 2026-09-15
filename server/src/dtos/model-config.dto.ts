@@ -88,4 +88,6 @@ export const OcrConfigSchema = ModelConfigSchema.extend({
     .describe('Minimum confidence score for text recognition'),
 }).meta({ id: 'OcrConfig' });
 
+export const SubtitlesConfigSchema = ModelConfigSchema.meta({ id: 'SubtitlesConfig' });
+
 export class CLIPConfig extends createZodDto(CLIPConfigSchema) {}

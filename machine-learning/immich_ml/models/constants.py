@@ -88,6 +88,26 @@ _PADDLE_MODELS = {
     "TH__PP-OCRv5_mobile",
 }
 
+# faster-whisper (CTranslate2) builds, pre-quantised to int8 so they're roughly half the size of the
+# float16 originals on disk. Pinned to exact revisions so a model can't change underneath an existing
+# cache. Only multilingual, translate-capable builds belong here: the "turbo" variants were distilled
+# for transcription alone and silently output the source language when asked to translate.
+WHISPER_MODELS: dict[str, dict[str, str]] = {
+    clean_name(name): source
+    for name, source in {
+        "faster-whisper-medium": {
+            "repo": "mukowaty/faster-whisper-int8",
+            "revision": "15d956df6a221df330485e243b2a5ed41f0e2728",
+            "subfolder": "faster-whisper-medium-int8",
+        },
+        "faster-whisper-large-v3": {
+            "repo": "mukowaty/faster-whisper-int8",
+            "revision": "f43ed6211b3d79e844ab2a0ec6f28eba5aa7298a",
+            "subfolder": "faster-whisper-large-v3-int8",
+        },
+    }.items()
+}
+
 SUPPORTED_PROVIDERS = [
     "CUDAExecutionProvider",
     "MIGraphXExecutionProvider",
@@ -174,5 +194,8 @@ def get_model_source(model_name: str) -> ModelSource | None:
 
     if cleaned_name in _PADDLE_MODELS:
         return ModelSource.PADDLE
+
+    if cleaned_name in WHISPER_MODELS:
+        return ModelSource.WHISPER
 
     return None

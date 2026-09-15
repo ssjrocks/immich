@@ -365,6 +365,7 @@ export class AssetService extends BaseService {
       assetFiles.editedPreviewFile?.path,
       assetFiles.editedThumbnailFile?.path,
       assetFiles.encodedVideoFile?.path,
+      assetFiles.subtitleFile?.path,
     ];
 
     if (deleteOnDisk && !asset.isOffline) {
@@ -493,6 +494,11 @@ export class AssetService extends BaseService {
 
         case AssetJobName.SCAN_VIDEO_FACES: {
           jobs.push({ name: JobName.AssetVideoDetectFaces, data: { id } });
+          break;
+        }
+
+        case AssetJobName.GENERATE_SUBTITLES: {
+          jobs.push({ name: JobName.AssetGenerateSubtitles, data: { id } });
           break;
         }
       }

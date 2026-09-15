@@ -16,6 +16,7 @@ export enum ModelTask {
   FACIAL_RECOGNITION = 'facial-recognition',
   SEARCH = 'clip',
   OCR = 'ocr',
+  TRANSCRIPTION = 'transcription',
 }
 
 export enum ModelType {
@@ -27,7 +28,7 @@ export enum ModelType {
   OCR = 'ocr',
 }
 
-export type ModelPayload = { imagePath: string } | { text: string };
+export type ModelPayload = { imagePath: string } | { text: string } | { audioPath: string };
 
 type ModelOptions = { modelName: string };
 
@@ -59,6 +60,14 @@ export type OcrRequest = {
 };
 export type OcrResponse = { [ModelTask.OCR]: OCR } & VisualResponse;
 
+export type TranscriptionWord = { start: number; end: number; word: string };
+export type TranscriptionSegment = { start: number; end: number; text: string; words?: TranscriptionWord[] };
+export type Transcription = { language: string; languageProbability: number; segments: TranscriptionSegment[] };
+export type TranscriptionRequest = {
+  [ModelTask.TRANSCRIPTION]: { [ModelType.RECOGNITION]: ModelOptions & { options: { task: 'translate' } } };
+};
+export type TranscriptionResponse = { [ModelTask.TRANSCRIPTION]: Transcription };
+
 export type FacialRecognitionRequest = {
   [ModelTask.FACIAL_RECOGNITION]: {
     [ModelType.DETECTION]: ModelOptions & { options: { minScore: number } };
@@ -74,7 +83,12 @@ export interface Face {
 
 export type FacialRecognitionResponse = { [ModelTask.FACIAL_RECOGNITION]: Face[] } & VisualResponse;
 export type DetectedFaces = { faces: Face[] } & VisualResponse;
-export type MachineLearningRequest = ClipVisualRequest | ClipTextualRequest | FacialRecognitionRequest | OcrRequest;
+export type MachineLearningRequest =
+  | ClipVisualRequest
+  | ClipTextualRequest
+  | FacialRecognitionRequest
+  | OcrRequest
+  | TranscriptionRequest;
 export type TextEncodingOptions = ModelOptions & { language?: string };
 
 @Injectable()
@@ -229,6 +243,15 @@ export class MachineLearningRepository {
     return response[ModelTask.OCR];
   }
 
+  // Always translates to English. Speech in any language goes in; the model detects which one it is.
+  async transcribe(audioPath: string, { modelName }: ModelOptions) {
+    const request = {
+      [ModelTask.TRANSCRIPTION]: { [ModelType.RECOGNITION]: { modelName, options: { task: 'translate' as const } } },
+    };
+    const response = await this.predict<TranscriptionResponse>({ audioPath }, request);
+    return response[ModelTask.TRANSCRIPTION];
+  }
+
   private async getFormData(payload: ModelPayload, config: MachineLearningRequest): Promise<FormData> {
     const formData = new FormData();
     formData.append('entries', JSON.stringify(config));
@@ -238,6 +261,9 @@ export class MachineLearningRepository {
       formData.append('image', new Blob([new Uint8Array(fileBuffer)]));
     } else if ('text' in payload) {
       formData.append('text', payload.text);
+    } else if ('audioPath' in payload) {
+      const fileBuffer = await readFile(payload.audioPath);
+      formData.append('audio', new Blob([new Uint8Array(fileBuffer)]));
     } else {
       throw new Error('Invalid input');
     }

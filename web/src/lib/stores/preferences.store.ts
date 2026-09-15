@@ -139,3 +139,20 @@ export const autoPlayVideo = persisted<boolean>('auto-play-video', true, {});
 export const alwaysLoadOriginalVideo = persisted<boolean>('always-load-original-video', false, {});
 
 export const recentAlbumsDropdown = persisted<boolean>('recent-albums-open', true, {});
+
+// String values mirror the server's AssetTypeEnum / SearchOrderField / AssetOrder, so the page
+// can hand them to the API directly. 'all' has no server equivalent: it means "omit type".
+export type BrowseMediaFilter = 'all' | 'IMAGE' | 'VIDEO';
+export type BrowseSortField = 'fileCreatedAt' | 'fileSizeInBytes' | 'resolution' | 'duration' | 'originalFileName';
+
+export interface BrowseSettings {
+  media: BrowseMediaFilter;
+  field: BrowseSortField;
+  direction: 'asc' | 'desc';
+}
+
+export const browseSettings = persisted<BrowseSettings>(
+  'browse-settings',
+  { media: 'all', field: 'fileCreatedAt', direction: 'desc' },
+  {},
+);

@@ -480,6 +480,53 @@ export class AssetJobRepository {
       .stream();
   }
 
+  @GenerateSql({ params: [], stream: true })
+  streamForSubtitlesJob(force?: boolean) {
+    return (
+      this.db
+        .selectFrom('asset')
+        .select(['asset.id'])
+        .where('asset.type', '=', sql.lit(AssetType.Video))
+        .where('asset.deletedAt', 'is', null)
+        .where('asset.visibility', '!=', AssetVisibility.Hidden)
+        // "Missing" means no subtitle file on record. A video with no speech still gets an empty file,
+        // so it isn't queued again on every run.
+        .$if(!force, (qb) =>
+          qb.where((eb) =>
+            eb.not(
+              eb.exists((sub) =>
+                sub
+                  .selectFrom('asset_file')
+                  .whereRef('asset_file.assetId', '=', 'asset.id')
+                  .where('asset_file.type', '=', AssetFileType.Subtitle),
+              ),
+            ),
+          ),
+        )
+        .orderBy('asset.fileCreatedAt', 'desc')
+        .stream()
+    );
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getForSubtitlesJob(id: string) {
+    return this.db
+      .selectFrom('asset')
+      .select(['asset.id', 'asset.ownerId', 'asset.originalPath', 'asset.visibility', 'asset.type'])
+      .where('asset.id', '=', id)
+      .where('asset.deletedAt', 'is', null)
+      .executeTakeFirst();
+  }
+
+  @GenerateSql({ params: [DummyValue.UUID] })
+  getSubtitlePath(id: string) {
+    return this.db
+      .selectFrom('asset')
+      .select((eb) => withFilePath(eb, AssetFileType.Subtitle).as('subtitlePath'))
+      .where('asset.id', '=', id)
+      .executeTakeFirst();
+  }
+
   @GenerateSql({ params: [DummyValue.DATE], stream: true })
   streamForMigrationJob() {
     return this.db.selectFrom('asset').select(['id']).where('asset.deletedAt', 'is', null).stream();

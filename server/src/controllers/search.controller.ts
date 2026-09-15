@@ -5,6 +5,7 @@ import { AssetResponseDto } from 'src/dtos/asset-response.dto';
 import { AuthDto } from 'src/dtos/auth.dto';
 import { PersonResponseDto } from 'src/dtos/person.dto';
 import {
+  BrowseSearchDto,
   LargeAssetSearchDto,
   MetadataSearchDto,
   PlacesResponseDto,
@@ -37,6 +38,19 @@ export class SearchController {
   })
   searchAssets(@Auth() auth: AuthDto, @Body() dto: MetadataSearchDto): Promise<SearchResponseDto> {
     return this.service.searchMetadata(auth, dto);
+  }
+
+  @Post('browse')
+  @Authenticated({ permission: Permission.AssetRead })
+  @HttpCode(HttpStatus.OK)
+  @Endpoint({
+    summary: 'Browse assets',
+    description:
+      'Page through timeline assets as a flat list, optionally restricted to images or videos, sorted by date, file size, resolution, duration or file name.',
+    history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
+  })
+  browseAssets(@Auth() auth: AuthDto, @Body() dto: BrowseSearchDto): Promise<SearchResponseDto> {
+    return this.service.browse(auth, dto);
   }
 
   @Post('statistics')

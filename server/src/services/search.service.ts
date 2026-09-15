@@ -4,6 +4,7 @@ import { AssetMapOptions, AssetResponseDto, MapAsset, mapAsset } from 'src/dtos/
 import { AuthDto } from 'src/dtos/auth.dto';
 import { mapPerson, PersonResponseDto } from 'src/dtos/person.dto';
 import {
+  BrowseSearchDto,
   LargeAssetSearchDto,
   mapPlaces,
   MetadataSearchDto,
@@ -18,7 +19,7 @@ import {
   SmartSearchDto,
   StatisticsSearchDto,
 } from 'src/dtos/search.dto';
-import { AssetOrder, AssetVisibility, Permission } from 'src/enum';
+import { AssetOrder, AssetType, AssetVisibility, Permission } from 'src/enum';
 import { BaseService } from 'src/services/base.service';
 import { requireElevatedPermission } from 'src/utils/access';
 import { getMyPartnerIds } from 'src/utils/asset.util';
@@ -93,6 +94,32 @@ export class SearchService extends BaseService {
         visibility: dto.visibility ?? (auth.session?.hasElevatedPermission ? undefined : 'not-locked'),
         userIds,
         orderDirection: dto.order ?? AssetOrder.Desc,
+      },
+    );
+
+    return this.mapResponse(items, hasNextPage ? (page + 1).toString() : null, { auth });
+  }
+
+  // The browse page is an alternative to the timeline, so it shows exactly what the timeline does:
+  // timeline visibility only (no archived, locked, or hidden assets such as the video half of a
+  // live photo), nothing in the trash, and partners' assets when they're shared into the timeline.
+  async browse(auth: AuthDto, dto: BrowseSearchDto): Promise<SearchResponseDto> {
+    const userIds = await this.getUserIdsToSearch(auth);
+    const page = dto.page ?? 1;
+    const size = dto.size || 250;
+    const { hasNextPage, items } = await this.searchRepository.browseAssets(
+      { page, size },
+      {
+        userIds,
+        withExif: dto.withExif,
+        order: dto.order,
+        filter: {
+          visibility: { eq: AssetVisibility.Timeline },
+          trashedAt: { eq: null },
+          // "both" means images and videos specifically, not every type: audio and other files
+          // aren't part of the timeline either.
+          type: dto.type ? { eq: dto.type } : { in: [AssetType.Image, AssetType.Video] },
+        },
       },
     );
 

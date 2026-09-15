@@ -1257,6 +1257,7 @@ export type QueuesResponseLegacyDto = {
     sidecar: QueueResponseLegacyDto;
     smartSearch: QueueResponseLegacyDto;
     storageTemplateMigration: QueueResponseLegacyDto;
+    subtitles: QueueResponseLegacyDto;
     thumbnailGeneration: QueueResponseLegacyDto;
     videoConversion: QueueResponseLegacyDto;
     videoFaceDetection: QueueResponseLegacyDto;
@@ -1644,6 +1645,54 @@ export type QueueJobResponseDto = {
     /** Job creation timestamp */
     timestamp: number;
 };
+export type SearchOrder = {
+    direction?: AssetOrder;
+    field?: SearchOrderField;
+};
+export type BrowseSearchDto = {
+    order?: SearchOrder;
+    /** Page number */
+    page?: number;
+    /** Number of results to return */
+    size?: number;
+    /** Restrict to one asset type; omit for images and videos together */
+    "type"?: AssetTypeEnum;
+    /** Include EXIF data in response */
+    withExif?: boolean;
+};
+export type SearchFacetCountResponseDto = {
+    /** Number of assets with this facet value */
+    count: number;
+    /** Facet value */
+    value: string;
+};
+export type SearchFacetResponseDto = {
+    counts: SearchFacetCountResponseDto[];
+    /** Facet field name */
+    fieldName: string;
+};
+export type SearchAlbumResponseDto = {
+    /** Number of albums in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AlbumResponseDto[];
+    /** Total number of matching albums */
+    total: number;
+};
+export type SearchAssetResponseDto = {
+    /** Number of assets in this page */
+    count: number;
+    facets: SearchFacetResponseDto[];
+    items: AssetResponseDto[];
+    /** Next page token */
+    nextPage: string | null;
+    /** Total number of matching assets */
+    total: number;
+};
+export type SearchResponseDto = {
+    albums: SearchAlbumResponseDto;
+    assets: SearchAssetResponseDto;
+};
 export type SearchExploreItem = {
     data: AssetResponseDto;
     /** Explore value */
@@ -1737,39 +1786,6 @@ export type MetadataSearchDto = {
     withPeople?: boolean;
     /** Include stacked assets */
     withStacked?: boolean;
-};
-export type SearchFacetCountResponseDto = {
-    /** Number of assets with this facet value */
-    count: number;
-    /** Facet value */
-    value: string;
-};
-export type SearchFacetResponseDto = {
-    counts: SearchFacetCountResponseDto[];
-    /** Facet field name */
-    fieldName: string;
-};
-export type SearchAlbumResponseDto = {
-    /** Number of albums in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AlbumResponseDto[];
-    /** Total number of matching albums */
-    total: number;
-};
-export type SearchAssetResponseDto = {
-    /** Number of assets in this page */
-    count: number;
-    facets: SearchFacetResponseDto[];
-    items: AssetResponseDto[];
-    /** Next page token */
-    nextPage: string | null;
-    /** Total number of matching assets */
-    total: number;
-};
-export type SearchResponseDto = {
-    albums: SearchAlbumResponseDto;
-    assets: SearchAssetResponseDto;
 };
 export type PlacesResponseDto = {
     /** Administrative level 1 name (state/province) */
@@ -2449,6 +2465,7 @@ export type SystemConfigJobDto = {
     search: JobSettingsDto;
     sidecar: JobSettingsDto;
     smartSearch: JobSettingsDto;
+    subtitles: JobSettingsDto;
     thumbnailGeneration: JobSettingsDto;
     videoConversion: JobSettingsDto;
     videoFaceDetection: JobSettingsDto;
@@ -2526,6 +2543,12 @@ export type OcrConfig = {
     /** Name of the model to use */
     modelName: string;
 };
+export type SubtitlesConfig = {
+    /** Whether the task is enabled */
+    enabled: boolean;
+    /** Name of the model to use */
+    modelName: string;
+};
 export type SystemConfigMachineLearningDto = {
     availabilityChecks: MachineLearningAvailabilityChecksDto;
     clip: ClipConfig;
@@ -2534,6 +2557,7 @@ export type SystemConfigMachineLearningDto = {
     enabled: boolean;
     facialRecognition: FacialRecognitionConfig;
     ocr: OcrConfig;
+    subtitles: SubtitlesConfig;
     /** ML service URLs */
     urls: string[];
 };
@@ -4440,6 +4464,24 @@ export function downloadAsset({ edited, id, key, slug }: {
     }));
 }
 /**
+ * Get video subtitles
+ */
+export function getAssetSubtitles({ id, key, slug }: {
+    id: string;
+    key?: string;
+    slug?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchBlob<{
+        status: 200;
+        data: Blob;
+    }>(`/assets/${encodeURIComponent(id)}/subtitles${QS.query(QS.explode({
+        key,
+        slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
  * View asset thumbnail
  */
 export function viewAsset({ edited, id, key, size, slug }: {
@@ -5770,6 +5812,21 @@ export function getQueueJobs({ name, status }: {
     }))}`, {
         ...opts
     }));
+}
+/**
+ * Browse assets
+ */
+export function browseAssets({ browseSearchDto }: {
+    browseSearchDto: BrowseSearchDto;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: SearchResponseDto;
+    }>("/search/browse", oazapfts.json({
+        ...opts,
+        method: "POST",
+        body: browseSearchDto
+    })));
 }
 /**
  * Retrieve assets by city
@@ -7442,7 +7499,8 @@ export enum AssetJobName {
     RefreshMetadata = "refresh-metadata",
     RegenerateThumbnail = "regenerate-thumbnail",
     TranscodeVideo = "transcode-video",
-    ScanVideoFaces = "scan-video-faces"
+    ScanVideoFaces = "scan-video-faces",
+    GenerateSubtitles = "generate-subtitles"
 }
 export enum AssetTypeEnum {
     Image = "IMAGE",
@@ -7505,6 +7563,7 @@ export enum QueueName {
     Notifications = "notifications",
     BackupDatabase = "backupDatabase",
     Ocr = "ocr",
+    Subtitles = "subtitles",
     Workflow = "workflow",
     IntegrityCheck = "integrityCheck",
     Editor = "editor"
@@ -7602,6 +7661,8 @@ export enum JobName {
     VersionCheck = "VersionCheck",
     OcrQueueAll = "OcrQueueAll",
     Ocr = "Ocr",
+    AssetGenerateSubtitlesQueueAll = "AssetGenerateSubtitlesQueueAll",
+    AssetGenerateSubtitles = "AssetGenerateSubtitles",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",
@@ -7613,6 +7674,15 @@ export enum JobName {
     IntegrityChecksumFilesRefresh = "IntegrityChecksumFilesRefresh",
     IntegrityDeleteReportType = "IntegrityDeleteReportType",
     IntegrityDeleteReports = "IntegrityDeleteReports"
+}
+export enum SearchOrderField {
+    FileCreatedAt = "fileCreatedAt",
+    LocalDateTime = "localDateTime",
+    FileSizeInBytes = "fileSizeInBytes",
+    Rating = "rating",
+    Resolution = "resolution",
+    Duration = "duration",
+    OriginalFileName = "originalFileName"
 }
 export enum SearchSuggestionType {
     Country = "country",

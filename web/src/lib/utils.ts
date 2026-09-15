@@ -5,6 +5,7 @@ import {
   finishOAuth,
   getAssetOriginalPath,
   getAssetPlaybackPath,
+  getAssetSubtitlesPath,
   getAssetThumbnailPath,
   getAssetVideoFramePath,
   getBaseUrl,
@@ -242,6 +243,11 @@ export const getAssetMediaUrl = (options: AssetUrlOptions) => {
 export const getAssetPlaybackUrl = (options: AssetUrlOptions) => {
   const { id, cacheKey: c } = options;
   return createUrl(getAssetPlaybackPath(id), { ...authManager.params, c });
+};
+
+export const getAssetSubtitlesUrl = (options: AssetUrlOptions) => {
+  const { id, cacheKey: c } = options;
+  return createUrl(getAssetSubtitlesPath(id), { ...authManager.params, c });
 };
 
 export const getAssetVideoFrameUrl = (id: string, timestampMs: number) => {

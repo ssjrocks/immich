@@ -186,6 +186,8 @@ export class JobService extends BaseService {
 
         if (asset.type === AssetType.Video) {
           jobs.push({ name: JobName.AssetEncodeVideo, data: item.data });
+          // Skipped by the handler unless subtitles are enabled, so it's safe to always queue.
+          jobs.push({ name: JobName.AssetGenerateSubtitles, data: item.data });
         }
 
         await this.jobRepository.queueAll(jobs);

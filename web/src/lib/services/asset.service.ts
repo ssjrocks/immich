@@ -33,6 +33,7 @@ import {
   mdiPlus,
   mdiPresentationPlay,
   mdiShareVariantOutline,
+  mdiSubtitlesOutline,
   mdiTagPlusOutline,
   mdiTune,
 } from '@mdi/js';
@@ -96,7 +97,21 @@ export const getAssetBulkActions = ($t: MessageFormatter) => {
     $if: () => ownedAssets.every((asset) => asset.isVideo),
   };
 
-  return { AddToAlbum, RefreshFacesJob, RefreshMetadataJob, RegenerateThumbnailJob, TranscodeVideoJob };
+  const GenerateSubtitlesJob: ActionItem = {
+    title: $t('generate_subtitles'),
+    icon: mdiSubtitlesOutline,
+    onAction: () => onAction(AssetJobName.GenerateSubtitles),
+    $if: () => ownedAssets.every((asset) => asset.isVideo),
+  };
+
+  return {
+    AddToAlbum,
+    GenerateSubtitlesJob,
+    RefreshFacesJob,
+    RefreshMetadataJob,
+    RegenerateThumbnailJob,
+    TranscodeVideoJob,
+  };
 };
 
 export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & { stackPrimaryAssetId?: string }) => {
@@ -297,6 +312,13 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     $if: () => asset.type === AssetTypeEnum.Video,
   };
 
+  const GenerateSubtitlesJob: ActionItem = {
+    title: $t('generate_subtitles'),
+    icon: mdiSubtitlesOutline,
+    onAction: () => handleRunAssetJob({ name: AssetJobName.GenerateSubtitles, assetIds: [asset.id] }),
+    $if: () => asset.type === AssetTypeEnum.Video,
+  };
+
   return {
     Share,
     Download,
@@ -323,6 +345,7 @@ export const getAssetActions = ($t: MessageFormatter, asset: AssetResponseDto & 
     RefreshMetadataJob,
     RegenerateThumbnailJob,
     TranscodeVideoJob,
+    GenerateSubtitlesJob,
   };
 };
 
@@ -407,6 +430,7 @@ const getAssetJobMessage = ($t: MessageFormatter, job: AssetJobName) => {
     [AssetJobName.RegenerateThumbnail]: $t('regenerating_thumbnails'),
     [AssetJobName.TranscodeVideo]: $t('refreshing_encoded_video'),
     [AssetJobName.ScanVideoFaces]: $t('scanning_video_faces'),
+    [AssetJobName.GenerateSubtitles]: $t('generating_subtitles'),
   };
 
   return messages[job];

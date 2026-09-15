@@ -179,6 +179,23 @@ export class AssetMediaController {
     await sendFile(res, next, () => this.service.playbackVideo(auth, id), this.logger);
   }
 
+  @Get(':id/subtitles')
+  @FileResponse()
+  @Authenticated({ permission: Permission.AssetView, sharedLink: true })
+  @Endpoint({
+    summary: 'Get video subtitles',
+    description: 'Retrieve the WebVTT subtitles generated for a video. Subtitles are always translated to English.',
+    history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
+  })
+  async getAssetSubtitles(
+    @Auth() auth: AuthDto,
+    @Param() { id }: UUIDParamDto,
+    @Res() res: Response,
+    @Next() next: NextFunction,
+  ) {
+    await sendFile(res, next, () => this.service.getSubtitles(auth, id), this.logger);
+  }
+
   @Get(':id/video/frame')
   @FileResponse()
   @Authenticated({ permission: Permission.AssetView, sharedLink: true })

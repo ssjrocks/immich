@@ -434,6 +434,38 @@
           />
         </div>
       </SettingAccordion>
+
+      <SettingAccordion
+        key="subtitles"
+        title={$t('admin.machine_learning_subtitles')}
+        subtitle={$t('admin.machine_learning_subtitles_description')}
+      >
+        <div class="mt-4 ml-4 flex flex-col gap-4">
+          <SettingSwitch
+            title={$t('admin.machine_learning_subtitles_enabled')}
+            subtitle={$t('admin.machine_learning_subtitles_enabled_description')}
+            bind:checked={configToEdit.machineLearning.subtitles.enabled}
+            disabled={disabled || !configToEdit.machineLearning.enabled}
+          />
+
+          <hr />
+
+          <SettingSelect
+            label={$t('admin.machine_learning_subtitles_model')}
+            desc={$t('admin.machine_learning_subtitles_model_description')}
+            name="subtitles-model"
+            bind:value={configToEdit.machineLearning.subtitles.modelName}
+            options={[
+              { text: 'Whisper Medium (faster, ~750 MB)', value: 'faster-whisper-medium' },
+              { text: 'Whisper Large-v3 (more accurate, ~1.5 GB)', value: 'faster-whisper-large-v3' },
+            ]}
+            disabled={disabled ||
+              !configToEdit.machineLearning.enabled ||
+              !configToEdit.machineLearning.subtitles.enabled}
+            isEdited={configToEdit.machineLearning.subtitles.modelName !== config.machineLearning.subtitles.modelName}
+          />
+        </div>
+      </SettingAccordion>
       <SettingButtonsRow bind:configToEdit keys={['machineLearning']} {disabled} />
     </form>
   </div>

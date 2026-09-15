@@ -31,10 +31,15 @@ class OcrSettings(BaseModel):
     detection: str | None = None
 
 
+class SubtitlesSettings(BaseModel):
+    transcription: str | None = None
+
+
 class PreloadModelData(BaseModel):
     clip: ClipSettings = ClipSettings()
     facial_recognition: FacialRecognitionSettings = FacialRecognitionSettings()
     ocr: OcrSettings = OcrSettings()
+    subtitles: SubtitlesSettings = SubtitlesSettings()
 
 
 class MaxBatchSize(BaseModel):

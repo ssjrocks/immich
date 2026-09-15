@@ -80,6 +80,10 @@
       missingText: $t('missing'),
       disabled: !featureFlags.ocr,
     },
+    [QueueName.Subtitles]: {
+      allText: $t('all'),
+      missingText: $t('missing'),
+    },
     [QueueName.VideoConversion]: {
       allText: $t('all'),
       missingText: $t('missing'),

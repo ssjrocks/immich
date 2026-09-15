@@ -47,6 +47,8 @@
     slidingWindowOffset?: number;
     arrowNavigation?: boolean;
     allowDeletion?: boolean;
+    /** Element that actually scrolls, when that isn't the document (e.g. inside UserPageLayout). */
+    scrollElement?: HTMLElement;
   };
 
   let {
@@ -63,6 +65,7 @@
     pageHeaderOffset = 0,
     arrowNavigation = true,
     allowDeletion = true,
+    scrollElement = undefined,
   }: Props = $props();
 
   const navigationAssets = $derived(viewerAssets ?? assets);
@@ -103,7 +106,20 @@
     assets[index] = asset;
   };
 
-  const updateSlidingWindow = () => (scrollTop = document.scrollingElement?.scrollTop ?? 0);
+  const updateSlidingWindow = () =>
+    (scrollTop = scrollElement ? scrollElement.scrollTop : (document.scrollingElement?.scrollTop ?? 0));
+
+  // Pages inside UserPageLayout scroll an inner element rather than the document, and scroll events
+  // don't bubble up to it -- without this the sliding window never moves and onEndReached never fires.
+  $effect(() => {
+    const element = scrollElement;
+    if (!element) {
+      return;
+    }
+    element.addEventListener('scroll', updateSlidingWindow, { passive: true });
+    updateSlidingWindow();
+    return () => element.removeEventListener('scroll', updateSlidingWindow);
+  });
 
   const debouncedOnEndReached = debounce(() => onEndReached?.(), 750, { maxWait: 100, leading: true });
 

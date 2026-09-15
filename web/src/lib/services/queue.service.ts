@@ -26,6 +26,7 @@ import {
   mdiPlay,
   mdiPlus,
   mdiStateMachine,
+  mdiSubtitlesOutline,
   mdiTable,
   mdiTagFaces,
   mdiTrashCanOutline,
@@ -213,6 +214,11 @@ export const asQueueItem = ($t: MessageFormatter, queue: { name: QueueName }): Q
       icon: mdiOcr,
       title: $t('admin.machine_learning_ocr'),
       subtitle: $t('admin.ocr_job_description'),
+    },
+    [QueueName.Subtitles]: {
+      icon: mdiSubtitlesOutline,
+      title: $t('admin.subtitles_job'),
+      subtitle: $t('admin.subtitles_job_description'),
     },
     [QueueName.VideoConversion]: {
       icon: mdiVideo,

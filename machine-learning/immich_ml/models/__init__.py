@@ -10,6 +10,7 @@ from immich_ml.schemas import ModelSource, ModelTask, ModelType
 from .constants import get_model_source
 from .facial_recognition.detection import FaceDetector
 from .facial_recognition.recognition import FaceRecognizer
+from .transcription.whisper import WhisperTranscriber
 
 
 def get_model_class(model_name: str, model_type: ModelType, model_task: ModelTask) -> type[InferenceModel]:
@@ -35,6 +36,9 @@ def get_model_class(model_name: str, model_type: ModelType, model_task: ModelTas
 
         case ModelSource.PADDLE, ModelType.RECOGNITION, ModelTask.OCR:
             return TextRecognizer
+
+        case ModelSource.WHISPER, ModelType.RECOGNITION, ModelTask.TRANSCRIPTION:
+            return WhisperTranscriber
 
         case _:
             raise ValueError(f"Unknown model combination: {source}, {model_type}, {model_task}")

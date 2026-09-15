@@ -459,6 +459,10 @@ export type JobItem =
   | { name: JobName.OcrQueueAll; data: IBaseJob }
   | { name: JobName.Ocr; data: IEntityJob }
 
+  // Subtitles
+  | { name: JobName.AssetGenerateSubtitlesQueueAll; data: IBaseJob }
+  | { name: JobName.AssetGenerateSubtitles; data: IEntityJob }
+
   // Workflow
   | { name: JobName.WorkflowAssetTrigger; data: { workflowId: string; assetId: string } }
 

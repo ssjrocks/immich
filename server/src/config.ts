@@ -113,6 +113,10 @@ export type SystemConfig = {
       minRecognitionScore: number;
       maxResolution: number;
     };
+    subtitles: {
+      enabled: boolean;
+      modelName: string;
+    };
   };
   map: {
     enabled: boolean;
@@ -293,6 +297,7 @@ export const defaults = Object.freeze<SystemConfig>({
     [QueueName.VideoConversion]: { concurrency: 1 },
     [QueueName.Notification]: { concurrency: 5 },
     [QueueName.Ocr]: { concurrency: 1 },
+    [QueueName.Subtitles]: { concurrency: 1 },
     [QueueName.Workflow]: { concurrency: 5 },
     [QueueName.IntegrityCheck]: { concurrency: 1 },
     [QueueName.Editor]: { concurrency: 2 },
@@ -341,6 +346,12 @@ export const defaults = Object.freeze<SystemConfig>({
       minDetectionScore: 0.5,
       minRecognitionScore: 0.8,
       maxResolution: 736,
+    },
+    subtitles: {
+      // Off by default: transcribing a library's worth of video is heavy CPU work, and upgrading to a
+      // version with this feature must not silently start doing it. Output is always English.
+      enabled: false,
+      modelName: 'faster-whisper-medium',
     },
   },
   map: {

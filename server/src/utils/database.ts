@@ -8,6 +8,7 @@ import {
   KyselyConfig,
   NotNull,
   OperandValueExpression,
+  RawBuilder,
   ReferenceExpression,
   Selectable,
   SelectQueryBuilder,
@@ -787,19 +788,31 @@ export function searchAssetBuilder(kysely: Kysely<DB>, options: AssetSearchBuild
   );
 }
 
-const searchOrderColumns = {
-  [SearchOrderField.FileCreatedAt]: { column: 'asset.fileCreatedAt', nullable: false },
-  [SearchOrderField.LocalDateTime]: { column: 'asset.localDateTime', nullable: false },
-  [SearchOrderField.FileSizeInBytes]: { column: 'asset_exif.fileSizeInByte', nullable: true },
-  [SearchOrderField.Rating]: { column: 'asset_exif.rating', nullable: true },
-} as const;
+// Every field resolves to a RawBuilder, whether it's a plain column or an expression, so
+// orderBy always sees one argument type instead of a union it can't overload on.
+const searchOrderColumns: Record<SearchOrderField, { expression: RawBuilder<unknown>; nullable: boolean }> = {
+  [SearchOrderField.FileCreatedAt]: { expression: sql.ref('asset.fileCreatedAt'), nullable: false },
+  [SearchOrderField.LocalDateTime]: { expression: sql.ref('asset.localDateTime'), nullable: false },
+  [SearchOrderField.FileSizeInBytes]: { expression: sql.ref('asset_exif.fileSizeInByte'), nullable: true },
+  [SearchOrderField.Rating]: { expression: sql.ref('asset_exif.rating'), nullable: true },
+  // Pixel count rather than either dimension: a portrait and a landscape shot of the same size
+  // rank together, and it doesn't care whether orientation swapped width and height.
+  [SearchOrderField.Resolution]: {
+    expression: sql`asset_exif."exifImageWidth" * asset_exif."exifImageHeight"`,
+    nullable: true,
+  },
+  // Images have no duration, so when images and videos are browsed together they sink to the end.
+  [SearchOrderField.Duration]: { expression: sql.ref('asset.duration'), nullable: true },
+  // Case-insensitive, or every capitalised name would sort ahead of every lower-case one.
+  [SearchOrderField.OriginalFileName]: { expression: sql`lower(asset."originalFileName")`, nullable: false },
+};
 
 export function withSearchOrder(qb: ReturnType<typeof searchAssetBuilder>, order?: SearchOrder) {
   const { field, direction } = order ?? DEFAULT_SEARCH_ORDER;
-  const { column, nullable } = searchOrderColumns[field];
+  const { expression, nullable } = searchOrderColumns[field];
   return (
     qb
-      .orderBy(column, (ob) => {
+      .orderBy(expression, (ob) => {
         const ordered = direction === AssetOrder.Asc ? ob.asc() : ob.desc();
         // nulls last: assets without an asset_exif row would otherwise lead descending results
         return nullable ? ordered.nullsLast() : ordered;

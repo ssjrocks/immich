@@ -8,7 +8,13 @@
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { mediaCapabilitiesManager } from '$lib/managers/media-capabilities-manager.svelte';
   import { autoPlayVideo, lang, loopVideo as loopVideoPreference } from '$lib/stores/preferences.store';
-  import { getAssetHlsSessionUrl, getAssetHlsUrl, getAssetMediaUrl, getAssetPlaybackUrl } from '$lib/utils';
+  import {
+    getAssetHlsSessionUrl,
+    getAssetHlsUrl,
+    getAssetMediaUrl,
+    getAssetPlaybackUrl,
+    getAssetSubtitlesUrl,
+  } from '$lib/utils';
   import { getNaturalSize, scaleToFit, type ContentMetrics } from '$lib/utils/container-utils';
   import { getBoundingBox } from '$lib/utils/people-utils';
   import { AssetMediaSize, type AssetResponseDto } from '@immich/sdk';
@@ -21,6 +27,8 @@
     mdiFullscreenExit,
     mdiPause,
     mdiPlay,
+    mdiSubtitles,
+    mdiSubtitlesOutline,
     mdiVolumeHigh,
     mdiVolumeLow,
     mdiVolumeMedium,
@@ -29,6 +37,7 @@
   import 'hls-video-element';
   import type HlsVideoElement from 'hls-video-element';
   import Hls, { AbrController, Events, type FragLoadedData, type FragLoadingData, type HlsConfig } from 'hls.js';
+  import 'media-chrome/media-captions-button';
   import 'media-chrome/media-control-bar';
   import 'media-chrome/media-controller';
   import 'media-chrome/media-fullscreen-button';
@@ -42,7 +51,7 @@
   import 'media-chrome/menu/media-settings-menu';
   import 'media-chrome/menu/media-settings-menu-button';
   import 'media-chrome/menu/media-settings-menu-item';
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import { useSwipe, type SwipeCustomEvent } from 'svelte-gestures';
   import { t } from 'svelte-i18n';
   import { fade } from 'svelte/transition';
@@ -80,6 +89,33 @@
 
   let videoPlayer: HTMLVideoElement | undefined = $state();
   let isLoading = $state(true);
+
+  // Only processed videos have subtitles, so check before adding a track: media-chrome shows a captions
+  // button for any <track>, even one whose file doesn't exist. A video with no speech has a header-only
+  // file, which is treated as having nothing to show either.
+  let subtitlesUrl: string | undefined = $state();
+  $effect(() => {
+    const url = getAssetSubtitlesUrl({ id: assetId, cacheKey });
+    // The player is reused when moving between videos, so the previous video's track is still attached here.
+    // Disable it before removing it: browsers can leave a removed track's last cue painted on a paused video
+    // until something forces a redraw, which looks like subtitles following you to the next video.
+    for (const track of Array.from(untrack(() => videoPlayer)?.textTracks ?? [])) {
+      if (track.kind === 'subtitles' || track.kind === 'captions') {
+        track.mode = 'disabled';
+      }
+    }
+    subtitlesUrl = undefined;
+    const controller = new AbortController();
+    fetch(url, { method: 'HEAD', signal: controller.signal })
+      .then((response) => {
+        const length = Number(response.headers.get('content-length') ?? Number.NaN);
+        if (response.ok && !(length <= 'WEBVTT\n'.length)) {
+          subtitlesUrl = url;
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  });
   let assetFileUrl = $derived.by(() => {
     if (featureFlagsManager.value.realtimeTranscoding) {
       return getAssetHlsUrl(assetId);
@@ -466,7 +502,11 @@
             }}
             onclose={onClose}
             poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
-          ></hls-video>
+          >
+            {#if subtitlesUrl}
+              <track kind="subtitles" srclang="en" label={$t('subtitles_track_english')} src={subtitlesUrl} default />
+            {/if}
+          </hls-video>
         {:else}
           <video
             bind:this={videoPlayer}
@@ -491,7 +531,11 @@
             }}
             onclose={onClose}
             poster={getAssetMediaUrl({ id: asset.id, size: AssetMediaSize.Preview, cacheKey })}
-          ></video>
+          >
+            {#if subtitlesUrl}
+              <track kind="subtitles" srclang="en" label={$t('subtitles_track_english')} src={subtitlesUrl} default />
+            {/if}
+          </video>
         {/if}
 
         {#if extendedControls}
@@ -539,6 +583,13 @@
                 <Icon slot="high" icon={mdiVolumeHigh} />
               </media-mute-button>
             </div>
+
+            {#if subtitlesUrl}
+              <media-captions-button class="shrink-0 rounded-full p-2 outline-none">
+                <Icon slot="on" icon={mdiSubtitles} />
+                <Icon slot="off" icon={mdiSubtitlesOutline} />
+              </media-captions-button>
+            {/if}
 
             {#if extendedControls}
               <media-fullscreen-button class="shrink-0 rounded-full p-2 outline-none">
