@@ -61,8 +61,22 @@ import {
 import { getPreferences } from 'src/utils/preferences';
 import { Point, transformPoints } from 'src/utils/transform';
 import { groupIntoAppearances } from 'src/utils/video-appearance';
+import { groupVideoFaces } from 'src/utils/video-face-groups';
 
 const personKey = ({ ownerId, personGroupId }: PersonId) => `${ownerId}/${personGroupId}`;
+
+// How many of a video face group's clearest faces are searched against the library for an existing person.
+const VIDEO_GROUP_MATCH_ATTEMPTS = 3;
+
+const mostCommonPersonGroupId = (faces: { personGroupId: string | null }[]) => {
+  const counts = new Map<string, number>();
+  for (const { personGroupId } of faces) {
+    if (personGroupId) {
+      counts.set(personGroupId, (counts.get(personGroupId) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+};
 
 @Injectable()
 export class PersonService extends BaseService {
@@ -624,6 +638,16 @@ export class PersonService extends BaseService {
     return JobStatus.Success;
   }
 
+  /**
+   * Gives each person in a video one person record, keeping every detection.
+   *
+   * A densely sampled video shows the same person in many nearly identical frames. Recognising those faces one
+   * at a time -- or deleting the near-duplicates first, as this job used to -- leaves each surviving face too far
+   * from the others to match, so one person turned into dozens of one-face people. Instead the detections are
+   * grouped (following a person frame to frame, and back after a cut), and each group is recognised once: it
+   * joins the person already on one of its faces, or a matching person elsewhere in the library, or becomes one
+   * new person.
+   */
   @OnJob({ name: JobName.AssetVideoClusterFaces, queue: QueueName.VideoFaceDetection })
   async handleVideoClusterFaces({ id }: JobOf<JobName.AssetVideoClusterFaces>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: true });
@@ -631,97 +655,76 @@ export class PersonService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    // Include the un-timestamped preview-frame face too, so a person visible in both the
-    // preview frame and a sampled video frame gets deduped into one face rather than kept
-    // as two near-identical entries.
-    const faces = await this.personRepository.getVideoFacesWithEmbeddings(id, { includeUntimedFace: true });
+    // Let queued photo recognition settle first, so a video joins the people it creates instead of racing it.
+    await this.jobRepository.waitForQueueCompletion(QueueName.FacialRecognition);
 
+    // The un-timestamped preview-frame face is included, so a person it was already recognised as carries
+    // over to the matching video frames.
+    const faces = await this.personRepository.getVideoFacesWithEmbeddings(id, { includeUntimedFace: true });
     if (faces.length === 0) {
       return JobStatus.Success;
     }
 
-    if (faces.length === 1) {
-      await this.jobRepository.queueAll([
-        { name: JobName.FacialRecognitionQueueAll, data: { force: false } },
-        { name: JobName.FacialRecognition, data: { id: faces[0].id } },
-      ]);
-      return JobStatus.Success;
+    const context = await this.personRepository.getFaceForFacialRecognitionJob(faces[0].id);
+    if (!context?.asset) {
+      this.logger.warn(`Could not find the asset for video ${id}'s faces`);
+      return JobStatus.Failed;
     }
 
-    const { maxDistance } = machineLearning.facialRecognition;
+    const { ownerId, clusterGroupId, fileCreatedAt, visibility } = context.asset;
+    const { maxDistance, minFaces } = machineLearning.facialRecognition;
+    const groups = groupVideoFaces(faces, maxDistance);
 
-    // Rank by normalised bounding-box area descending. Larger faces are generally
-    // more frontal and yield better embeddings, so they become cluster representatives.
-    const ranked = faces
-      .map((face) => ({
-        ...face,
-        area:
-          ((face.boundingBoxX2 - face.boundingBoxX1) * (face.boundingBoxY2 - face.boundingBoxY1)) /
-          (face.imageWidth * face.imageHeight || 1),
-        vec: JSON.parse(face.embedding) as number[],
-      }))
-      .sort((a, b) => b.area - a.area);
+    let assigned = 0;
+    let created = 0;
+    for (const group of groups) {
+      let personGroupId = mostCommonPersonGroupId(group);
 
-    const processed = new Set<string>();
-    const faceIdsToRemove: string[] = [];
-    const survivors: string[] = [];
+      // Try a few of the clearest faces: one bad angle shouldn't stop a group from finding its person.
+      for (const face of personGroupId ? [] : group.slice(0, VIDEO_GROUP_MATCH_ATTEMPTS)) {
+        const [match] = await this.searchRepository.searchFaces({
+          clusterGroupId,
+          embedding: face.embedding,
+          maxDistance,
+          numResults: 1,
+          hasPerson: true,
+          minBirthDate: new Date(fileCreatedAt),
+        });
+        if (match?.personGroupId) {
+          personGroupId = match.personGroupId;
+          break;
+        }
+      }
 
-    // Greedy clustering: each unvisited face becomes a cluster representative;
-    // all subsequent faces within maxDistance of it are marked as duplicates.
-    for (const face of ranked) {
-      if (processed.has(face.id)) {
+      // Same rule as photo recognition: only this many sightings are enough to be confident it's a new person.
+      if (!personGroupId && group.length >= minFaces && visibility === AssetVisibility.Timeline) {
+        personGroupId = (await this.personRepository.createGroup(ownerId)).id;
+        created++;
+      }
+
+      if (!personGroupId) {
         continue;
       }
-      processed.add(face.id);
-      survivors.push(face.id);
 
-      for (const other of ranked) {
-        if (processed.has(other.id)) {
-          continue;
-        }
-        if (this.cosineDistance(face.vec, other.vec) <= maxDistance) {
-          processed.add(other.id);
-          faceIdsToRemove.push(other.id);
-        }
+      const person = await this.personRepository.getByGroupId({ ownerId, personGroupId });
+      if (!person) {
+        await this.personRepository.create({ ownerId, faceAssetId: group[0].id, personGroupId });
+        await this.jobRepository.queue({ name: JobName.PersonGenerateThumbnail, data: { ownerId, personGroupId } });
+      }
+
+      // Faces already assigned (the preview face, or a manual correction) are left as they are.
+      const faceIds = group.filter((face) => !face.personGroupId).map((face) => face.id);
+      if (faceIds.length > 0) {
+        await this.personRepository.reassignFaces({ faceIds, newPersonGroupId: personGroupId });
+        assigned += faceIds.length;
       }
     }
 
-    if (faceIdsToRemove.length > 0) {
-      // A removed face may be the representative photo (faceAssetId) for its person -- unlike a
-      // plain duplicate, deleting that one leaves the person with no thumbnail source at all
-      // (the FK sets faceAssetId to null on delete, and nothing else would ever repair it). Looked
-      // up before deleting, for that same reason.
-      const changeFeaturePhoto = await this.personRepository.getByFaceAssetIds(faceIdsToRemove);
-
-      await this.personRepository.refreshFaces([], faceIdsToRemove, []);
-      this.logger.log(
-        `Removed ${faceIdsToRemove.length} duplicate video faces in asset ${id}, kept ${survivors.length}`,
-      );
-
-      if (changeFeaturePhoto.length > 0) {
-        await this.createNewFeaturePhoto(changeFeaturePhoto);
-      }
-    }
-
-    const jobs = survivors.map((faceId) => ({ name: JobName.FacialRecognition, data: { id: faceId } }) as const);
-    await this.jobRepository.queueAll([{ name: JobName.FacialRecognitionQueueAll, data: { force: false } }, ...jobs]);
+    this.logger.log(
+      `Grouped ${faces.length} faces in video ${id} into ${groups.length} people: assigned ${assigned} faces, created ${created} people`,
+    );
 
     return JobStatus.Success;
-  }
-
-  // Returns cosine distance (1 − cosine similarity). 0 = identical direction, 1 = orthogonal.
-  // Zero-magnitude vectors are treated as maximally distant to avoid division by zero.
-  private cosineDistance(a: number[], b: number[]): number {
-    let dot = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-    const denom = Math.sqrt(normA) * Math.sqrt(normB);
-    return denom === 0 ? 1 : 1 - dot / denom;
   }
 
   private iou(
@@ -794,6 +797,20 @@ export class PersonService extends BaseService {
       );
     }
 
+    if (force && isVideoFaceScanEnabled(machineLearning)) {
+      // A reset unassigns video faces too, and recognition leaves those to video face grouping: re-group every
+      // video. Each job waits for the recognition queued above to finish first.
+      let jobs: JobItem[] = [];
+      for await (const asset of this.assetJobRepository.streamForVideoDetectFacesJob(true)) {
+        jobs.push({ name: JobName.AssetVideoClusterFaces, data: { id: asset.id } });
+        if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
+          await this.jobRepository.queueAll(jobs);
+          jobs = [];
+        }
+      }
+      await this.jobRepository.queueAll(jobs);
+    }
+
     await this.systemMetadataRepository.set(SystemMetadataKey.FacialRecognitionState, { lastRun });
 
     return JobStatus.Success;
@@ -824,6 +841,13 @@ export class PersonService extends BaseService {
 
     if (face.personGroupId) {
       this.logger.debug(`Face ${id} already has a person assigned`);
+      return JobStatus.Skipped;
+    }
+
+    // Faces from sampled video frames are recognised a whole group at a time by handleVideoClusterFaces. One by
+    // one they're near-duplicates of each other, which is what split one person into many.
+    if (face.timestampMs !== null) {
+      this.logger.debug(`Face ${id} is from a video frame, leaving it to video face grouping`);
       return JobStatus.Skipped;
     }
 

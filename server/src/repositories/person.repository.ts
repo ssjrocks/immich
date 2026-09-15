@@ -248,8 +248,8 @@ export class PersonRepository {
   /**
    * By default, returns only this asset's timestamped (sampled-frame) video faces. Pass
    * `includeUntimedFace: true` to also include the asset's un-timestamped preview-frame face (if
-   * any) -- needed when clustering, so a person visible in both the preview frame and a sampled
-   * video frame gets deduped into a single face rather than kept as two near-identical entries.
+   * any) -- needed when grouping, so a person the preview face was already recognised as carries
+   * over to the matching video frames.
    */
   @GenerateSql({ params: [DummyValue.UUID] })
   getVideoFacesWithEmbeddings(assetId: string, options: { includeUntimedFace?: boolean } = {}) {
@@ -265,6 +265,7 @@ export class PersonRepository {
         'asset_face.boundingBoxX2',
         'asset_face.boundingBoxY2',
         'asset_face.timestampMs',
+        'asset_face.personGroupId',
         'face_search.embedding',
       ])
       .where('asset_face.assetId', '=', assetId)
@@ -299,20 +300,6 @@ export class PersonRepository {
       .where('asset_face.deletedAt', 'is', null)
       .groupBy(['asset_face.assetId', 'asset.originalFileName', 'asset.duration'])
       .orderBy((eb) => eb.fn.min('asset_face.timestampMs'), 'asc')
-      .execute();
-  }
-
-  // Every person (of any owner) whose feature photo is one of these faces. In a cluster group several users'
-  // copies of a person can share a representative face, so each of them needs repairing when it goes away.
-  @GenerateSql({ params: [[DummyValue.UUID]] })
-  getByFaceAssetIds(faceAssetIds: string[]) {
-    if (faceAssetIds.length === 0) {
-      return Promise.resolve([]);
-    }
-    return this.db
-      .selectFrom('person')
-      .select(['person.ownerId', 'person.personGroupId'])
-      .where('person.faceAssetId', 'in', faceAssetIds)
       .execute();
   }
 
@@ -462,7 +449,7 @@ export class PersonRepository {
   getFaceForFacialRecognitionJob(id: string) {
     return this.db
       .selectFrom('asset_face')
-      .select(['asset_face.id', 'asset_face.personGroupId', 'asset_face.sourceType'])
+      .select(['asset_face.id', 'asset_face.personGroupId', 'asset_face.sourceType', 'asset_face.timestampMs'])
       .select((eb) =>
         jsonObjectFrom(
           eb
