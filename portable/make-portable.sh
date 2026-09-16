@@ -9,7 +9,8 @@
 # Options:
 #   --version TAG     release to package (default: latest)
 #   --output DIR      where to build the folder (default: ./immich-portable)
-#   --maps DIR        copy offline map tiles from an existing map-tiles folder
+#   --maps DIR        use offline map tiles from an existing map-tiles folder instead of downloading them
+#   --no-maps         leave out the offline map (the map will be blank offline)
 #   --docker-version  static Docker binaries to bundle (default: 29.8.1)
 #
 # The offline machine needs no Docker install: the folder carries its own.
@@ -18,6 +19,8 @@ set -euo pipefail
 VERSION=latest
 OUTPUT=./immich-portable
 MAPS=
+INCLUDE_MAPS=1
+MAP_RELEASE=https://github.com/ssjrocks/immich/releases/download/offline-map-z10
 DOCKER_VERSION=29.8.1
 REGISTRY=ghcr.io/ssjrocks
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -27,6 +30,7 @@ while [ $# -gt 0 ]; do
     --version) VERSION="$2"; shift 2 ;;
     --output) OUTPUT="$2"; shift 2 ;;
     --maps) MAPS="$2"; shift 2 ;;
+    --no-maps) INCLUDE_MAPS=0; shift ;;
     --docker-version) DOCKER_VERSION="$2"; shift 2 ;;
     -h|--help) sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
@@ -63,7 +67,9 @@ done
 mkdir -p "$OUTPUT" || die "can't create $OUTPUT"
 OUTPUT="$(cd "$OUTPUT" && pwd)"
 available_gb=$(df -Pk "$OUTPUT" | awk 'NR==2 {print int($4/1024/1024)}')
-[ "${available_gb:-0}" -ge 15 ] || die "only ${available_gb}GB free where the folder is being built; about 15GB is needed (more with map tiles)."
+needed_gb=15
+[ "$INCLUDE_MAPS" -eq 1 ] && needed_gb=20
+[ "${available_gb:-0}" -ge "$needed_gb" ] || die "only ${available_gb}GB free where the folder is being built; about ${needed_gb}GB is needed."
 echo "  building in $OUTPUT (${available_gb}GB free)"
 echo "  version: $VERSION"
 
@@ -184,15 +190,41 @@ chmod +x "$OUTPUT"/runtime/docker/*
 echo "  done"
 
 # ----------------------------------------------------------------------------------- map tiles
+# The offline world map: a zoom-10 planet archive plus its styles, fonts and sprites. Downloaded from this
+# project's offline-map release unless a local copy is given with --maps.
+sha256_of() { # <file>
+  if command -v sha256sum >/dev/null; then sha256sum "$1" | awk '{print $1}'; else shasum -a 256 "$1" | awk '{print $1}'; fi
+}
+
 if [ -n "$MAPS" ]; then
-  say "Copying offline map tiles"
+  say "Copying offline map tiles from $MAPS"
   [ -d "$MAPS" ] || die "$MAPS isn't a folder"
   cp -a "$MAPS"/. "$OUTPUT/map-tiles/"
   echo "  done"
+elif [ "$INCLUDE_MAPS" -eq 1 ]; then
+  say "Downloading the offline world map (about 3.7 GB)"
+  serve="$OUTPUT/map-tiles/serve"
+  download "$MAP_RELEASE/SHA256SUMS" "$serve/.SHA256SUMS" || die "couldn't download the map checksums"
+  archive="$serve/planet-z10.pmtiles"
+  expected=$(awk '$2 == "planet-z10.pmtiles" {print $1}' "$serve/.SHA256SUMS")
+  if [ -s "$archive" ] && [ "$(sha256_of "$archive")" = "$expected" ]; then
+    echo "  already downloaded"
+  else
+    rm -f "$archive"
+    for part in 1 2; do
+      echo "  part $part of 2"
+      download "$MAP_RELEASE/planet-z10.pmtiles.part$part" "$serve/.part" || die "couldn't download part $part of the map"
+      cat "$serve/.part" >> "$archive" && rm -f "$serve/.part"
+    done
+    echo "  checking it"
+    [ "$(sha256_of "$archive")" = "$expected" ] || { rm -f "$archive"; die "the downloaded map is corrupt; run this again to retry"; }
+  fi
+  download "$MAP_RELEASE/map-styles.tar.gz" "$serve/.map-styles.tar.gz" || die "couldn't download the map styles"
+  tar -xzf "$serve/.map-styles.tar.gz" -C "$serve" && rm -f "$serve/.map-styles.tar.gz" "$serve/.SHA256SUMS"
+  echo "  done"
 else
-  say "Skipping offline map tiles"
-  echo "  The map will be blank offline. To include maps, pass --maps /path/to/map-tiles"
-  echo "  (a folder containing serve/ with a .pmtiles archive and style files)."
+  say "Leaving out the offline map (--no-maps)"
+  echo "  The map will be blank on the offline machine."
 fi
 
 # ----------------------------------------------------------------------------------- done

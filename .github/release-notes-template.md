@@ -24,7 +24,7 @@ Run this on a computer that **does** have internet:
 curl -fsSL https://raw.githubusercontent.com/ssjrocks/immich/main/portable/make-portable.sh -o make-portable.sh && bash make-portable.sh
 ```
 
-It builds a self-contained folder (about 4.5 GB) holding Docker itself, these images, and every machine-learning model — search, faces, text recognition and both subtitle models. Copy that folder to the offline machine (it needs a Linux filesystem), then run `./start-immich.sh` there. Nothing is ever downloaded on that machine. See [portable/README.md](https://github.com/ssjrocks/immich/blob/main/portable/README.md).
+It builds a self-contained folder (about 8 GB) holding Docker itself, these images, every machine-learning model — search, faces, text recognition and both subtitle models — and an offline world map. Copy that folder to the offline machine (it needs a Linux filesystem), then run `./start-immich.sh` there. Nothing is ever downloaded on that machine. See [portable/README.md](https://github.com/ssjrocks/immich/blob/main/portable/README.md).
 
 ## Already running an older release?
 

@@ -4,14 +4,14 @@ This folder builds a **self-contained copy** of this customised version of Immic
 computer with **no internet at all**, which then runs without downloading anything, ever.
 
 It carries its own Docker, its own images, and every machine-learning model the app can use (search, faces,
-text recognition, and both Whisper models for video subtitles). Optionally an offline world map too.
+text recognition, and both Whisper models for video subtitles), plus an offline world map.
 
 Handy for an air-gapped machine, a spare laptop with no network, or a photo library on an external drive
 you plug in when you need it.
 
 ## 1. Build the folder (on a computer WITH internet)
 
-You need [Docker](https://docs.docker.com/get-docker/) running, and about 15 GB free. Linux or macOS;
+You need [Docker](https://docs.docker.com/get-docker/) running, and about 20 GB free. Linux or macOS;
 on Windows use WSL.
 
 **One command:**
@@ -22,8 +22,10 @@ curl -fsSL https://raw.githubusercontent.com/ssjrocks/immich/main/portable/make-
 
 (no `curl`? swap it for `wget -q -O make-portable.sh`)
 
-It fetches everything it needs, then downloads about 10 GB: the application images and every
-machine-learning model. When it finishes you'll have an `immich-portable` folder ready to copy.
+It fetches everything it needs, then downloads the application images, every machine-learning model and
+the offline world map (about 3.7 GB of that, hosted on this project's
+[releases page](https://github.com/ssjrocks/immich/releases/tag/offline-map-z10)). When it finishes you'll
+have an `immich-portable` folder of about 8 GB, ready to copy.
 
 Options:
 
@@ -31,7 +33,8 @@ Options:
 | --- | --- |
 | `--version TAG` | Package a specific [release](https://github.com/ssjrocks/immich/releases) instead of the latest |
 | `--output DIR` | Build the folder somewhere else (for example straight onto a drive) |
-| `--maps DIR` | Include offline map tiles by copying them from an existing `map-tiles` folder |
+| `--maps DIR` | Copy the offline map from an existing `map-tiles` folder instead of downloading it |
+| `--no-maps` | Leave the offline map out (saves about 3.7 GB; the map will be blank offline) |
 | `--docker-version X` | Bundle a different version of Docker's static binaries |
 
 ## 2. Copy it to the offline machine
@@ -68,7 +71,7 @@ That stops everything cleanly. Pulling the drive out while it's running can corr
 | `model-cache-seed/` | Every machine-learning model, copied into the library on first start |
 | `runtime/docker/` | Docker itself, run straight from the folder: nothing is installed on the machine |
 | `library/` | Created on first start: your photos, the database, the live model cache. **This is the part to back up** |
-| `map-tiles/` | Offline map, if you included one |
+| `map-tiles/` | The offline world map and the small server that shows it |
 | `start-immich.sh`, `stop-immich.sh` | Start and stop |
 | `upgrade.sh` | Apply newer image files (see below) |
 | `cleanup.sh` | Reset Docker's own state after a failed start. Never touches `library/` |
@@ -96,7 +99,8 @@ database, so the backup is what lets you go back.
 - **Nothing here reaches the internet.** The machine-learning service is told not to download, and every
   model it needs is already present. If you change a model in the settings to one that isn't bundled, that
   feature will fail.
-- **The map is blank unless you included tiles.** With `--maps`, point Immich at the bundled map under
-  **Administration → Settings → Map** using `http://localhost:8082/style-light.json` and
-  `style-dark.json`.
+- **The offline map** covers the whole world down to city level (zoom 10). To use it, point Immich at it
+  under **Administration → Settings → Map**: light style `http://localhost:8082/style-light.json`, dark
+  style `http://localhost:8082/style-dark.json`. Map data © OpenStreetMap contributors (ODbL), tiles by
+  Protomaps.
 - **Ports used:** 2283 for Immich, 8082 for the map server.
