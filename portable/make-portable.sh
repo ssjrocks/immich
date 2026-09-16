@@ -150,7 +150,10 @@ preload_models "Whisper Large-v3 for subtitles" \
   "transcription/faster-whisper-large-v3/recognition/model.bin" \
   -e MACHINE_LEARNING_PRELOAD__SUBTITLES__TRANSCRIPTION=faster-whisper-large-v3
 
-# The models were written by the container as root; make them readable to copy around.
+# The container writes the models as root; hand them back so the folder can be copied, moved and
+# deleted without sudo.
+docker run --rm --entrypoint chown -v "$OUTPUT/model-cache-seed:/cache" \
+  "$REGISTRY/immich-machine-learning:$VERSION" -R "$(id -u):$(id -g)" /cache >/dev/null 2>&1 || true
 docker run --rm --entrypoint chmod -v "$OUTPUT/model-cache-seed:/cache" \
   "$REGISTRY/immich-machine-learning:$VERSION" -R a+rX /cache >/dev/null 2>&1 || true
 
