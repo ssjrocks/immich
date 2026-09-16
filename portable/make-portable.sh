@@ -71,8 +71,13 @@ echo "  done"
 save_image() { # <pull ref> <local tag> <tar name>
   echo "  $3"
   docker pull -q "$1" >/dev/null || die "couldn't download $1 (is the release published?)"
-  docker tag "$1" "$2"
-  docker save "$2" -o "$OUTPUT/images/$3"
+  if [ "$1" = "$2" ]; then
+    # pinned by digest: can't be re-tagged, and the offline start script tags it by image id anyway
+    docker save "$1" -o "$OUTPUT/images/$3"
+  else
+    docker tag "$1" "$2"
+    docker save "$2" -o "$OUTPUT/images/$3"
+  fi
 }
 
 say "Downloading the application images (this is the slow part)"
@@ -93,15 +98,21 @@ save_image "$nginx_ref" "$nginx_ref" nginx.tar
 # Nothing can be downloaded on the offline machine, so every model it will ever use is fetched here. The
 # machine-learning image downloads them itself, through the same code the app uses, so the files land in
 # exactly the layout it looks for.
-preload_models() { # <label> <env args...>
-  local label="$1"; shift
+preload_models() { # <label> <expected files, comma separated> <env args...>
+  local label="$1" expected="$2"; shift 2
   echo "  $label"
+  docker rm -f immich_portable_preload >/dev/null 2>&1 || true
   docker run --rm -d --name immich_portable_preload \
     -v "$OUTPUT/model-cache-seed:/cache" "$@" \
     "$REGISTRY/immich-machine-learning:$VERSION" >/dev/null || die "couldn't start the machine-learning image"
-  local waited=0
+  local waited=0 have_all file
   while [ "$waited" -lt 3600 ]; do
-    if docker logs immich_portable_preload 2>&1 | grep -q "Application startup complete"; then
+    have_all=1
+    for file in ${expected//,/ }; do
+      [ -s "$OUTPUT/model-cache-seed/$file" ] || have_all=0
+    done
+    if [ "$have_all" -eq 1 ]; then
+      sleep 5 # let the last file finish being written
       docker stop immich_portable_preload >/dev/null 2>&1 || true
       return 0
     fi
@@ -118,6 +129,7 @@ preload_models() { # <label> <env args...>
 
 say "Downloading the machine-learning models (several GB)"
 preload_models "search, faces, text recognition, and Whisper Medium for subtitles" \
+  "clip/ViT-B-32__openai/visual/model.onnx,clip/ViT-B-32__openai/textual/model.onnx,facial-recognition/buffalo_l/detection/model.onnx,facial-recognition/buffalo_l/recognition/model.onnx,ocr/PP-OCRv5_mobile/detection/model.onnx,ocr/PP-OCRv5_mobile/recognition/model.onnx,transcription/faster-whisper-medium/recognition/model.bin" \
   -e MACHINE_LEARNING_PRELOAD__CLIP__VISUAL=ViT-B-32__openai \
   -e MACHINE_LEARNING_PRELOAD__CLIP__TEXTUAL=ViT-B-32__openai \
   -e MACHINE_LEARNING_PRELOAD__FACIAL_RECOGNITION__DETECTION=buffalo_l \
@@ -126,11 +138,12 @@ preload_models "search, faces, text recognition, and Whisper Medium for subtitle
   -e MACHINE_LEARNING_PRELOAD__OCR__RECOGNITION=PP-OCRv5_mobile \
   -e MACHINE_LEARNING_PRELOAD__SUBTITLES__TRANSCRIPTION=faster-whisper-medium
 preload_models "Whisper Large-v3 for subtitles" \
+  "transcription/faster-whisper-large-v3/recognition/model.bin" \
   -e MACHINE_LEARNING_PRELOAD__SUBTITLES__TRANSCRIPTION=faster-whisper-large-v3
 
 # The models were written by the container as root; make them readable to copy around.
-docker run --rm -v "$OUTPUT/model-cache-seed:/cache" "$REGISTRY/immich-machine-learning:$VERSION" \
-  chmod -R a+rX /cache >/dev/null 2>&1 || true
+docker run --rm --entrypoint chmod -v "$OUTPUT/model-cache-seed:/cache" \
+  "$REGISTRY/immich-machine-learning:$VERSION" -R a+rX /cache >/dev/null 2>&1 || true
 
 missing=
 for f in clip/ViT-B-32__openai/visual/model.onnx facial-recognition/buffalo_l/recognition/model.onnx \
