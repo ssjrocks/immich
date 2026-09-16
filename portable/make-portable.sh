@@ -42,7 +42,7 @@ command -v docker >/dev/null || die "Docker isn't installed. Install it from htt
 docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker and try again."
 command -v curl >/dev/null || die "curl isn't installed."
 command -v tar >/dev/null || die "tar isn't installed."
-for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml .env.portable map-tiles.conf; do
+for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml env.portable map-tiles.conf; do
   [ -f "$SOURCE_DIR/$f" ] || die "missing $f next to this script — download the whole portable folder, not just this file."
 done
 
@@ -61,7 +61,7 @@ for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.por
   cp -f "$SOURCE_DIR/$f" "$OUTPUT/$f"
 done
 cp -f "$SOURCE_DIR/map-tiles.conf" "$OUTPUT/map-tiles/map-tiles.conf"
-[ -f "$OUTPUT/.env.portable" ] || cp -f "$SOURCE_DIR/.env.portable" "$OUTPUT/.env.portable"
+[ -f "$OUTPUT/.env.portable" ] || cp -f "$SOURCE_DIR/env.portable" "$OUTPUT/.env.portable"
 chmod +x "$OUTPUT"/*.sh
 echo "  done"
 
