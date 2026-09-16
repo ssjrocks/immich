@@ -45,6 +45,12 @@ echo "  looks good"
 mkdir -p "$DIR" || die "can't create $DIR"
 DIR="$(cd "$DIR" && pwd)"
 
+# Refuse to scribble into a folder that holds something else (a source checkout, say). A folder this
+# installer made before is fine: that's how you update or repair an install.
+if [ -n "$(ls -A "$DIR" 2>/dev/null)" ] && [ ! -f "$DIR/docker-compose.yml" ] && [ ! -f "$DIR/.env" ]; then
+  die "$DIR already has files in it. Run this in an empty folder, or pass --dir with somewhere new."
+fi
+
 say "Setting up $DIR"
 download "$RAW/docker/docker-compose.release.yml" "$DIR/docker-compose.yml" || die "couldn't download the compose file"
 if [ "$PORT" != "2283" ]; then
