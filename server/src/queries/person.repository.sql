@@ -32,6 +32,17 @@ returning
   "ownerId",
   "thumbnailPath"
 
+-- PersonRepository.unassignPersonFromAsset
+update "asset_face"
+set
+  "personGroupId" = $1
+where
+  "asset_face"."personGroupId" = $2
+  and "asset_face"."assetId" = $3
+  and "asset_face"."deletedAt" is null
+returning
+  "asset_face"."id"
+
 -- PersonRepository.deleteGroups
 delete from "person_group"
 where
@@ -75,6 +86,66 @@ where
   and "asset_face"."deletedAt" is null
   and "asset_face"."isVisible" is true
 
+-- PersonRepository.getVideoFacesWithEmbeddings
+select
+  "asset_face"."id",
+  "asset_face"."imageWidth",
+  "asset_face"."imageHeight",
+  "asset_face"."boundingBoxX1",
+  "asset_face"."boundingBoxY1",
+  "asset_face"."boundingBoxX2",
+  "asset_face"."boundingBoxY2",
+  "asset_face"."timestampMs",
+  "asset_face"."personGroupId",
+  "face_search"."embedding"
+from
+  "asset_face"
+  inner join "face_search" on "face_search"."faceId" = "asset_face"."id"
+where
+  "asset_face"."assetId" = $1
+  and "asset_face"."timestampMs" is not null
+  and "asset_face"."sourceType" = $2
+  and "asset_face"."deletedAt" is null
+
+-- PersonRepository.getVideoOccurrences
+select
+  "asset_face"."assetId",
+  "asset"."originalFileName",
+  "asset"."duration" as "durationMs",
+  array_agg(
+    distinct "asset_face"."timestampMs"
+    order by
+      "asset_face"."timestampMs" asc
+  ) as "timestampsMs"
+from
+  "asset_face"
+  inner join "asset" on "asset"."id" = "asset_face"."assetId"
+  and (
+    "asset"."ownerId" = $1::uuid
+    or exists (
+      select
+        1 as "exists"
+      from
+        "album_asset"
+        inner join "album" on "album"."id" = "album_asset"."albumId"
+        and "album"."deletedAt" is null
+        inner join "album_user" on "album_user"."albumId" = "album"."id"
+        and "album_user"."userId" = $2::uuid
+      where
+        "album_asset"."assetId" = "asset"."id"
+    )
+  )
+where
+  "asset_face"."personGroupId" = $3
+  and "asset_face"."timestampMs" is not null
+  and "asset_face"."deletedAt" is null
+group by
+  "asset_face"."assetId",
+  "asset"."originalFileName",
+  "asset"."duration"
+order by
+  min("asset_face"."timestampMs") asc
+
 -- PersonRepository.getFileSamples
 select
   "ownerId",
@@ -89,7 +160,8 @@ limit
 
 -- PersonRepository.getAllForUser
 select
-  "person".*
+  "person".*,
+  count(distinct asset_face.id)::int as "faceCount"
 from
   "person"
   inner join "asset_face" on "asset_face"."personGroupId" = "person"."personGroupId"
@@ -125,7 +197,7 @@ order by
   "person"."isHidden" asc,
   "person"."isFavorite" desc,
   NULLIF(person.name, '') is null asc,
-  count("asset_face"."assetId") desc,
+  count(distinct "asset_face"."assetId") desc,
   NULLIF(person.name, '') asc nulls last,
   "person"."createdAt"
 limit
@@ -139,17 +211,13 @@ select
 from
   "person"
   left join "asset_face" on "asset_face"."personGroupId" = "person"."personGroupId"
-where
-  "asset_face"."deletedAt" is null
-  and (
-    "asset_face"."isVisible" is null
-    or "asset_face"."isVisible" = $1
-  )
+  and "asset_face"."deletedAt" is null
+  and "asset_face"."isVisible" is true
 group by
   "person"."ownerId",
   "person"."personGroupId"
 having
-  count("asset_face"."assetId") = $2
+  count("asset_face"."assetId") = $1
 
 -- PersonRepository.getFaces
 select
@@ -205,6 +273,7 @@ select
   "asset_face"."id",
   "asset_face"."personGroupId",
   "asset_face"."sourceType",
+  "asset_face"."timestampMs",
   (
     select
       to_json(obj)
@@ -250,6 +319,7 @@ select
   "asset_face"."boundingBoxY2" as "y2",
   "asset_face"."imageWidth" as "oldWidth",
   "asset_face"."imageHeight" as "oldHeight",
+  "asset_face"."timestampMs",
   "asset"."type",
   "asset"."originalPath",
   "asset_exif"."orientation" as "exifOrientation",
@@ -617,6 +687,13 @@ where
   "asset_face"."assetId" = $2
   and "asset_face"."personGroupId" = $3
   and "asset_face"."deletedAt" is null
+order by
+  (
+    "asset_face"."boundingBoxX2" - "asset_face"."boundingBoxX1"
+  ) * (
+    "asset_face"."boundingBoxY2" - "asset_face"."boundingBoxY1"
+  ) desc,
+  "asset_face"."id" asc
 
 -- PersonRepository.getForMergePerson
 select

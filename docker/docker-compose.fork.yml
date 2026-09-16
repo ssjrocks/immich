@@ -19,6 +19,10 @@ services:
     build:
       context: ../
       dockerfile: server/Dockerfile
+      args:
+        # So the app knows it's this fork, not upstream Immich (About dialog, version banner)
+        - BUILD_REPOSITORY=ssjrocks/immich
+        - BUILD_SOURCE_REF=${IMMICH_VERSION:-local build}
     # extends:
     #   file: hwaccel.transcoding.yml
     #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
@@ -46,6 +50,8 @@ services:
       args:
         # Keep this as cpu: video subtitles (Whisper) are only included in the cpu build.
         - DEVICE=cpu
+        - BUILD_REPOSITORY=ssjrocks/immich
+        - BUILD_SOURCE_REF=${IMMICH_VERSION:-local build}
     volumes:
       - model-cache:/cache
     env_file:

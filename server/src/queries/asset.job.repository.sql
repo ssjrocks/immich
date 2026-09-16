@@ -888,6 +888,56 @@ where
   and "asset"."deletedAt" is null
   and "asset"."visibility" != $1
 
+-- AssetJobRepository.streamForSubtitlesJob
+select
+  "asset"."id"
+from
+  "asset"
+where
+  "asset"."type" = 'VIDEO'
+  and "asset"."deletedAt" is null
+  and "asset"."visibility" != $1
+  and not exists (
+    select
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = $2
+  )
+order by
+  "asset"."fileCreatedAt" desc
+
+-- AssetJobRepository.getForSubtitlesJob
+select
+  "asset"."id",
+  "asset"."ownerId",
+  "asset"."originalPath",
+  "asset"."visibility",
+  "asset"."type"
+from
+  "asset"
+where
+  "asset"."id" = $1
+  and "asset"."deletedAt" is null
+
+-- AssetJobRepository.getSubtitlePath
+select
+  (
+    select
+      "asset_file"."path"
+    from
+      "asset_file"
+    where
+      "asset_file"."assetId" = "asset"."id"
+      and "asset_file"."type" = 'subtitle'
+      and "asset_file"."isEdited" = false
+  ) as "subtitlePath"
+from
+  "asset"
+where
+  "asset"."id" = $1
+
 -- AssetJobRepository.streamForMigrationJob
 select
   "id"
