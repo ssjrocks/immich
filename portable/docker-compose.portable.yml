@@ -1,0 +1,87 @@
+#
+# Portable, fully offline compose file for the air-gapped thumbdrive.
+#
+# Differences from docker/docker-compose.prod.yml in the source tree:
+#   - No `build:` sections — images are pre-built/pulled and docker-loaded
+#     from images/*.tar by start-immich.sh, so nothing is compiled here.
+#   - immich-prometheus / immich-grafana dropped (not needed for portable use).
+#   - Volumes are relative paths (./library/...), resolved relative to this
+#     file's own directory — start-immich.sh always cds here first, so the
+#     bundle works no matter where the drive gets mounted.
+#
+name: immich-portable
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: immich-server:latest
+    volumes:
+      - ./library/photos:/data
+    env_file:
+      - .env.portable
+    ports:
+      - 2283:2283
+    depends_on:
+      - redis
+      - database
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    # Custom build, not upstream: adds Whisper transcription for video subtitles.
+    image: immich-machine-learning:latest
+    ports:
+      - 3003:3003
+    volumes:
+      - ./library/model-cache:/cache
+    environment:
+      # Models are pre-seeded into /cache (see model-cache-seed/) — force huggingface_hub
+      # to use them straight from local cache instead of trying (and timing out on) a
+      # network check first, since this machine is air-gapped.
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+    env_file:
+      - .env.portable
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+  redis:
+    container_name: immich_redis
+    image: docker.io/valkey/valkey:9@sha256:8e8d64b405ce18f41b8e5ee20aa4687a8ed0022d1298f2ce31cdcf3a76e09411
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: unless-stopped
+
+  database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    env_file:
+      - .env.portable
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_DB: ${DB_DATABASE_NAME}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ./library/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+  # Serves the offline basemap (PMTiles archive + style JSONs + glyphs + sprites) so
+  # Immich's map works with no internet. Immich's own map settings must point at
+  # http://localhost:8082/style-light.json and style-dark.json — see README.
+  # Read-only mount: this is static reference data, nothing here is ever written to.
+  map-tiles:
+    container_name: immich_map_tiles
+    image: nginx:alpine
+    volumes:
+      - ./map-tiles/serve:/srv/maps:ro
+      - ./map-tiles/map-tiles.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - 8082:8082
+    restart: unless-stopped

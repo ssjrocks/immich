@@ -216,6 +216,12 @@ Immich downloads, because those don't include its changes.
 For everything else (backups, storage, phone apps), the official
 [Immich documentation](https://docs.immich.app/) applies.
 
+### No internet on the machine?
+
+There's a **fully offline build** for machines with no connection at all: one command on a computer that
+has internet produces a folder you copy across, carrying Docker, the images and every model, so the offline
+machine downloads nothing. See [portable/README.md](portable/README.md).
+
 ## Turning on this version's features
 
 The video features are **off by default**, because processing a whole library of video takes a lot of
