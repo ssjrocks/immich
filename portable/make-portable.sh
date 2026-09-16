@@ -36,11 +36,20 @@ done
 say() { echo; echo "==> $*"; }
 die() { echo; echo "ERROR: $*" >&2; exit 1; }
 
+# Some machines have curl, some have wget. Use whichever is there.
+download() { # <url> <destination>
+  if command -v curl >/dev/null; then
+    curl -fsSL "$1" -o "$2"
+  else
+    wget -q -O "$2" "$1"
+  fi
+}
+
 # ----------------------------------------------------------------------------------- checks
 say "Checking this computer"
 command -v docker >/dev/null || die "Docker isn't installed. Install it from https://docs.docker.com/get-docker/ and try again."
 docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker and try again."
-command -v curl >/dev/null || die "curl isn't installed."
+command -v curl >/dev/null || command -v wget >/dev/null || die "neither curl nor wget is installed."
 command -v tar >/dev/null || die "tar isn't installed."
 for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml env.portable map-tiles.conf; do
   [ -f "$SOURCE_DIR/$f" ] || die "missing $f next to this script — download the whole portable folder, not just this file."
@@ -157,12 +166,12 @@ done
 say "Downloading Docker itself, so the offline machine doesn't need it installed"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" -o "$tmp/docker.tgz" \
+download "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" "$tmp/docker.tgz" \
   || die "couldn't download Docker ${DOCKER_VERSION}; pass --docker-version with a version from https://download.docker.com/linux/static/stable/x86_64/"
 tar -xzf "$tmp/docker.tgz" -C "$tmp"
 cp -f "$tmp"/docker/* "$OUTPUT/runtime/docker/"
-curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
-  -o "$OUTPUT/runtime/docker/docker-compose-linux-x86_64" || die "couldn't download Docker Compose"
+download "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64" \
+  "$OUTPUT/runtime/docker/docker-compose-linux-x86_64" || die "couldn't download Docker Compose"
 chmod +x "$OUTPUT"/runtime/docker/*
 echo "  done"
 
