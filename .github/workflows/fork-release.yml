@@ -1,0 +1,142 @@
+# Builds and publishes this fork's images, then creates a release.
+#
+# Trigger it by pushing a tag, for example:
+#   git tag v3.2.1-fork.1 && git push origin v3.2.1-fork.1
+#
+# Images are published to ghcr.io/<owner>/immich-server and ghcr.io/<owner>/immich-machine-learning,
+# tagged with the version and 'latest'. docker/docker-compose.release.yml runs them.
+name: Fork Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  images:
+    name: Build and publish ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: immich-server
+            context: .
+            dockerfile: server/Dockerfile
+            device_arg: ''
+          - image: immich-machine-learning
+            context: machine-learning
+            dockerfile: machine-learning/Dockerfile
+            # cpu is the build that includes Whisper, for video subtitles
+            device_arg: DEVICE=cpu
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
+          df -h /
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out image tags
+        id: tags
+        env:
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          IMAGE: ${{ matrix.image }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          owner=$(echo "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          name="ghcr.io/${owner}/${IMAGE}"
+          {
+            echo "version=${REF_NAME}"
+            echo "tags=${name}:${REF_NAME},${name}:latest"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          build-args: |
+            ${{ matrix.device_arg }}
+            BUILD_REPOSITORY=${{ github.repository }}
+            BUILD_ID=${{ github.run_id }}
+            BUILD_IMAGE=${{ steps.tags.outputs.version }}
+            BUILD_SOURCE_REF=${{ github.ref_name }}
+            BUILD_SOURCE_COMMIT=${{ github.sha }}
+
+  release:
+    name: Create the release
+    needs: images
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          owner=$(echo "$REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
+          {
+            echo "A customised version of Immich — **not** the official app. See the [README](https://github.com/${REPOSITORY}#-this-fork) for what it adds, and the disclaimer."
+            echo
+            echo "## Install"
+            echo
+            echo "1. Download \`docker-compose.release.yml\` and \`example.fork.env\` below into an empty folder."
+            echo "2. Rename \`example.fork.env\` to \`.env\`, then edit it: set where your photos and database go, change the password, and set \`IMMICH_VERSION=${TAG}\`."
+            echo "3. Start it:"
+            echo
+            echo "   \`\`\`"
+            echo "   docker compose -f docker-compose.release.yml up -d"
+            echo "   \`\`\`"
+            echo
+            echo "4. Open http://localhost:2283 and create your admin account."
+            echo
+            echo "Already running an older release of this version? Back up first, set \`IMMICH_VERSION=${TAG}\`, then run the same command again."
+            echo
+            echo "## Images"
+            echo
+            echo "- \`ghcr.io/${owner}/immich-server:${TAG}\`"
+            echo "- \`ghcr.io/${owner}/immich-machine-learning:${TAG}\`"
+          } > notes.md
+          gh release create "$TAG" \
+            --repo "$REPOSITORY" \
+            --title "$TAG" \
+            --notes-file notes.md \
+            docker/docker-compose.release.yml \
+            docker/example.fork.env
