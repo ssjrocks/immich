@@ -14,24 +14,16 @@ you plug in when you need it.
 You need [Docker](https://docs.docker.com/get-docker/) running, and about 15 GB free. Linux or macOS;
 on Windows use WSL.
 
-```bash
-curl -fsSLO https://raw.githubusercontent.com/ssjrocks/immich/main/portable/make-portable.sh
-```
-
-Download the rest of this folder next to that script, then run it:
+**One command:**
 
 ```bash
-bash make-portable.sh
+curl -fsSL https://raw.githubusercontent.com/ssjrocks/immich/main/portable/make-portable.sh -o make-portable.sh && bash make-portable.sh
 ```
 
-Or, more simply, clone the repository and run it from there:
+(no `curl`? swap it for `wget -q -O make-portable.sh`)
 
-```bash
-git clone --depth 1 https://github.com/ssjrocks/immich.git && bash immich/portable/make-portable.sh
-```
-
-It takes a while: it downloads about 10 GB (the app images and the models). When it finishes you'll have an
-`immich-portable` folder.
+It fetches everything it needs, then downloads about 10 GB: the application images and every
+machine-learning model. When it finishes you'll have an `immich-portable` folder ready to copy.
 
 Options:
 

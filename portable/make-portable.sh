@@ -51,8 +51,13 @@ command -v docker >/dev/null || die "Docker isn't installed. Install it from htt
 docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker and try again."
 command -v curl >/dev/null || command -v wget >/dev/null || die "neither curl nor wget is installed."
 command -v tar >/dev/null || die "tar isn't installed."
+RAW=https://raw.githubusercontent.com/ssjrocks/immich/main/portable
 for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml env.portable map-tiles.conf; do
-  [ -f "$SOURCE_DIR/$f" ] || die "missing $f next to this script — download the whole portable folder, not just this file."
+  if [ ! -f "$SOURCE_DIR/$f" ]; then
+    # downloaded on its own: fetch the rest of the folder next to it
+    echo "  fetching $f"
+    download "$RAW/$f" "$SOURCE_DIR/$f" || die "couldn't download $f from $RAW"
+  fi
 done
 
 mkdir -p "$OUTPUT" || die "can't create $OUTPUT"

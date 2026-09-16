@@ -181,37 +181,46 @@ Immich downloads, because those don't include its changes.
 - An internet connection: the first build downloads a lot, and each machine-learning feature downloads its
   model the first time it's used
 
-**Steps:**
+**Install it with one command:**
 
-1. Download this version:
+```bash
+curl -fsSL https://raw.githubusercontent.com/ssjrocks/immich/main/install.sh | bash
+```
 
-   ```bash
-   git clone https://github.com/ssjrocks/immich.git
-   ```
+(no `curl`? use `wget -qO- https://raw.githubusercontent.com/ssjrocks/immich/main/install.sh | bash`)
 
-   ```bash
-   cd immich/docker
-   ```
+That makes an `immich` folder in the current directory, writes the settings with a randomly generated
+database password, downloads the ready-built images, starts everything, and prints the address to open —
+usually <http://localhost:2283>. Create your admin account there and you're done.
 
-2. Create your settings file:
+Options, if you want them: `--dir /path/to/folder`, `--port 3000`, `--version v3.2.1-fork.1`. For example:
 
-   ```bash
-   cp example.env .env
-   ```
+```bash
+curl -fsSL https://raw.githubusercontent.com/ssjrocks/immich/main/install.sh | bash -s -- --dir /srv/immich
+```
 
-   Open `.env` in a text editor and set:
-   - `UPLOAD_LOCATION`: the folder where your photos and videos will be stored
-   - `DB_DATA_LOCATION`: the folder for the database (keep it on a local disk, not a network share)
-   - `DB_PASSWORD`: change it to a random password, letters and numbers only
+Afterwards, from that folder: `docker compose stop` to stop it, `docker compose start` to start it again,
+and `docker compose pull && docker compose up -d` to update.
 
-3. Build and start it. The first build can take half an hour or more:
+<details>
+<summary>Prefer to do it by hand, or build from source?</summary>
 
-   ```bash
-   docker compose -f docker-compose.fork.yml up -d --build
-   ```
+Installing by hand: download
+[`docker-compose.release.yml`](docker/docker-compose.release.yml) and
+[`example.fork.env`](docker/example.fork.env) into an empty folder, rename the env file to `.env` and edit
+the storage locations and password, then run `docker compose -f docker-compose.release.yml up -d`.
 
-4. Open `http://<this computer's address>:2283` in a browser (`http://localhost:2283` on the same computer)
-   and create your admin account.
+Building the images yourself instead of using the published ones:
+
+```bash
+git clone https://github.com/ssjrocks/immich.git && cd immich/docker
+cp example.env .env   # then edit it
+docker compose -f docker-compose.fork.yml up -d --build
+```
+
+The first build takes half an hour or more.
+
+</details>
 
 For everything else (backups, storage, phone apps), the official
 [Immich documentation](https://docs.immich.app/) applies.
