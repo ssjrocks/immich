@@ -99,8 +99,9 @@ database, so the backup is what lets you go back.
 - **Nothing here reaches the internet.** The machine-learning service is told not to download, and every
   model it needs is already present. If you change a model in the settings to one that isn't bundled, that
   feature will fail.
-- **The offline map** covers the whole world down to city level (zoom 10). To use it, point Immich at it
-  under **Administration → Settings → Map**: light style `http://localhost:8082/style-light.json`, dark
-  style `http://localhost:8082/style-dark.json`. Map data © OpenStreetMap contributors (ODbL), tiles by
-  Protomaps.
+- **The offline map** covers the whole world down to city level (zoom 10), and Immich is pointed at it
+  automatically on the first start. If you had already chosen your own map styles, they're left alone; the
+  offline ones are `http://localhost:8082/style-light.json` and `style-dark.json` under
+  **Administration → Settings → Map**. The map is served from this computer, so it shows in a browser
+  here, not on other devices. Map data © OpenStreetMap contributors (ODbL), tiles by Protomaps.
 - **Ports used:** 2283 for Immich, 8082 for the map server.

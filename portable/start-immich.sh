@@ -367,6 +367,33 @@ if [ "$server_up" -ne 1 ]; then
 fi
 log "immich-server is up"
 
+# --- point Immich's map at the bundled offline map ---
+# Immich's default map comes from tiles.immich.cloud, which this machine can't reach. If the bundle has the
+# offline map and nobody has chosen map styles yet, set them to the local map server. Styles already set
+# (by an admin, or by an earlier run) are left alone, so this only ever changes anything once.
+if [ -f "$DRIVE/map-tiles/serve/style-light.json" ]; then
+  MAP_SQL="INSERT INTO system_metadata (key, value)
+  VALUES ('system-config', '{\"map\": {\"lightStyle\": \"http://localhost:8082/style-light.json\", \"darkStyle\": \"http://localhost:8082/style-dark.json\"}}')
+  ON CONFLICT (key) DO UPDATE
+    SET value = system_metadata.value || jsonb_build_object('map', COALESCE(system_metadata.value->'map', '{}'::jsonb) || EXCLUDED.value->'map')
+    WHERE system_metadata.value->'map'->>'lightStyle' IS NULL AND system_metadata.value->'map'->>'darkStyle' IS NULL
+  RETURNING 'changed';"
+  if map_result="$(echo "$MAP_SQL" | run_docker exec -i immich_postgres sh -c 'psql -v ON_ERROR_STOP=1 -qtA -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 2>&1)"; then
+    if echo "$map_result" | grep -qx changed; then
+      log "set Immich's map to the bundled offline map; restarting immich-server so it picks that up"
+      run_compose restart immich-server >/dev/null 2>&1 || log "WARNING: couldn't restart immich-server — the map will switch over on the next start"
+      for i in $(seq 1 90); do
+        wget -q -O /dev/null "http://localhost:2283/api/server/ping" && break
+        sleep 2
+      done
+    else
+      log "map styles already set — leaving them as they are"
+    fi
+  else
+    log "WARNING: couldn't set the offline map automatically ($map_result). Set it under Administration -> Settings -> Map: http://localhost:8082/style-light.json and style-dark.json"
+  fi
+fi
+
 # --- open a browser ---
 URL="http://localhost:2283"
 log "opening $URL"
