@@ -161,7 +161,8 @@ export class PersonController {
   @Authenticated({ permission: Permission.PersonRead })
   @Endpoint({
     summary: 'Get video occurrences for a person',
-    description: 'Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.',
+    description:
+      'Retrieve the videos this person appears in, with the timestamps (ms from video start) of each appearance.',
     history: new HistoryBuilder().added('v3.1.0').alpha('v3.1.0'),
   })
   getPersonVideoOccurrences(

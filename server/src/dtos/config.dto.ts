@@ -265,7 +265,9 @@ const AdminConfigSchemaWithVisibility = z
                 .number()
                 .min(0.1)
                 .max(60)
-                .describe('Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision.')
+                .describe(
+                  'Seconds between captured frames when samplingMethod is "interval". Supports sub-second precision.',
+                )
                 .meta({ format: 'double' }),
               appearanceGapSeconds: z
                 .number()

@@ -1,7 +1,7 @@
-import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Insertable, Selectable, Updateable } from 'kysely';
 import _ from 'lodash';
+import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { Person } from 'src/database';
 import { Chunked, OnJob } from 'src/decorators';
 import { BulkIdErrorReason, BulkIdResponseDto, BulkIdsDto } from 'src/dtos/asset-ids.response.dto';
@@ -190,11 +190,7 @@ export class PersonService extends BaseService {
   // person across dozens of appearances -- detaching them individually isn't practical.
   // Faces are unassigned rather than deleted, matching unassignFace: if they really are
   // someone else, recognition gets to re-cluster them instead of the detections being lost.
-  async unassignPersonFromAsset(
-    auth: AuthDto,
-    personGroupId: string,
-    dto: PersonUnassignFromAssetDto,
-  ): Promise<void> {
+  async unassignPersonFromAsset(auth: AuthDto, personGroupId: string, dto: PersonUnassignFromAssetDto): Promise<void> {
     await this.requireAccess({ auth, permission: Permission.PersonUpdate, ids: [personGroupId] });
     await this.requireAccess({ auth, permission: Permission.AssetRead, ids: [dto.assetId] });
 

@@ -1592,7 +1592,9 @@ describe(PersonService.name, () => {
         makeFace('a1', 0, [1, 0, 0]),
         makeFace('a2', 500, [0.99, 0.01, 0]),
       ]);
-      mocks.search.searchFaces.mockResolvedValue([{ id: 'photo-face', personGroupId: 'group-existing', distance: 0.3 }]);
+      mocks.search.searchFaces.mockResolvedValue([
+        { id: 'photo-face', personGroupId: 'group-existing', distance: 0.3 },
+      ]);
       mocks.person.getByGroupId.mockResolvedValue(
         PersonFactory.create({ ownerId: asset.ownerId, personGroupId: 'group-existing' }),
       );
@@ -1623,7 +1625,10 @@ describe(PersonService.name, () => {
 
       expect(mocks.search.searchFaces).not.toHaveBeenCalled();
       expect(mocks.person.createGroup).not.toHaveBeenCalled();
-      expect(mocks.person.reassignFaces).toHaveBeenCalledWith({ faceIds: ['frame'], newPersonGroupId: 'group-preview' });
+      expect(mocks.person.reassignFaces).toHaveBeenCalledWith({
+        faceIds: ['frame'],
+        newPersonGroupId: 'group-preview',
+      });
     });
 
     it('should leave a group unassigned when it has fewer faces than minFaces and matches nobody', async () => {

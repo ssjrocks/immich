@@ -189,11 +189,7 @@
 
 <OnEvents onAlbumAddAssets={() => assetMultiSelectManager.clear()} />
 
-<UserPageLayout
-  hideNavbar={assetMultiSelectManager.selectionActive}
-  title={data.meta.title}
-  use={[trackScrollElement]}
->
+<UserPageLayout hideNavbar={assetMultiSelectManager.selectionActive} title={data.meta.title} use={[trackScrollElement]}>
   {#snippet buttons()}
     <div class="flex items-center gap-2 overflow-x-auto">
       <div class="h-10 shrink-0">

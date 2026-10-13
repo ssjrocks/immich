@@ -401,8 +401,7 @@ export class MediaService extends BaseService {
       return JobStatus.Failed;
     }
 
-    const { x1, y1, x2, y2, oldWidth, oldHeight, exifOrientation, previewPath, originalPath, timestampMs } =
-      data;
+    const { x1, y1, x2, y2, oldWidth, oldHeight, exifOrientation, previewPath, originalPath, timestampMs } = data;
     let inputImage: string | Buffer;
     if (data.type === AssetType.Video) {
       if (timestampMs != null) {

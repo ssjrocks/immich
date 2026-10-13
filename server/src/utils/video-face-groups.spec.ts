@@ -43,7 +43,12 @@ describe('groupVideoFaces', () => {
       face('a2', 500, [0.99, 0.01, 0]),
       face('b2', 500, [0.01, 0.99, 0]),
     ];
-    expect(ids(groupVideoFaces(faces, 0.5))).toEqual(expect.arrayContaining([['a1', 'a2'], ['b1', 'b2']]));
+    expect(ids(groupVideoFaces(faces, 0.5))).toEqual(
+      expect.arrayContaining([
+        ['a1', 'a2'],
+        ['b1', 'b2'],
+      ]),
+    );
   });
 
   it('follows one person through a gradual change, even when the first and last frames do not match', () => {
@@ -55,7 +60,11 @@ describe('groupVideoFaces', () => {
   });
 
   it('rejoins a person who reappears long after they were last seen', () => {
-    const faces = [face('early', 0, [1, 0, 0]), face('other', 30_000, [0, 1, 0]), face('late', 90_000, [0.97, 0.03, 0])];
+    const faces = [
+      face('early', 0, [1, 0, 0]),
+      face('other', 30_000, [0, 1, 0]),
+      face('late', 90_000, [0.97, 0.03, 0]),
+    ];
     expect(ids(groupVideoFaces(faces, 0.5))).toEqual(expect.arrayContaining([['early', 'late'], ['other']]));
   });
 

@@ -87,11 +87,7 @@ export interface Face {
 
 export type FacialRecognitionResponse = { [ModelTask.FACIAL_RECOGNITION]: Face[] } & VisualResponse;
 export type MachineLearningRequest =
-  | ClipVisualRequest
-  | ClipTextualRequest
-  | FacialRecognitionRequest
-  | OcrRequest
-  | TranscriptionRequest;
+  ClipVisualRequest | ClipTextualRequest | FacialRecognitionRequest | OcrRequest | TranscriptionRequest;
 export type TextEncodingOptions = ModelOptions & { language?: string };
 
 /**
