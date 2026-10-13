@@ -6,6 +6,9 @@ upstream **v3.2.1** (merged 2026-09-15). On top of stock Immich it adds:
 - **Face detection and recognition throughout videos**, not just on the first frame
 - a **Browse page**: a flat grid with one-click filtering and sorting
 - **Video subtitles**: English subtitles for videos in any spoken language, generated in the background
+- a **portable offline version**: one folder carrying Docker, the images, every model and an offline map,
+  for machines with no internet (see [portable/README.md](portable/README.md) and
+  [portable/GUIDE.md](portable/GUIDE.md))
 
 The README has the user-facing overview; this file is the technical changelog (schema, config, API, jobs).
 

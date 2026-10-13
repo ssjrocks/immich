@@ -56,7 +56,7 @@ docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start D
 command -v curl >/dev/null || command -v wget >/dev/null || die "neither curl nor wget is installed."
 command -v tar >/dev/null || die "tar isn't installed."
 RAW=https://raw.githubusercontent.com/ssjrocks/immich/main/portable
-for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml env.portable map-tiles.conf; do
+for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh immich-diag.sh docker-compose.portable.yml env.portable map-tiles.conf; do
   if [ ! -f "$SOURCE_DIR/$f" ]; then
     # downloaded on its own: fetch the rest of the folder next to it
     echo "  fetching $f"
@@ -77,7 +77,7 @@ mkdir -p "$OUTPUT"/{images,model-cache-seed,runtime/docker,map-tiles/serve,logs}
 
 # ----------------------------------------------------------------------------------- scripts
 say "Copying the offline scripts"
-for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh docker-compose.portable.yml; do
+for f in start-immich.sh stop-immich.sh cleanup.sh upgrade.sh immich-diag.sh docker-compose.portable.yml; do
   cp -f "$SOURCE_DIR/$f" "$OUTPUT/$f"
 done
 cp -f "$SOURCE_DIR/map-tiles.conf" "$OUTPUT/map-tiles/map-tiles.conf"

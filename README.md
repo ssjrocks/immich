@@ -16,6 +16,8 @@ upstream (currently **v3.2.1**), with a few extra capabilities layered on top of
 - [Facial recognition throughout videos](#facial-recognition-throughout-videos)
 - [A Browse page](#browse-page) with one-click filtering and sorting
 - [Video subtitles](#video-subtitles): English subtitles for videos in any spoken language
+- [A portable offline version](#portable-offline-version): the whole thing in one folder on a drive, for a
+  computer with no internet at all
 
 See [FORK_CHANGES.md](FORK_CHANGES.md) for the full technical changelog (schema, config, API).
 
@@ -138,6 +140,20 @@ simply transcribed.
 - Only multilingual Whisper models are offered, because the "turbo" variants silently skip the
   translation and output the original language.
 
+## Portable offline version
+
+Run your library on a computer with **no internet connection at all**: an air-gapped machine, a laptop
+with no network, or an external drive you plug into any Linux machine, even an Ubuntu live USB session.
+
+One command on a computer that *does* have internet builds a folder of about 8 GB that carries everything:
+Docker itself, the application with all of this version's features, every machine-learning model (search,
+faces, text recognition and both subtitle models) and an offline world map. Copy it to a drive, run
+`./start-immich.sh`, and nothing is ever downloaded or installed on the offline machine.
+
+- **[Portable README](portable/README.md)**: what it is, and a quick start
+- **[Portable guide](portable/GUIDE.md)**: preparing a drive, everyday use, backups, updates and
+  troubleshooting
+
 ## AI-generated photo descriptions via Immich Analyze
 
 Credit for this one goes entirely to **Timofey Klester** ([@timasoft](https://github.com/timasoft)) —
@@ -227,9 +243,10 @@ For everything else (backups, storage, phone apps), the official
 
 ### No internet on the machine?
 
-There's a **fully offline build** for machines with no connection at all: one command on a computer that
-has internet produces a folder you copy across, carrying Docker, the images and every model, so the offline
-machine downloads nothing. See [portable/README.md](portable/README.md).
+Use the [portable offline version](#portable-offline-version): one command on a computer that has internet
+produces a folder you copy across, carrying Docker, the images, every model and an offline map, so the
+offline machine downloads nothing. Start with the [portable README](portable/README.md); the
+[portable guide](portable/GUIDE.md) has the details.
 
 ## Turning on this version's features
 
