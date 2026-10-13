@@ -4,8 +4,10 @@ This is a personal fork of [immich-app/immich](https://github.com/immich-app/imm
 upstream **v3.2.1** (merged 2026-09-15). On top of stock Immich it adds:
 
 - **Face detection and recognition throughout videos**, not just on the first frame
-- a **Browse page**: a flat grid with one-click filtering and sorting
-- **Video subtitles**: English subtitles for videos in any spoken language, generated in the background
+- a **Browse page**: a flat grid with one-click filtering and sorting, and an All / Photos / Videos filter
+  on **similar images**
+- **Video subtitles**: English subtitles for videos in any spoken language, generated in the background,
+  with a clickable transcript in the info panel and search by what's said
 - a **portable offline version**: one folder carrying Docker, the images, every model and an offline map,
   for machines with no internet (see [portable/README.md](portable/README.md) and
   [portable/GUIDE.md](portable/GUIDE.md))
@@ -171,10 +173,16 @@ you for the thorough review.
 - **Jobs**: a `subtitles` queue with `AssetGenerateSubtitlesQueueAll` / `AssetGenerateSubtitles`, a row on
   the admin Job Queues page, and a per-asset `generate-subtitles` action. New videos are queued after
   thumbnail generation, alongside video transcoding.
-- **Pipeline**: the audio is extracted with ffmpeg into 60-second mono 16 kHz chunks (a single request for
-  a long video would outlast Node's default 300-second response-headers timeout), each chunk is sent to the
-  ML service's new `transcription` task with the `translate` option, and segment and word times are offset
-  back into place. Output is always English.
+- **Pipeline**: the whole video's audio is extracted with ffmpeg as one 16 kHz mono FLAC file and sent to
+  the ML service's new `transcription` task with the `translate` option in a single request, streamed from
+  disk (`fs.openAsBlob`). Whisper walks long audio in 30-second windows itself, resuming each window where
+  the last complete sentence ended and carrying the text so far forward as context. That request bypasses
+  `fetch`'s 300-second wait for response headers (`postWithoutTimeout`, plain `node:http`), since the ML
+  service only answers when a long video is done. Output is always English.
+  - *Earlier builds* cut the audio into 60-second chunks to stay inside that timeout, which split words and
+    sentences at every cut (garbled or repeated lines around each minute mark) and lost context between
+    chunks. Whole-file transcription measured ~10% faster as well. Videos done by those builds keep their
+    subtitles until regenerated (Job Queues → Video subtitles → **All**, or per video).
 - **Cues** (`buildCues`): built from word timings rather than Whisper's segments, whose end times often
   run on through the silence after them. A cue ends 0.3 s after its last word, splits at sentence ends,
   pauses over 0.8 s, 84 characters or 7 seconds, is held at least 1 s when there's room, and never overlaps
@@ -183,16 +191,46 @@ you for the thorough review.
   `subtitle` asset file type (a text column, so no migration), served by `GET /assets/:id/subtitles`
   (shared links allowed). Deleting the asset deletes its subtitles.
 
+### Server: transcripts and spoken-word search
+
+- **Schema** (migration `1791874393121-AddVideoTranscripts`): `asset_transcript` (one row per subtitle line:
+  `assetId`, `startMs`, `endMs`, `text`; cascade-deleted with the asset) and `transcript_search` (`assetId`
+  primary key, the whole transcript as one text with a GIN trigram index on `f_unaccent(text)`, mirroring
+  `ocr_search`). Every video whose subtitles have been stored has a `transcript_search` row, with empty text
+  when nothing was said, which also marks it done.
+- **Writing**: the subtitle job stores the same cues it writes to the WebVTT file (`TranscriptRepository.replace`,
+  one transaction, inserts batched at 1000 rows).
+- **Backfill**: on bootstrap the microservices worker queues `AssetImportSubtitlesQueueAll` (subtitles
+  queue), which queues `AssetImportSubtitles` for each video that has a subtitle file but no
+  `transcript_search` row. The import parses the existing `.vtt` (`parseWebVtt`) instead of transcribing
+  again. Not gated on subtitles being enabled; once done it's one query per start that finds nothing.
+- **Search**: a `transcript` filter, in both the flat search DTOs and the `SearchFilter` tree
+  (`StringSimilarityFilter`), matched like OCR: `f_unaccent(transcript_search.text) %>> f_unaccent(query)`.
+- **API**: `GET /assets/:id/transcript` → `AssetTranscriptLineResponseDto[]` (`startMs`, `endMs`, `text`),
+  `AssetView` permission, shared links allowed (same exposure as `GET /assets/:id/subtitles`).
+
 ### Machine learning
 
 - A `transcription` task (`immich_ml/models/transcription/whisper.py`) using
-  [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (CTranslate2): language detected per chunk,
+  [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (CTranslate2): language detected again for
+  every 30-second window (`multilingual=True`, reusing that window's encoding) so a video that switches
+  language is still translated from the right one,
   `translate` to English, VAD filtering to skip silence and music (which Whisper otherwise fills with
   invented text), and word timestamps.
 - Two models, int8 builds pinned to exact revisions: `faster-whisper-medium` and `faster-whisper-large-v3`.
   Only multilingual, translate-capable builds are offered: the "turbo" variants were distilled for
   transcription alone and silently output the source language when asked to translate.
 - `faster-whisper` is in the `cpu` extra only (it conflicts with `onnxruntime-gpu`) and is imported lazily.
+
+### Web: transcripts and similar images
+
+- Info panel: a **Transcript** section at the bottom for videos with one (`DetailPanelTranscript`), each line
+  a button that seeks the player, the line on screen highlighted from `timeupdate`.
+- Search: a **Spoken words** search type (`transcript` query type).
+- Search page: when the query is only `queryAssetId` ("View similar"), an **All / Photos / Videos** filter
+  passes `type` to the existing smart search, remembered in `similar-media` local storage. The
+  `queryAssetId` chip reads "Similar to" with the asset's thumbnail. A page still loading for a previous
+  query or filter is dropped instead of appended.
 
 ### Web
 

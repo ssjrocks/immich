@@ -1,22 +1,65 @@
 import { Injectable } from '@nestjs/common';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { JOBS_ASSET_PAGINATION_SIZE } from 'src/constants';
 import { StorageCore } from 'src/cores/storage.core';
-import { OnJob } from 'src/decorators';
-import { AssetFileType, AssetType, AssetVisibility, JobName, JobStatus, QueueName, StorageFolder } from 'src/enum';
+import { OnEvent, OnJob } from 'src/decorators';
+import {
+  AssetFileType,
+  AssetType,
+  AssetVisibility,
+  ImmichWorker,
+  JobName,
+  JobStatus,
+  QueueName,
+  StorageFolder,
+} from 'src/enum';
 import { TranscriptionSegment } from 'src/repositories/machine-learning.repository';
+import { TranscriptLine } from 'src/repositories/transcript.repository';
 import { BaseService } from 'src/services/base.service';
 import { JobItem, JobOf } from 'src/types';
+import { tokenizeForSearch } from 'src/utils/database';
 import { isSubtitleGenerationEnabled } from 'src/utils/misc';
-
-// Audio goes to the ML service one chunk per request. Node's fetch abandons a request whose response
-// hasn't started within 300 seconds, and nothing here configures that, so a chunk has to transcribe
-// comfortably inside it even with the slower model on a modest CPU. The cost is that a word falling
-// exactly on a chunk boundary can be clipped.
-const AUDIO_CHUNK_SECONDS = 60;
 
 @Injectable()
 export class SubtitleService extends BaseService {
+  // Subtitle files written before transcripts were kept in the database are read in once, so those videos
+  // become searchable and show their transcript without being transcribed again. Once that's done this
+  // finds nothing, so it costs one query per start.
+  @OnEvent({ name: 'AppBootstrap', workers: [ImmichWorker.Microservices] })
+  async onBootstrap() {
+    await this.jobRepository.queue({ name: JobName.AssetImportSubtitlesQueueAll, data: {} });
+  }
+
+  // Not gated on subtitles being enabled: this only reads files that already exist, which is cheap, and
+  // turning the feature off later shouldn't stop what was already transcribed from being searchable.
+  @OnJob({ name: JobName.AssetImportSubtitlesQueueAll, queue: QueueName.Subtitles })
+  async handleQueueImportSubtitles(): Promise<JobStatus> {
+    let jobs: JobItem[] = [];
+    for await (const asset of this.assetJobRepository.streamForSubtitleImport()) {
+      jobs.push({ name: JobName.AssetImportSubtitles, data: { id: asset.id } });
+
+      if (jobs.length >= JOBS_ASSET_PAGINATION_SIZE) {
+        await this.jobRepository.queueAll(jobs);
+        jobs = [];
+      }
+    }
+
+    await this.jobRepository.queueAll(jobs);
+    return JobStatus.Success;
+  }
+
+  @OnJob({ name: JobName.AssetImportSubtitles, queue: QueueName.Subtitles })
+  async handleImportSubtitles({ id }: JobOf<JobName.AssetImportSubtitles>): Promise<JobStatus> {
+    const asset = await this.assetJobRepository.getSubtitlePath(id);
+    if (!asset?.subtitlePath) {
+      return JobStatus.Skipped;
+    }
+
+    const file = await this.storageRepository.readFile(asset.subtitlePath);
+    await this.saveTranscript(id, parseWebVtt(file.toString('utf8')));
+    return JobStatus.Success;
+  }
+
   @OnJob({ name: JobName.AssetGenerateSubtitlesQueueAll, queue: QueueName.Subtitles })
   async handleQueueGenerateSubtitles({ force }: JobOf<JobName.AssetGenerateSubtitlesQueueAll>): Promise<JobStatus> {
     const { machineLearning } = await this.getConfig({ withCache: false });
@@ -54,26 +97,18 @@ export class SubtitleService extends BaseService {
       return JobStatus.Skipped;
     }
 
-    const segments: TranscriptionSegment[] = [];
+    let segments: TranscriptionSegment[] = [];
     const { audioStreams } = await this.mediaRepository.probe(asset.originalPath);
     if (audioStreams.length > 0) {
       let tempDir: string | undefined;
       try {
+        // The whole video in one go. Whisper works through long audio in 30-second windows itself, moving each
+        // window on to where the last complete sentence ended and carrying what was said into the next. Cutting
+        // the audio up first would split words and sentences at the cuts and lose that context.
         tempDir = await this.storageRepository.createTempDir('immich-subtitles-');
-        const chunks = await this.mediaRepository.extractAudioChunks(asset.originalPath, tempDir, AUDIO_CHUNK_SECONDS);
-
-        for (const [index, chunk] of chunks.entries()) {
-          const offset = index * AUDIO_CHUNK_SECONDS;
-          const transcription = await this.machineLearningRepository.transcribe(chunk, machineLearning.subtitles);
-          for (const segment of transcription.segments) {
-            segments.push({
-              start: segment.start + offset,
-              end: segment.end + offset,
-              text: segment.text,
-              words: segment.words?.map((word) => ({ ...word, start: word.start + offset, end: word.end + offset })),
-            });
-          }
-        }
+        const audioPath = join(tempDir, 'audio.flac');
+        await this.mediaRepository.extractAudio(asset.originalPath, audioPath);
+        ({ segments } = await this.machineLearningRepository.transcribe(audioPath, machineLearning.subtitles));
       } finally {
         if (tempDir) {
           await this.storageRepository.unlinkDir(tempDir, { recursive: true, force: true });
@@ -83,13 +118,21 @@ export class SubtitleService extends BaseService {
 
     // Written even when nothing was said: an empty file marks the video as done, so "Missing" doesn't
     // keep queueing it, and the player just has no captions to show.
+    const cues = buildCues(segments);
     const path = StorageCore.getNestedPath(StorageFolder.EncodedVideo, asset.ownerId, `${asset.id}.subtitles.vtt`);
     this.storageRepository.mkdirSync(dirname(path));
-    await this.storageRepository.createOrOverwriteFile(path, Buffer.from(toWebVtt(buildCues(segments))));
+    await this.storageRepository.createOrOverwriteFile(path, Buffer.from(toWebVtt(cues)));
     await this.assetRepository.upsertFile({ assetId: asset.id, path, type: AssetFileType.Subtitle });
+    await this.saveTranscript(asset.id, cues);
 
-    this.logger.debug(`Generated ${segments.length} subtitle cue(s) for video ${id}`);
+    this.logger.debug(`Generated ${cues.length} subtitle cue(s) for video ${id}`);
     return JobStatus.Success;
+  }
+
+  private async saveTranscript(assetId: string, cues: SubtitleCue[]) {
+    const lines = toTranscriptLines(cues);
+    const searchText = tokenizeForSearch(lines.map((line) => line.text).join(' ')).join(' ');
+    await this.transcriptRepository.replace(assetId, lines, searchText);
   }
 }
 
@@ -177,4 +220,49 @@ export const toWebVtt = (cues: SubtitleCue[]) => {
     return `${index + 1}\n${formatTimestamp(start)} --> ${formatTimestamp(end)}\n${safeText}`;
   });
   return ['WEBVTT', ...blocks].join('\n\n') + '\n';
+};
+
+export const toTranscriptLines = (cues: SubtitleCue[]): TranscriptLine[] =>
+  cues
+    .map(({ start, end, text }) => ({
+      startMs: Math.max(0, Math.round(start * 1000)),
+      endMs: Math.max(0, Math.round(end * 1000)),
+      text: text.trim(),
+    }))
+    .filter((line) => line.text);
+
+const TIMING_LINE = /^(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})\s+-->\s+(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})/;
+
+const toSeconds = (hours: string | undefined, minutes: string, seconds: string, millis: string) =>
+  Number(hours ?? 0) * 3600 + Number(minutes) * 60 + Number(seconds) + Number(millis) / 1000;
+
+/**
+ * Reads cues back out of a WebVTT file, for subtitle files written before transcripts were stored in the
+ * database. Handles what toWebVtt writes and the usual variations: no cue numbers, hours left out, a comma
+ * before the milliseconds, cue settings after the timing, and text over several lines.
+ */
+export const parseWebVtt = (content: string): SubtitleCue[] => {
+  const cues: SubtitleCue[] = [];
+  for (const block of content.replaceAll('\r\n', '\n').split(/\n{2,}/)) {
+    const lines = block.split('\n');
+    const timingIndex = lines.findIndex((line) => TIMING_LINE.test(line));
+    if (timingIndex === -1) {
+      continue;
+    }
+
+    const match = TIMING_LINE.exec(lines[timingIndex])!;
+    const text = lines
+      .slice(timingIndex + 1)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join(' ');
+    if (text) {
+      cues.push({
+        start: toSeconds(match[1], match[2], match[3], match[4]),
+        end: toSeconds(match[5], match[6], match[7], match[8]),
+        text,
+      });
+    }
+  }
+  return cues;
 };

@@ -5199,6 +5199,82 @@
         "x-immich-state": "Stable"
       }
     },
+    "/assets/{id}/transcript": {
+      "get": {
+        "description": "Retrieve the lines of a video's generated subtitles with their timestamps, in order. Empty when the video has no subtitles or nothing was said.",
+        "operationId": "getAssetTranscript",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$",
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "slug",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssetTranscriptLineResponseDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "summary": "Retrieve a video transcript",
+        "tags": [
+          "Assets"
+        ],
+        "x-immich-history": [
+          {
+            "version": "v3.2.1",
+            "state": "Added"
+          },
+          {
+            "version": "v3.2.1",
+            "state": "Alpha"
+          }
+        ],
+        "x-immich-permission": "asset.view",
+        "x-immich-state": "Alpha"
+      }
+    },
     "/assets/{id}/video/frame": {
       "get": {
         "description": "Extracts and returns a single JPEG frame from the specified video asset at the given timestamp, for use as a thumbnail (e.g. for a specific face-appearance moment) rather than the full playback stream.",
@@ -12286,6 +12362,31 @@
               "format": "date-time",
               "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
               "example": "2024-01-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "transcript",
+            "required": false,
+            "in": "query",
+            "description": "Filter by words spoken in a video, from its generated subtitles",
+            "x-immich-history": [
+              {
+                "version": "v1",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              },
+              {
+                "version": "v3.2.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated",
+            "deprecated": true,
+            "schema": {
               "type": "string"
             }
           },
@@ -21687,6 +21788,32 @@
         ],
         "type": "object"
       },
+      "AssetTranscriptLineResponseDto": {
+        "properties": {
+          "endMs": {
+            "description": "When the line ends, in milliseconds from the start of the video",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "startMs": {
+            "description": "When the line starts, in milliseconds from the start of the video",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "text": {
+            "description": "What was said, translated to English",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endMs",
+          "startMs",
+          "text"
+        ],
+        "type": "object"
+      },
       "AssetTypeEnum": {
         "description": "Asset type",
         "enum": [
@@ -23082,6 +23209,8 @@
           "Ocr",
           "AssetGenerateSubtitlesQueueAll",
           "AssetGenerateSubtitles",
+          "AssetImportSubtitlesQueueAll",
+          "AssetImportSubtitles",
           "WorkflowAssetTrigger",
           "IntegrityUntrackedFilesQueueAll",
           "IntegrityUntrackedFiles",
@@ -24496,6 +24625,26 @@
           "thumbnailPath": {
             "deprecated": true,
             "description": "Filter by thumbnail file path",
+            "type": "string",
+            "x-immich-history": [
+              {
+                "version": "v1",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              },
+              {
+                "version": "v3.2.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated"
+          },
+          "transcript": {
+            "deprecated": true,
+            "description": "Filter by words spoken in a video, from its generated subtitles",
             "type": "string",
             "x-immich-history": [
               {
@@ -26924,6 +27073,26 @@
             ],
             "x-immich-state": "Deprecated"
           },
+          "transcript": {
+            "deprecated": true,
+            "description": "Filter by words spoken in a video, from its generated subtitles",
+            "type": "string",
+            "x-immich-history": [
+              {
+                "version": "v1",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              },
+              {
+                "version": "v3.2.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated"
+          },
           "trashedAfter": {
             "deprecated": true,
             "description": "Filter by trash date (after)",
@@ -27509,6 +27678,9 @@
           "takenAt": {
             "$ref": "#/components/schemas/DateFilter"
           },
+          "transcript": {
+            "$ref": "#/components/schemas/StringSimilarityFilter"
+          },
           "trashedAt": {
             "$ref": "#/components/schemas/DateFilterNullable"
           },
@@ -27610,6 +27782,9 @@
           },
           "takenAt": {
             "$ref": "#/components/schemas/DateFilter"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/StringSimilarityFilter"
           },
           "trashedAt": {
             "$ref": "#/components/schemas/DateFilterNullable"
@@ -29163,6 +29338,26 @@
             ],
             "x-immich-state": "Deprecated"
           },
+          "transcript": {
+            "deprecated": true,
+            "description": "Filter by words spoken in a video, from its generated subtitles",
+            "type": "string",
+            "x-immich-history": [
+              {
+                "version": "v1",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              },
+              {
+                "version": "v3.2.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated"
+          },
           "trashedAfter": {
             "deprecated": true,
             "description": "Filter by trash date (after)",
@@ -29871,6 +30066,26 @@
             "example": "2024-01-01T00:00:00.000Z",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string",
+            "x-immich-history": [
+              {
+                "version": "v1",
+                "state": "Added"
+              },
+              {
+                "version": "v2",
+                "state": "Stable"
+              },
+              {
+                "version": "v3.2.0",
+                "state": "Deprecated"
+              }
+            ],
+            "x-immich-state": "Deprecated"
+          },
+          "transcript": {
+            "deprecated": true,
+            "description": "Filter by words spoken in a video, from its generated subtitles",
             "type": "string",
             "x-immich-history": [
               {

@@ -99,6 +99,11 @@ export interface SearchOcrOptions {
   ocr?: string;
 }
 
+export interface SearchTranscriptOptions {
+  /** words spoken in a video, matched against its generated subtitles */
+  transcript?: string;
+}
+
 export interface SearchPeopleOptions {
   personIds?: string[];
 }
@@ -130,7 +135,8 @@ type BaseAssetSearchOptions = SearchDateOptions &
   SearchPeopleOptions &
   SearchTagOptions &
   SearchAlbumOptions &
-  SearchOcrOptions;
+  SearchOcrOptions &
+  SearchTranscriptOptions;
 
 export type AssetSearchOptions = Omit<BaseAssetSearchOptions, 'visibility'> &
   SearchRelationOptions & { visibility?: AssetVisibility | 'not-locked' };
@@ -161,7 +167,8 @@ export type SmartSearchOptions = SearchDateOptions &
   SearchUserIdOptions &
   SearchPeopleOptions &
   SearchTagOptions &
-  SearchOcrOptions & { visibility?: AssetVisibility | 'not-locked'; viewingUserId?: string };
+  SearchOcrOptions &
+  SearchTranscriptOptions & { visibility?: AssetVisibility | 'not-locked'; viewingUserId?: string };
 
 export type LargeAssetSearchOptions = AssetSearchOptions & { minFileSize?: number };
 

@@ -1,6 +1,6 @@
 import { Kysely } from 'kysely';
 import { SearchSuggestionType } from 'src/dtos/search.dto';
-import { AlbumUserRole, AssetOrder, AssetVisibility, SearchOrderField } from 'src/enum';
+import { AlbumUserRole, AssetOrder, AssetType, AssetVisibility, SearchOrderField } from 'src/enum';
 import { AccessRepository } from 'src/repositories/access.repository';
 import { AssetRepository } from 'src/repositories/asset.repository';
 import { DatabaseRepository } from 'src/repositories/database.repository';
@@ -8,6 +8,7 @@ import { LoggingRepository } from 'src/repositories/logging.repository';
 import { PartnerRepository } from 'src/repositories/partner.repository';
 import { PersonRepository } from 'src/repositories/person.repository';
 import { SearchRepository } from 'src/repositories/search.repository';
+import { TranscriptRepository } from 'src/repositories/transcript.repository';
 import { DB } from 'src/schema';
 import { SearchService } from 'src/services/search.service';
 import { newMediumService } from 'test/medium.factory';
@@ -28,6 +29,7 @@ const setup = (db?: Kysely<DB>) => {
       SearchRepository,
       PartnerRepository,
       PersonRepository,
+      TranscriptRepository,
     ],
     mock: [LoggingRepository],
   });
@@ -36,6 +38,26 @@ const setup = (db?: Kysely<DB>) => {
 beforeAll(async () => {
   defaultDatabase = await getKyselyDB();
 });
+
+/** Two videos: one where "General Kenobi" is said across two subtitle lines, and one about the weather. */
+const setupVideos = async () => {
+  const { sut, ctx } = setup();
+  const { user } = await ctx.newUser();
+  const transcripts = ctx.get(TranscriptRepository);
+  const { asset: kenobi } = await ctx.newAsset({ ownerId: user.id, type: AssetType.Video });
+  const { asset: other } = await ctx.newAsset({ ownerId: user.id, type: AssetType.Video });
+  // the phrase spans two subtitle lines
+  await transcripts.replace(
+    kenobi.id,
+    [
+      { startMs: 0, endMs: 1000, text: 'Hello there. General' },
+      { startMs: 1000, endMs: 2000, text: 'Kenobi!' },
+    ],
+    'Hello there. General Kenobi!',
+  );
+  await transcripts.replace(other.id, [{ startMs: 0, endMs: 1000, text: 'Nice weather.' }], 'Nice weather.');
+  return { sut, auth: factory.auth({ user: { id: user.id } }), kenobi, other, transcripts };
+};
 
 describe(SearchService.name, () => {
   it('should work', () => {
@@ -447,6 +469,44 @@ describe(SearchService.name, () => {
       const secondPage = await searchRepository.searchSmartV3({ take: 2, skip: 2 }, options, scope);
       expect(secondPage.items.length).toBe(1);
       expect(secondPage.hasNextPage).toBe(false);
+    });
+  });
+
+  describe('spoken words', () => {
+    it('should find a video by what is said in it, across subtitle lines', async () => {
+      const { sut, auth, kenobi } = await setupVideos();
+
+      const response = await sut.searchMetadata(auth, { size: 250, transcript: 'general kenobi' });
+
+      expect(response.assets.items.map(({ id }) => id)).toEqual([kenobi.id]);
+    });
+
+    it('should find a video by what is said in it with the filter tree', async () => {
+      const { sut, auth, kenobi } = await setupVideos();
+
+      const response = await sut.searchMetadata(auth, { size: 250, filter: { transcript: { matches: 'Kenobi' } } });
+
+      expect(response.assets.items.map(({ id }) => id)).toEqual([kenobi.id]);
+    });
+
+    it('should return the lines of a transcript in order', async () => {
+      const { kenobi, transcripts } = await setupVideos();
+
+      await expect(transcripts.getByAssetId(kenobi.id)).resolves.toEqual([
+        { startMs: 0, endMs: 1000, text: 'Hello there. General' },
+        { startMs: 1000, endMs: 2000, text: 'Kenobi!' },
+      ]);
+    });
+
+    it('should replace an old transcript instead of adding to it', async () => {
+      const { sut, auth, kenobi, transcripts } = await setupVideos();
+
+      await transcripts.replace(kenobi.id, [{ startMs: 0, endMs: 500, text: 'Bye.' }], 'Bye.');
+
+      await expect(transcripts.getByAssetId(kenobi.id)).resolves.toEqual([{ startMs: 0, endMs: 500, text: 'Bye.' }]);
+      await expect(sut.searchMetadata(auth, { size: 250, transcript: 'kenobi' })).resolves.toMatchObject({
+        assets: { items: [] },
+      });
     });
   });
 });

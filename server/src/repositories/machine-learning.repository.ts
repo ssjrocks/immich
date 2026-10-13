@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Duration } from 'luxon';
+import { openAsBlob } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { Readable } from 'node:stream';
+import { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { MachineLearningConfig } from 'src/dtos/config.dto';
 import { LoggingRepository } from 'src/repositories/logging.repository';
 
@@ -89,6 +94,31 @@ export type MachineLearningRequest =
   | TranscriptionRequest;
 export type TextEncodingOptions = ModelOptions & { language?: string };
 
+/**
+ * POSTs without fetch's limit of 300 seconds waiting for a response to start. The ML service only answers once
+ * the work is done, and transcribing a long video on a CPU can take much longer than that.
+ */
+const postWithoutTimeout = (url: URL, formData: FormData): Promise<Response> => {
+  // Response encodes the form exactly as fetch would, multipart boundary and all.
+  const body = new Response(formData);
+  const send = url.protocol === 'https:' ? httpsRequest : httpRequest;
+  return new Promise((resolve, reject) => {
+    const request = send(
+      url,
+      { method: 'POST', headers: { 'content-type': body.headers.get('content-type')! } },
+      (response) =>
+        resolve(
+          new Response(Readable.toWeb(response) as ReadableStream, {
+            status: response.statusCode,
+            statusText: response.statusMessage,
+          }),
+        ),
+    );
+    request.on('error', reject);
+    Readable.fromWeb(body.body as NodeReadableStream).pipe(request);
+  });
+};
+
 @Injectable()
 export class MachineLearningRepository {
   private healthyMap: Record<string, boolean> = {};
@@ -173,7 +203,11 @@ export class MachineLearningRepository {
     return this.healthyMap[url];
   }
 
-  private async predict<T>(payload: ModelPayload, config: MachineLearningRequest): Promise<T> {
+  private async predict<T>(
+    payload: ModelPayload,
+    config: MachineLearningRequest,
+    { waitForever = false }: { waitForever?: boolean } = {},
+  ): Promise<T> {
     const formData = await this.getFormData(payload, config);
 
     for (const url of [
@@ -182,7 +216,10 @@ export class MachineLearningRepository {
       ...this.config.urls.filter((url) => !this.isHealthy(url)),
     ]) {
       try {
-        const response = await fetch(new URL('predict', url), { method: 'POST', body: formData });
+        const predictUrl = new URL('predict', url);
+        const response = waitForever
+          ? await postWithoutTimeout(predictUrl, formData)
+          : await fetch(predictUrl, { method: 'POST', body: formData });
         if (response.ok) {
           this.setHealthy(url, true);
           return response.json();
@@ -240,11 +277,12 @@ export class MachineLearningRepository {
   }
 
   // Always translates to English. Speech in any language goes in; the model detects which one it is.
+  // A whole video's audio goes in one request, which can take far longer than fetch is willing to wait.
   async transcribe(audioPath: string, { modelName }: ModelOptions) {
     const request = {
       [ModelTask.TRANSCRIPTION]: { [ModelType.RECOGNITION]: { modelName, options: { task: 'translate' as const } } },
     };
-    const response = await this.predict<TranscriptionResponse>({ audioPath }, request);
+    const response = await this.predict<TranscriptionResponse>({ audioPath }, request, { waitForever: true });
     return response[ModelTask.TRANSCRIPTION];
   }
 
@@ -258,8 +296,8 @@ export class MachineLearningRepository {
     } else if ('text' in payload) {
       formData.append('text', payload.text);
     } else if ('audioPath' in payload) {
-      const fileBuffer = await readFile(payload.audioPath);
-      formData.append('audio', new Blob([new Uint8Array(fileBuffer)]));
+      // Streamed from disk rather than read into memory: a long video's audio can run to tens of megabytes.
+      formData.append('audio', await openAsBlob(payload.audioPath));
     } else {
       throw new Error('Invalid input');
     }

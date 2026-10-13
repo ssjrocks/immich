@@ -641,6 +641,29 @@ describe(AssetService.name, () => {
     });
   });
 
+  describe('getTranscript', () => {
+    it('should require access to the video', async () => {
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set());
+
+      await expect(sut.getTranscript(authStub.admin, 'asset-1')).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(mocks.transcript.getByAssetId).not.toHaveBeenCalled();
+    });
+
+    it("should return the video's transcript lines", async () => {
+      const lines = [
+        { startMs: 0, endMs: 1300, text: 'Hello.' },
+        { startMs: 2000, endMs: 3300, text: 'Goodbye.' },
+      ];
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set(['asset-1']));
+      mocks.transcript.getByAssetId.mockResolvedValue(lines);
+
+      await expect(sut.getTranscript(authStub.admin, 'asset-1')).resolves.toEqual(lines);
+
+      expect(mocks.transcript.getByAssetId).toHaveBeenCalledWith('asset-1');
+    });
+  });
+
   describe('getOcr', () => {
     it('should require asset read permission', async () => {
       mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set());

@@ -1,7 +1,8 @@
 import { Kysely } from 'kysely';
-import { AssetFileType } from 'src/enum';
+import { AssetFileType, AssetType } from 'src/enum';
 import { AssetJobRepository } from 'src/repositories/asset-job.repository';
 import { LoggingRepository } from 'src/repositories/logging.repository';
+import { TranscriptRepository } from 'src/repositories/transcript.repository';
 import { DB } from 'src/schema';
 import { BaseService } from 'src/services/base.service';
 import { newMediumService } from 'test/medium.factory';
@@ -138,6 +139,27 @@ describe(AssetJobRepository.name, () => {
           previewFile: 'preview_unedited.jpg',
         }),
       );
+    });
+  });
+
+  describe('streamForSubtitleImport', () => {
+    it('should find videos with a subtitle file until their transcript is stored', async () => {
+      const { ctx, sut } = setup();
+      const { user } = await ctx.newUser();
+      const { asset: withFile } = await ctx.newAsset({ ownerId: user.id, type: AssetType.Video });
+      const { asset: withoutFile } = await ctx.newAsset({ ownerId: user.id, type: AssetType.Video });
+      await ctx.newAssetFile({ assetId: withFile.id, type: AssetFileType.Subtitle, path: '/data/sub.vtt' });
+
+      const ids = async () => {
+        const rows = await consume(sut.streamForSubtitleImport());
+        return rows.map(({ id }) => id);
+      };
+      await expect(ids()).resolves.toContain(withFile.id);
+      await expect(ids()).resolves.not.toContain(withoutFile.id);
+
+      // a video with nothing said still counts as done once it has been read in
+      await ctx.get(TranscriptRepository).replace(withFile.id, [], '');
+      await expect(ids()).resolves.not.toContain(withFile.id);
     });
   });
 });

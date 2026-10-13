@@ -518,6 +518,32 @@ export class AssetJobRepository {
     );
   }
 
+  /** Videos whose subtitle file was written before transcripts were kept in the database. */
+  @GenerateSql({ params: [], stream: true })
+  streamForSubtitleImport() {
+    return this.db
+      .selectFrom('asset')
+      .select(['asset.id'])
+      .where('asset.type', '=', sql.lit(AssetType.Video))
+      .where('asset.deletedAt', 'is', null)
+      .where((eb) =>
+        eb.and([
+          eb.exists((sub) =>
+            sub
+              .selectFrom('asset_file')
+              .whereRef('asset_file.assetId', '=', 'asset.id')
+              .where('asset_file.type', '=', AssetFileType.Subtitle),
+          ),
+          eb.not(
+            eb.exists((sub) =>
+              sub.selectFrom('transcript_search').whereRef('transcript_search.assetId', '=', 'asset.id'),
+            ),
+          ),
+        ]),
+      )
+      .stream();
+  }
+
   @GenerateSql({ params: [DummyValue.UUID] })
   getForSubtitlesJob(id: string) {
     return this.db

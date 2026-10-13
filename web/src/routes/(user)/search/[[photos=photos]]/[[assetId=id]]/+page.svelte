@@ -19,6 +19,7 @@
   import TagAction from '$lib/components/timeline/actions/TagAction.svelte';
   import AssetSelectControlBar from '$lib/components/timeline/AssetSelectControlBar.svelte';
   import { QueryParameter } from '$lib/constants';
+  import GroupTab from '$lib/elements/GroupTab.svelte';
   import { assetMultiSelectManager } from '$lib/managers/asset-multi-select-manager.svelte';
   import { authManager } from '$lib/managers/auth-manager.svelte';
   import { featureFlagsManager } from '$lib/managers/feature-flags-manager.svelte';
@@ -26,15 +27,17 @@
   import type { Viewport } from '$lib/managers/timeline-manager/types';
   import { Route } from '$lib/route';
   import { getAssetBulkActions } from '$lib/services/asset.service';
-  import { lang, locale } from '$lib/stores/preferences.store';
-  import { handlePromiseError } from '$lib/utils';
+  import { lang, locale, similarMediaFilter, type BrowseMediaFilter } from '$lib/stores/preferences.store';
+  import { getAssetMediaUrl, handlePromiseError } from '$lib/utils';
   import { parseUtcDate } from '$lib/utils/date-time';
   import { handleError } from '$lib/utils/handle-error';
   import { isAlbumsRoute, isPeopleRoute } from '$lib/utils/navigation';
   import { toTimelineAsset } from '$lib/utils/timeline-util';
   import {
     type AlbumResponseDto,
+    AssetMediaSize,
     type AssetResponseDto,
+    AssetTypeEnum,
     AssetVisibility,
     getPerson,
     getTagById,
@@ -68,6 +71,27 @@
   let smartSearchEnabled = $derived(featureFlagsManager.value.smartSearch);
   let terms = $derived<SearchTerms>(searchQuery ? JSON.parse(searchQuery) : {});
   let searchTermKeys = $derived(getObjectKeys(terms));
+  // "View similar" on its own gets an All / Photos / Videos filter. Once other filters are added from the
+  // search options it's an ordinary smart search again, and those filters decide what's shown.
+  let similarAssetId = $derived(
+    smartSearchEnabled && searchTermKeys.length === 1 && terms.queryAssetId ? terms.queryAssetId : undefined,
+  );
+
+  const mediaTypes: Record<BrowseMediaFilter, AssetTypeEnum | undefined> = {
+    all: undefined,
+    IMAGE: AssetTypeEnum.Image,
+    VIDEO: AssetTypeEnum.Video,
+  };
+
+  const mediaOptions = $derived([
+    { value: 'all', label: $t('all') },
+    { value: 'IMAGE', label: $t('photos') },
+    { value: 'VIDEO', label: $t('videos') },
+  ]);
+
+  // Bumped whenever the query or the media filter changes, so a page still in flight for the previous
+  // query can't land in the new results.
+  let generation = 0;
 
   $effect(() => {
     // we want this to *only* be reactive on `terms`
@@ -121,6 +145,7 @@
   };
 
   async function onSearchQueryUpdate() {
+    generation++;
     nextPage = 1;
     searchResultAssets = [];
     searchResultAlbums = [];
@@ -133,11 +158,13 @@
       return;
     }
     isLoading = true;
+    const requested = generation;
 
     const searchDto: SearchTerms = {
       page: nextPage,
       withExif: true,
       ...terms,
+      ...(similarAssetId && { type: mediaTypes[$similarMediaFilter] }),
     };
 
     try {
@@ -148,6 +175,10 @@
             })
           : await searchAssets({ metadataSearchDto: { visibility: AssetVisibility.Timeline, ...searchDto } });
 
+      if (requested !== generation) {
+        return;
+      }
+
       searchResultAlbums.push(...albums.items);
       searchResultAssets.push(...assets.items);
 
@@ -155,8 +186,16 @@
     } catch (error) {
       handleError(error, $t('loading_search_results_failed'));
     } finally {
-      isLoading = false;
+      if (requested === generation) {
+        isLoading = false;
+      }
     }
+  };
+
+  const setSimilarMedia = (media: string) => {
+    similarMediaFilter.set(media as BrowseMediaFilter);
+    assetMultiSelectManager.clear();
+    handlePromiseError(onSearchQueryUpdate());
   };
 
   function getHumanReadableDate(dateString: string) {
@@ -191,8 +230,9 @@
       originalFileName: $t('file_name_text'),
       originalPath: $t('full_path_or_folder'),
       description: $t('description'),
-      queryAssetId: $t('query_asset_id'),
+      queryAssetId: $t('similar_to'),
       ocr: $t('ocr'),
+      transcript: $t('spoken_words'),
     };
     return keyMap[key] || key;
   }
@@ -281,6 +321,13 @@
                 {#await getTagNames(value) then tagNames}
                   {tagNames}
                 {/await}
+              {:else if searchKey === 'queryAssetId' && typeof value === 'string'}
+                <img
+                  src={getAssetMediaUrl({ id: value, size: AssetMediaSize.Thumbnail })}
+                  alt={$t('similar_to')}
+                  class="size-7 rounded-md object-cover"
+                  draggable="false"
+                />
               {:else if searchKey === 'rating'}
                 {$t('rating_count', { values: { count: value ?? 0 } })}
               {:else if value === null || value === ''}
@@ -302,6 +349,20 @@
           </button>
         </div>
       {/each}
+    </div>
+  </section>
+{/if}
+
+{#if similarAssetId}
+  <section id="similar-controls" class="mx-auto mt-4 flex w-full max-w-7xl justify-center px-4 sm:px-8 lg:px-12">
+    <div class="h-10 shrink-0">
+      <GroupTab
+        label={$t('media_type')}
+        filters={mediaOptions.map((option) => option.value)}
+        labels={mediaOptions.map((option) => option.label)}
+        selected={$similarMediaFilter}
+        onSelect={setSimilarMedia}
+      />
     </div>
   </section>
 {/if}

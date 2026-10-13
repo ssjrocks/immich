@@ -908,6 +908,32 @@ where
 order by
   "asset"."fileCreatedAt" desc
 
+-- AssetJobRepository.streamForSubtitleImport
+select
+  "asset"."id"
+from
+  "asset"
+where
+  "asset"."type" = 'VIDEO'
+  and "asset"."deletedAt" is null
+  and (
+    exists (
+      select
+      from
+        "asset_file"
+      where
+        "asset_file"."assetId" = "asset"."id"
+        and "asset_file"."type" = $1
+    )
+    and not exists (
+      select
+      from
+        "transcript_search"
+      where
+        "transcript_search"."assetId" = "asset"."id"
+    )
+  )
+
 -- AssetJobRepository.getForSubtitlesJob
 select
   "asset"."id",

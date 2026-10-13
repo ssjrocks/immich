@@ -20,6 +20,7 @@ import {
 import { AuthDto } from 'src/dtos/auth.dto';
 import { AssetEditsCreateDto, AssetEditsResponseDto } from 'src/dtos/editing.dto';
 import { AssetOcrResponseDto } from 'src/dtos/ocr.dto';
+import { AssetTranscriptLineResponseDto } from 'src/dtos/transcript.dto';
 import { ApiTag, Permission, RouteKey } from 'src/enum';
 import { Auth, Authenticated } from 'src/middleware/auth.guard';
 import { AssetService } from 'src/services/asset.service';
@@ -188,6 +189,18 @@ export class AssetController {
   })
   getAssetOcr(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto): Promise<AssetOcrResponseDto[]> {
     return this.service.getOcr(auth, id);
+  }
+
+  @Get(':id/transcript')
+  @Authenticated({ permission: Permission.AssetView, sharedLink: true })
+  @Endpoint({
+    summary: 'Retrieve a video transcript',
+    description:
+      "Retrieve the lines of a video's generated subtitles with their timestamps, in order. Empty when the video has no subtitles or nothing was said.",
+    history: new HistoryBuilder().added('v3.2.1').alpha('v3.2.1'),
+  })
+  getAssetTranscript(@Auth() auth: AuthDto, @Param() { id }: UUIDParamDto): Promise<AssetTranscriptLineResponseDto[]> {
+    return this.service.getTranscript(auth, id);
   }
 
   @Put(':id/metadata')

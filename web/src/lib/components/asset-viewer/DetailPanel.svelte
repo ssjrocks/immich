@@ -26,6 +26,7 @@
   import UserAvatar from '../shared-components/UserAvatar.svelte';
   import AlbumListItemDetails from './AlbumListItemDetails.svelte';
   import DetailPanelPeople from '$lib/components/asset-viewer/DetailPanelPeople.svelte';
+  import DetailPanelTranscript from '$lib/components/asset-viewer/DetailPanelTranscript.svelte';
 
   interface Props {
     asset: AssetResponseDto;
@@ -363,3 +364,5 @@
     <DetailPanelTags {asset} {isOwner} />
   </section>
 {/if}
+
+<DetailPanelTranscript {asset} />

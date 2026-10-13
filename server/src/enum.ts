@@ -957,6 +957,8 @@ export enum JobName {
   // Subtitles
   AssetGenerateSubtitlesQueueAll = 'AssetGenerateSubtitlesQueueAll',
   AssetGenerateSubtitles = 'AssetGenerateSubtitles',
+  AssetImportSubtitlesQueueAll = 'AssetImportSubtitlesQueueAll',
+  AssetImportSubtitles = 'AssetImportSubtitles',
 
   // Workflow
   WorkflowAssetTrigger = 'WorkflowAssetTrigger',

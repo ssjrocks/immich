@@ -14,8 +14,10 @@ This is a personal fork of [immich-app/immich](https://github.com/immich-app/imm
 upstream (currently **v3.2.1**), with a few extra capabilities layered on top of a stock install:
 
 - [Facial recognition throughout videos](#facial-recognition-throughout-videos)
-- [A Browse page](#browse-page) with one-click filtering and sorting
-- [Video subtitles](#video-subtitles): English subtitles for videos in any spoken language
+- [A Browse page](#browse-page) with one-click filtering and sorting, and a photos/videos filter on
+  [similar images](#similar-images)
+- [Video subtitles](#video-subtitles): English subtitles for videos in any spoken language, a clickable
+  transcript beside the video, and search by what's said
 - [A portable offline version](#portable-offline-version): the whole thing in one folder on a drive, for a
   computer with no internet at all
 
@@ -124,6 +126,12 @@ flat grid for everything else:
 It shows exactly what the timeline does: nothing archived, locked or in the trash, and partners' photos
 when they're shared into your timeline.
 
+## Similar images
+
+**View similar** on a photo or video finds everything that looks like it, closest first. An **All / Photos /
+Videos** filter narrows it to one kind with one click, and is remembered. The search chip shows the photo
+you started from.
+
 ## Video subtitles
 
 Videos can get **English subtitles, whatever language is spoken**, generated in the background by
@@ -137,6 +145,17 @@ simply transcribed.
   uploads are handled automatically. A single video can be (re)done from its menu → **Generate subtitles**.
 - In the player, a captions button appears once a video has subtitles. Lines are timed from the spoken
   words, so they end when the speaker stops, and they're split into readable chunks.
+- **Transcript**: the video's info panel (ⓘ) ends with every line that was said and when. Click a line to
+  play from there; the line being spoken is highlighted as the video plays.
+- **Search by what's said**: pick **Spoken words** as the search type to find videos by their speech, even a
+  phrase that runs across two subtitle lines. Matching is forgiving of small spelling differences
+  ("harbor" finds "harbour").
+- Videos given subtitles by an earlier build are read in automatically when the server starts, so they're
+  searchable and get a transcript without being transcribed again.
+- Each video is transcribed in one pass, so Whisper keeps the context of what was said throughout. Builds
+  before v3.2.1-fork.3 cut the audio into one-minute pieces, which could garble or repeat a line at each
+  minute mark; to redo those videos, run **Admin → Job Queues → Video subtitles → All** (slow: it
+  transcribes everything again) or **Generate subtitles** on just the ones you care about.
 - Only multilingual Whisper models are offered, because the "turbo" variants silently skip the
   translation and output the original language.
 

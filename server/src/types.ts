@@ -439,6 +439,8 @@ export type JobItem =
   // Subtitles
   | { name: JobName.AssetGenerateSubtitlesQueueAll; data: IBaseJob }
   | { name: JobName.AssetGenerateSubtitles; data: IEntityJob }
+  | { name: JobName.AssetImportSubtitlesQueueAll; data: IBaseJob }
+  | { name: JobName.AssetImportSubtitles; data: IEntityJob }
 
   // Workflow
   | { name: JobName.WorkflowAssetTrigger; data: { workflowId: string; assetId: string } }

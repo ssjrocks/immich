@@ -62,12 +62,15 @@ class WhisperTranscriber(InferenceModel):
         self.beam_size = int(kwargs.get("beamSize", self.beam_size))
 
     def _predict(self, audio: bytes, **kwargs: Any) -> dict[str, Any]:
-        # language=None makes Whisper detect it per request. Each request is one chunk of a video, so a
-        # video that switches language partway through is still detected chunk by chunk.
+        # Each request is a whole video. multilingual detects the language again for every 30-second window,
+        # from the encoding Whisper already made for it, so a video that switches language partway through is
+        # still translated from the right one. Without it the language found at the start would be assumed
+        # throughout.
         segments, info = self.model.transcribe(
             BytesIO(audio),
             task=self.task,
             language=None,
+            multilingual=True,
             beam_size=self.beam_size,
             # Skips silence and music-only stretches, which Whisper otherwise tends to fill with invented
             # text. The VAD model ships inside faster-whisper itself, so this needs no download.

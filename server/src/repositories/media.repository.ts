@@ -297,32 +297,21 @@ export class MediaRepository {
    * can be transcribed in its own request. Returns chunk paths in playback order: chunk N starts at
    * N * chunkSeconds.
    */
-  async extractAudioChunks(videoPath: string, outputDir: string, chunkSeconds: number): Promise<string[]> {
+  /** Writes a video's audio as one 16 kHz mono FLAC file: what Whisper works on, losslessly and about half the size of WAV. */
+  async extractAudio(videoPath: string, outputPath: string): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       ffmpeg(videoPath)
         .noVideo()
         .audioChannels(1)
         .audioFrequency(16_000)
-        .audioCodec('pcm_s16le')
-        // -reset_timestamps starts every chunk at zero, so a cue's real time is its chunk's offset plus
-        // its position within the chunk -- which is how the caller reassembles them.
-        .outputOptions(['-f segment', `-segment_time ${chunkSeconds}`, '-reset_timestamps 1'])
-        .output(path.join(outputDir, 'chunk_%05d.wav'))
+        .audioCodec('flac')
+        .output(outputPath)
         .on('error', (error: Error, _stdout: string | null, stderr: string | null) =>
           reject(new Error(stderr || error.message)),
         )
         .on('end', () => resolve())
         .run();
     });
-
-    const files = await fs.readdir(outputDir);
-    return (
-      files
-        .filter((file) => file.startsWith('chunk_') && file.endsWith('.wav'))
-        // Numeric for the same reason as extractVideoFrames: %05d only pads to a minimum width.
-        .sort((a, b) => Number.parseInt(a.slice(6, -4), 10) - Number.parseInt(b.slice(6, -4), 10))
-        .map((file) => path.join(outputDir, file))
-    );
   }
 
   /**

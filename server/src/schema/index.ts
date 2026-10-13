@@ -48,6 +48,7 @@ import { AssetMetadataAuditTable } from 'src/schema/tables/asset-metadata-audit.
 import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table';
 import { AssetOcrAuditTable } from 'src/schema/tables/asset-ocr-audit.table';
 import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table';
+import { AssetTranscriptTable } from 'src/schema/tables/asset-transcript.table';
 import { AssetTable } from 'src/schema/tables/asset.table';
 import { ClusterGroupRequestTable } from 'src/schema/tables/cluster-group-request.table';
 import { ClusterGroupTable } from 'src/schema/tables/cluster-group.table';
@@ -82,6 +83,7 @@ import { SystemMetadataTable } from 'src/schema/tables/system-metadata.table';
 import { TagAssetTable } from 'src/schema/tables/tag-asset.table';
 import { TagClosureTable } from 'src/schema/tables/tag-closure.table';
 import { TagTable } from 'src/schema/tables/tag.table';
+import { TranscriptSearchTable } from 'src/schema/tables/transcript-search.table';
 import { UserAuditTable } from 'src/schema/tables/user-audit.table';
 import { UserMetadataAuditTable } from 'src/schema/tables/user-metadata-audit.table';
 import { UserMetadataTable } from 'src/schema/tables/user-metadata.table';
@@ -117,6 +119,7 @@ export class ImmichDatabase {
     AssetMetadataAuditTable,
     AssetJobStatusTable,
     AssetOcrTable,
+    AssetTranscriptTable,
     AssetOcrAuditTable,
     AssetTable,
     AssetFileTable,
@@ -135,6 +138,7 @@ export class ImmichDatabase {
     NaturalEarthCountriesTable,
     NotificationTable,
     OcrSearchTable,
+    TranscriptSearchTable,
     PartnerAuditTable,
     PartnerTable,
     PersonTable,
@@ -225,10 +229,12 @@ export interface DB {
   asset_job_status: AssetJobStatusTable;
   asset_ocr: AssetOcrTable;
   asset_ocr_audit: AssetOcrAuditTable;
+  asset_transcript: AssetTranscriptTable;
   asset_audio: AssetAudioTable;
   asset_video: AssetVideoTable;
   asset_keyframe: AssetKeyframeTable;
   ocr_search: OcrSearchTable;
+  transcript_search: TranscriptSearchTable;
 
   face_search: FaceSearchTable;
 

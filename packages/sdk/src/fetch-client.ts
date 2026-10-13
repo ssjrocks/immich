@@ -1441,6 +1441,14 @@ export type AssetOcrResponseDto = {
     /** Normalized y coordinate of box corner 4 (0-1) */
     y4: number;
 };
+export type AssetTranscriptLineResponseDto = {
+    /** When the line ends, in milliseconds from the start of the video */
+    endMs: number;
+    /** When the line starts, in milliseconds from the start of the video */
+    startMs: number;
+    /** What was said, translated to English */
+    text: string;
+};
 export type SignUpDto = {
     /** User email */
     email: string;
@@ -2385,6 +2393,7 @@ export type SearchFilterBranch = {
     state?: StringFilterNullable;
     tagIds?: IdsFilter;
     takenAt?: DateFilter;
+    transcript?: StringSimilarityFilter;
     trashedAt?: DateFilterNullable;
     "type"?: EnumFilterAssetType;
     updatedAt?: DateFilter;
@@ -2420,6 +2429,7 @@ export type SearchFilter = {
     state?: StringFilterNullable;
     tagIds?: IdsFilter;
     takenAt?: DateFilter;
+    transcript?: StringSimilarityFilter;
     trashedAt?: DateFilterNullable;
     "type"?: EnumFilterAssetType;
     updatedAt?: DateFilter;
@@ -2494,6 +2504,8 @@ export type MetadataSearchDto = {
     takenBefore?: string;
     /** Filter by thumbnail file path */
     thumbnailPath?: string;
+    /** Filter by words spoken in a video, from its generated subtitles */
+    transcript?: string;
     /** Filter by trash date (after) */
     trashedAfter?: string;
     /** Filter by trash date (before) */
@@ -2571,6 +2583,8 @@ export type RandomSearchDto = {
     takenAfter?: string;
     /** Filter by taken date (before) */
     takenBefore?: string;
+    /** Filter by words spoken in a video, from its generated subtitles */
+    transcript?: string;
     /** Filter by trash date (after) */
     trashedAfter?: string;
     /** Filter by trash date (before) */
@@ -2644,6 +2658,8 @@ export type SmartSearchDto = {
     takenAfter?: string;
     /** Filter by taken date (before) */
     takenBefore?: string;
+    /** Filter by words spoken in a video, from its generated subtitles */
+    transcript?: string;
     /** Filter by trash date (after) */
     trashedAfter?: string;
     /** Filter by trash date (before) */
@@ -2705,6 +2721,8 @@ export type StatisticsSearchDto = {
     takenAfter?: string;
     /** Filter by taken date (before) */
     takenBefore?: string;
+    /** Filter by words spoken in a video, from its generated subtitles */
+    transcript?: string;
     /** Filter by trash date (after) */
     trashedAfter?: string;
     /** Filter by trash date (before) */
@@ -4999,6 +5017,24 @@ export function viewAsset({ edited, id, key, size, slug }: {
     }));
 }
 /**
+ * Retrieve a video transcript
+ */
+export function getAssetTranscript({ id, key, slug }: {
+    id: string;
+    key?: string;
+    slug?: string;
+}, opts?: Oazapfts.RequestOpts) {
+    return oazapfts.ok(oazapfts.fetchJson<{
+        status: 200;
+        data: AssetTranscriptLineResponseDto[];
+    }>(`/assets/${encodeURIComponent(id)}/transcript${QS.query(QS.explode({
+        key,
+        slug
+    }))}`, {
+        ...opts
+    }));
+}
+/**
  * Get a video frame at a timestamp
  */
 export function getVideoFrame({ id, key, slug, timestampMs }: {
@@ -6516,7 +6552,7 @@ export function getExploreData(opts?: Oazapfts.RequestOpts) {
 /**
  * Search large assets
  */
-export function searchLargeAssets({ albumIds, city, country, createdAfter, createdBefore, isEncoded, isFavorite, isMotion, isNotInAlbum, isOffline, lensModel, libraryId, make, minFileSize, model, ocr, personIds, rating, size, state, tagIds, takenAfter, takenBefore, trashedAfter, trashedBefore, $type, updatedAfter, updatedBefore, visibility, withDeleted, withExif }: {
+export function searchLargeAssets({ albumIds, city, country, createdAfter, createdBefore, isEncoded, isFavorite, isMotion, isNotInAlbum, isOffline, lensModel, libraryId, make, minFileSize, model, ocr, personIds, rating, size, state, tagIds, takenAfter, takenBefore, transcript, trashedAfter, trashedBefore, $type, updatedAfter, updatedBefore, visibility, withDeleted, withExif }: {
     albumIds?: string[];
     city?: string | null;
     country?: string | null;
@@ -6540,6 +6576,7 @@ export function searchLargeAssets({ albumIds, city, country, createdAfter, creat
     tagIds?: string[] | null;
     takenAfter?: string;
     takenBefore?: string;
+    transcript?: string;
     trashedAfter?: string;
     trashedBefore?: string;
     $type?: AssetTypeEnum;
@@ -6576,6 +6613,7 @@ export function searchLargeAssets({ albumIds, city, country, createdAfter, creat
         tagIds,
         takenAfter,
         takenBefore,
+        transcript,
         trashedAfter,
         trashedBefore,
         "type": $type,
@@ -8454,6 +8492,8 @@ export enum JobName {
     Ocr = "Ocr",
     AssetGenerateSubtitlesQueueAll = "AssetGenerateSubtitlesQueueAll",
     AssetGenerateSubtitles = "AssetGenerateSubtitles",
+    AssetImportSubtitlesQueueAll = "AssetImportSubtitlesQueueAll",
+    AssetImportSubtitles = "AssetImportSubtitles",
     WorkflowAssetTrigger = "WorkflowAssetTrigger",
     IntegrityUntrackedFilesQueueAll = "IntegrityUntrackedFilesQueueAll",
     IntegrityUntrackedFiles = "IntegrityUntrackedFiles",

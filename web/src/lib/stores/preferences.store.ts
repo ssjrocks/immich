@@ -153,3 +153,6 @@ export const browseSettings = persisted<BrowseSettings>(
   { media: 'all', field: 'fileCreatedAt', direction: 'desc' },
   {},
 );
+
+// "View similar" results: all, photos only or videos only. Remembered like the browse page's filter.
+export const similarMediaFilter = persisted<BrowseMediaFilter>('similar-media', 'all', {});
